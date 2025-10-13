@@ -1,0 +1,14 @@
+@startuml
+entity telemetry_event {
+    * id : varchar [PK]
+    --
+    * contract_id : varchar
+    * participant_did : varchar [FK]
+    * response_status_code : int
+    * msg_size : int
+    * csv_id : int [FK]
+    * timestamp : timestamp
+    --
+    unique (contract_id, participant_did, timestamp)
+}
+@enduml

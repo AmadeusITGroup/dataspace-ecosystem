@@ -1,0 +1,2 @@
+org.eclipse.edc.eonax.dataplane.api.DataPlaneProxyApiExtension
+org.eclipse.edc.eonax.dataplane.api.DataPlanePublicApiV2Extension

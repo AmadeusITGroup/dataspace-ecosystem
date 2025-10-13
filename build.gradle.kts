@@ -1,0 +1,171 @@
+import com.bmuschko.gradle.docker.tasks.image.DockerBuildImage
+import com.github.jengelman.gradle.plugins.shadow.ShadowJavaPlugin
+
+plugins {
+    `java-library`
+    id("com.bmuschko.docker-remote-api") version "9.3.4"
+    id("com.github.johnrengelman.shadow") version "8.1.1"
+}
+
+val annotationProcessorVersion: String by project
+val eonaxWebsiteUrl: String by project
+val eonaxScmConnection: String by project
+val eonaxScmUrl: String by project
+
+val loadToKind = project.hasProperty("loadToKind")
+
+allprojects {
+
+    apply(plugin = "${group}.edc-build")
+
+    // configure which version of the annotation processor to use. defaults to the same version as the plugin
+    configure<org.eclipse.edc.plugins.autodoc.AutodocExtension> {
+        processorVersion.set(annotationProcessorVersion)
+        outputDirectory.set(project.layout.buildDirectory.asFile.get())
+    }
+
+    configure<org.eclipse.edc.plugins.edcbuild.extensions.BuildExtension> {
+        pom {
+            // this is actually important, so we can publish under the correct GID
+            groupId = project.group.toString()
+            projectName.set(project.name)
+            description.set("edc :: ${project.name}")
+            projectUrl.set(eonaxWebsiteUrl)
+            scmConnection.set(eonaxScmConnection)
+            scmUrl.set(eonaxScmUrl)
+        }
+    }
+
+    configure<CheckstyleExtension> {
+        configFile = rootProject.file("resources/checkstyle-config.xml")
+        configDirectory.set(rootProject.file("resources"))
+    }
+}
+
+subprojects {
+    afterEvaluate {
+
+        if (project.plugins.hasPlugin("com.github.johnrengelman.shadow") && file("${project.projectDir}/Dockerfile").exists()) {
+            val buildDir = project.layout.buildDirectory.get().asFile
+            val otelFileName = "opentelemetry-javaagent.jar"
+            val agentFileOnBuildDirectory = buildDir.resolve(otelFileName)
+
+            val openTelemetryAgentUrl =
+                "https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v2.9.0/opentelemetry-javaagent.jar"
+
+            val dockerContextDir = project.projectDir
+            val dockerFile = file("$dockerContextDir/Dockerfile")
+            val imageName = "${project.name}:latest"
+
+            val downloadOtel = tasks.create("downloadOtel") {
+                // only execute task if the opentelemetry agent does not exist. invoke the "clean" task to force
+                onlyIf {
+                    !agentFileOnBuildDirectory.exists()
+                }
+                // this task could be the first in the graph, so "build/" may not yet exist. Let's be defensive
+                doFirst {
+                    project.layout.buildDirectory.asFile.get().mkdirs()
+                }
+                // download the jar file
+                doLast {
+                    val download = { url: String, destFile: File ->
+                        ant.invokeMethod(
+                            "get",
+                            mapOf("src" to url, "dest" to destFile)
+                        )
+                    }
+                    logger.lifecycle("Downloading OpenTelemetry Agent")
+                    download(openTelemetryAgentUrl, agentFileOnBuildDirectory)
+                }
+            }
+
+            val copyOtel = tasks.register("copyOtel") {
+                val agentFile = rootDir.resolve("externalLibs").resolve(otelFileName)
+                // Only execute if the opentelemetry agent exists in the root dir but not in build directory
+                onlyIf {
+                    agentFile.exists() && !agentFileOnBuildDirectory.exists()
+                }
+                // Ensure the build directory exists before copying
+                doFirst {
+                    buildDir.mkdirs()
+                }
+                // Copy the jar file
+                doLast {
+                    copy {
+                        from(agentFile)
+                        into(buildDir)
+                    }
+                }
+            }
+
+            val podmanTask = tasks.register("podmanize", Exec::class) {
+                description = "Build container image with Podman"
+                group = "build"
+
+                val jarFile = "./build/libs/${project.name}.jar"
+                val otelFile = "./build/$otelFileName"
+                val platform = System.getProperty("platform")
+
+                val commandLineArgs = mutableListOf(
+                    "podman", "build",
+                    "--build-arg", "JAR=$jarFile",
+                    "--build-arg", "OTEL_JAR=$otelFile",
+                    "-t", imageName,
+                    "-f", dockerFile,
+                    dockerContextDir
+                )
+
+                if(platform != null) {
+                    commandLineArgs.add("--platform")
+                    commandLineArgs.add(platform)
+                }
+
+                commandLine(commandLineArgs)
+
+                doLast {
+                    exec {
+                        commandLine("podman", "save", "-o", "${dockerContextDir.path}/image.tar", imageName)
+                    }
+                }
+            }
+            podmanTask.configure {
+                dependsOn(tasks.named(ShadowJavaPlugin.SHADOW_JAR_TASK_NAME))
+                dependsOn(copyOtel)
+            }
+
+            val loadToKindTask = tasks.register("loadToKind") {
+                doFirst {
+                    exec {
+                        commandLine("kind", "load", "image-archive", "${dockerContextDir.path}/image.tar", "-n", "eonax-cluster")
+                        println("Image loaded to kind: $imageName")
+                    }
+                }
+            }
+            loadToKindTask.configure {
+                dependsOn(podmanTask)
+            }
+
+            val dockerTask: DockerBuildImage = tasks.create("dockerize", DockerBuildImage::class) {
+                project.plugins.apply("com.bmuschko.docker-remote-api")
+                images.add("${project.name}:latest")
+                // specify platform with the -Dplatform flag:
+                if (System.getProperty("platform") != null)
+                    platform.set(System.getProperty("platform"))
+                buildArgs.put("JAR", "build/libs/${project.name}.jar")
+                buildArgs.put("OTEL_JAR", "build/${agentFileOnBuildDirectory.name}")
+                inputDir.set(file(dockerContextDir))
+            }
+            // make sure  always runs after "dockerize" and after "copyOtel"
+            dockerTask.dependsOn(tasks.named(ShadowJavaPlugin.SHADOW_JAR_TASK_NAME))
+                .dependsOn(downloadOtel)
+        }
+    }
+}
+
+buildscript {
+    dependencies {
+        val edcGradlePluginsVersion: String by project
+        classpath("org.eclipse.edc.edc-build:org.eclipse.edc.edc-build.gradle.plugin:${edcGradlePluginsVersion}")
+    }
+}
+

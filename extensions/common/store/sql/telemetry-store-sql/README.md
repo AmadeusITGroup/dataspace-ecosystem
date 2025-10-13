@@ -1,0 +1,39 @@
+# SQL Asset
+
+Provides SQL persistence for telemetry record.
+
+
+
+## Prerequisites
+
+Please apply this [schema](src/main/resources/telemetry-record-schema.sql) to your SQL database.
+
+## Entity Diagram
+
+```plantuml
+@startuml
+entity edc_telemetry_record {
+  * record_id: string <<PK>>
+  * properties: string <<json>>
+  * state: int
+  * state_count: int
+  * state_time_stamp: long
+  * created_at: long
+  * updated_at: long
+  * trace_context: string <<json>>
+  * error_detail: string
+  --
+}
+@enduml
+
+```
+
+-->
+
+## Configuration
+
+| Key                             | Description                       | Mandatory | 
+|:--------------------------------|:----------------------------------|-----------|
+| edc.datasource.telemetry.record | Datasource used by this extension | X         |
+
+

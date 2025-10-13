@@ -1,0 +1,225 @@
+openapi: 3.0.1
+info:
+  description: This API is used to manipulate membership attestations
+  title: Issuer Service Membership Attestation API
+  version: "1"
+paths:
+  /v1alpha/participants/{participantContextId}/attestation-membership:
+    post:
+      description: Adds a new membership attestation.
+      operationId: createMembershipAttestation
+      parameters:
+      - in: path
+        name: participantContextId
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MembershipAttestationDto"
+      responses:
+        "201":
+          description: The membership attestation was added successfully.
+        "400":
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ApiErrorDetail"
+          description: "Request body was malformed, or the request could not be processed"
+        "409":
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ApiErrorDetail"
+          description: "Can't add the membership attestation, because a object with\
+            \ the same ID already exists"
+      tags:
+      - Membership Attestation Admin API
+    put:
+      description: Updates membership attestation.
+      operationId: updateMembershipAttestation
+      parameters:
+      - in: path
+        name: participantContextId
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MembershipAttestationDto"
+      responses:
+        "204":
+          description: The membership attestation was updated successfully.
+        "400":
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ApiErrorDetail"
+          description: "Request body was malformed, or the request could not be processed"
+        "401":
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ApiErrorDetail"
+          description: "The request could not be completed, because either the authentication\
+            \ was missing or was not valid."
+        "404":
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ApiErrorDetail"
+          description: Can't update the membership attestation because it was not
+            found.
+      tags:
+      - Membership Attestation Admin API
+  /v1alpha/participants/{participantContextId}/attestation-membership/request:
+    post:
+      description: Gets all membership attestations for a certain query.
+      operationId: queryMembershipAttestations
+      parameters:
+      - in: path
+        name: participantContextId
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuerySpec"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MembershipAttestation"
+          description: A list of membership attestations metadata.
+        "400":
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ApiErrorDetail"
+          description: "Request body was malformed, or the request could not be processed"
+      tags:
+      - Membership Attestation Admin API
+  /v1alpha/participants/{participantContextId}/attestation-membership/{id}:
+    delete:
+      description: Delete membership attestation.
+      operationId: deleteMembershipAttestation
+      parameters:
+      - in: path
+        name: participantContextId
+        required: true
+        schema:
+          type: string
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+      responses:
+        "204":
+          description: The membership attestation was deleted successfully.
+        "400":
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ApiErrorDetail"
+          description: "Request body was malformed, or the request could not be processed"
+        "404":
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ApiErrorDetail"
+          description: Can't delete membership attestation because it was not found.
+      tags:
+      - Membership Attestation Admin API
+components:
+  schemas:
+    ApiErrorDetail:
+      type: object
+      properties:
+        invalidValue:
+          type: object
+        message:
+          type: string
+        path:
+          type: string
+        type:
+          type: string
+    Criterion:
+      type: object
+      properties:
+        operandLeft:
+          type: object
+        operandRight:
+          type: object
+        operator:
+          type: string
+    MembershipAttestation:
+      type: object
+      properties:
+        holderId:
+          type: string
+        id:
+          type: string
+        membershipStartDate:
+          type: string
+          format: date-time
+        membershipType:
+          type: string
+        name:
+          type: string
+    MembershipAttestationDto:
+      type: object
+      properties:
+        holderId:
+          type: string
+        id:
+          type: string
+        membershipType:
+          type: string
+        name:
+          type: string
+    QuerySpec:
+      type: object
+      properties:
+        filterExpression:
+          type: array
+          items:
+            $ref: "#/components/schemas/Criterion"
+        limit:
+          type: integer
+          format: int32
+        offset:
+          type: integer
+          format: int32
+        sortField:
+          type: string
+        sortOrder:
+          type: string
+          enum:
+          - ASC
+          - DESC

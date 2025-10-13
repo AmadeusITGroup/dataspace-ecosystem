@@ -1,0 +1,426 @@
+package org.eclipse.edc.test.system;
+
+import com.azure.messaging.eventhubs.EventHubClientBuilder;
+import com.azure.messaging.eventhubs.EventHubConsumerAsyncClient;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.restassured.http.ContentType;
+import jakarta.json.JsonObject;
+import org.eclipse.edc.connector.controlplane.contract.spi.types.negotiation.ContractNegotiationStates;
+import org.eclipse.edc.connector.dataplane.spi.response.TransferErrorResponse;
+import org.eclipse.edc.junit.annotations.EndToEndTest;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.ArgumentsProvider;
+import org.junit.jupiter.params.provider.ArgumentsSource;
+
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Stream;
+
+import static io.restassured.RestAssured.given;
+import static io.restassured.http.ContentType.JSON;
+import static jakarta.ws.rs.core.Response.Status.INTERNAL_SERVER_ERROR;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
+import static org.eclipse.edc.connector.controlplane.test.system.utils.PolicyFixtures.atomicConstraint;
+import static org.eclipse.edc.connector.controlplane.transfer.spi.types.TransferProcessStates.TERMINATED;
+import static org.eclipse.edc.jsonld.spi.JsonLdKeywords.ID;
+import static org.eclipse.edc.spi.constants.CoreConstants.EDC_NAMESPACE;
+import static org.eclipse.edc.spi.core.CoreConstants.EONAX_POLICY_PREFIX;
+import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_FAILURE_REST_API;
+import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_REST_20_SEC_API;
+import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_REST_API;
+import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_REST_API_EMBEDDED_QUERY_PARAMS;
+import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_REST_API_OAUTH2;
+import static org.eclipse.edc.test.system.LocalProvider.EMBEDDED_QUERY_PARAM;
+import static org.eclipse.edc.test.system.LocalProvider.OAUTH2_CLIENT_SECRET;
+import static org.eclipse.edc.test.system.LocalProvider.OAUTH2_CLIENT_SECRET_KEY;
+import static org.eclipse.edc.test.system.LocalProvider.POLICY_RESTRICTED_API;
+import static org.eclipse.edc.test.system.PostgresDataVerifier.verifyData;
+import static org.eclipse.eonax.iam.policy.PolicyConstants.GENERIC_CLAIM_CONSTRAINT;
+import static org.eclipse.eonax.iam.policy.PolicyConstants.MEMBERSHIP_CREDENTIAL_TYPE;
+
+@EndToEndTest
+public class LocalEndToEndTests extends AbstractEndToEndTests {
+
+    private static final String EVENT_HUB_CONNECTION_STRING_ALIAS = "event-hub-connection-string";
+    private static final String EVENT_HUB_CONNECTION_STRING_SECRET = "Endpoint=sb://eventhubs;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;";
+    private static final String LOCAL_CONSUMER_EVENT_HUB_CONNECTION_STRING = "Endpoint=sb://localhost:52717;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;";
+    private static final String VAULT_TOKEN = "root";
+    private static final String EVENT_HUB_NAMESPACE = "local-eventhub-eventhubs";
+    private static final String EVENT_HUB_NAME = "eh1";
+
+    private static final LocalAuthority AUTHORITY = new LocalAuthority();
+    private static final LocalProvider PROVIDER = new LocalProvider();
+    private static final LocalConsumer CONSUMER = new LocalConsumer();
+
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private static final List<String> USED_CONTRACT_ID = new ArrayList<>();
+    private static EventHubConsumerAsyncClient consumer;
+
+    public static void initializeParticipant(AbstractEntity participant) {
+        AUTHORITY.createParticipant(participant.name(), participant.did());
+        participant.requestMembershipCredential(AUTHORITY.did(), MEMBERSHIP_CREDENTIAL_TYPE);
+    }
+
+
+    @BeforeAll
+    static void beforeAll() {
+        consumer = new EventHubClientBuilder()
+                .fullyQualifiedNamespace(EVENT_HUB_NAMESPACE)
+                .eventHubName(EVENT_HUB_NAME)
+                .connectionString(LOCAL_CONSUMER_EVENT_HUB_CONNECTION_STRING)
+                .consumerGroup("$default")
+                .buildAsyncConsumerClient();
+
+        // prepare authority
+        createKey(AUTHORITY, EVENT_HUB_CONNECTION_STRING_ALIAS, EVENT_HUB_CONNECTION_STRING_SECRET);
+        AUTHORITY.defineMembershipCredential();
+
+        // prepare participants
+        List.of(PROVIDER, CONSUMER, AUTHORITY).forEach(LocalEndToEndTests::initializeParticipant);
+
+        // seed provider data
+        seedData();
+    }
+
+
+    @AfterAll
+    public static void afterAll() {
+        consumer.receive(true)
+                .takeUntil(event -> {
+                    String contractId;
+                    String timestamp;
+                    String updatedTelemetryEvent;
+                    try {
+                        contractId = OBJECT_MAPPER.readTree(event.getData().getBodyAsString())
+                                .path("properties").path("contractId").asText();
+
+                        timestamp = OBJECT_MAPPER.readTree(event.getData().getBodyAsString())
+                                .path("createdAt").asText();
+
+                        // Parse the telemetryEvent JSON
+                        JsonNode telemetryEventNode = OBJECT_MAPPER.readTree(event.getData().getBodyAsString())
+                                .path("properties");
+
+                        // Add the timestamp to the telemetryEvent JSON
+                        if (telemetryEventNode.isObject()) {
+                            ((ObjectNode) telemetryEventNode).put("timestamp", timestamp);
+                        }
+
+                        // Convert the updated telemetryEvent JSON back to a string
+                        updatedTelemetryEvent = OBJECT_MAPPER.writeValueAsString(telemetryEventNode);
+
+                    } catch (JsonProcessingException e) {
+                        throw new RuntimeException(e);
+                    }
+                    USED_CONTRACT_ID.remove(contractId);
+
+
+                    given()
+                            .baseUri("%s".formatted(AUTHORITY.telemetryUrl()))
+                            .contentType(JSON)
+                            .body(updatedTelemetryEvent)
+                            .post()
+                            .then()
+                            .log().ifError()
+                            .statusCode(201);
+
+                    if (!verifyData(contractId)) {
+                        System.out.println("Data verification failed for contract ID: " + contractId);
+                    }
+
+                    return USED_CONTRACT_ID.isEmpty(); // we will take msg until the list is empty
+                })
+                .timeout(Duration.ofMinutes(1))
+                .doOnError(error -> {
+                    if (!USED_CONTRACT_ID.isEmpty()) {
+                        throw new RuntimeException("Timeout: usedContractId is not empty after 1 minute. Remaining elements: " + USED_CONTRACT_ID);
+                    }
+                })
+                .blockLast(); // This will block until the last message is received
+        consumer.close();
+    }
+
+    private static void seedData() {
+        // basic api
+        PROVIDER.createEntry(ASSET_ID_REST_API, "Test Asset REST", "a basic REST API", Map.of(
+                "type", "HttpData",
+                "baseUrl", "http://provider-backend:8080/api/provider/data",
+                "proxyQueryParams", Boolean.TRUE.toString()
+        ), genericClaimConstraint(MEMBERSHIP_CREDENTIAL_TYPE, "name", "odrl:eq", "consumer"));
+
+        // api returning not authorized
+        PROVIDER.createEntry(ASSET_ID_FAILURE_REST_API, "Failure REST API", "a REST API returning not authorized", Map.of(
+                "type", "HttpData",
+                "baseUrl", "http://provider-backend:8080/api/provider/failure"
+        ));
+
+        // api with embedded query params
+        PROVIDER.createEntry(ASSET_ID_REST_API_EMBEDDED_QUERY_PARAMS, "Test Asset REST embedded query params", "a REST API with query params in the address", Map.of(
+                "type", "HttpData",
+                "baseUrl", "http://provider-backend:8080/api/provider/data",
+                "queryParams", "message=%s".formatted(EMBEDDED_QUERY_PARAM),
+                "proxyQueryParams", Boolean.TRUE.toString()
+        ));
+
+        // oauth2 api
+        PROVIDER.createSecret(OAUTH2_CLIENT_SECRET_KEY, OAUTH2_CLIENT_SECRET);
+        PROVIDER.createEntry(ASSET_ID_REST_API_OAUTH2, "Test Asset REST Oauth2", "a REST API with oauth2 authorization", Map.of(
+                "type", "HttpData",
+                "baseUrl", "http://provider-backend:8080/api/provider/oauth2data",
+                "proxyQueryParams", Boolean.TRUE.toString(),
+                "oauth2:clientId", "clientId",
+                "oauth2:clientSecretKey", OAUTH2_CLIENT_SECRET_KEY,
+                "oauth2:tokenUrl", "http://provider-backend:8080/api/oauth2/token"
+        ));
+
+        // asset with policy on claim that is not satisfied by any member
+        PROVIDER.createEntry(POLICY_RESTRICTED_API, "Restricted API", "An API with a restricted policy", Map.of(
+                "type", "HttpData",
+                "baseUrl", "http://example.com"
+        ), genericClaimConstraint(MEMBERSHIP_CREDENTIAL_TYPE, "name", "odrl:eq", "unknown"));
+
+        // basic api
+        PROVIDER.createEntry(ASSET_ID_REST_20_SEC_API, "Test Asset REST - 10sec", "a basic REST API available for 10 seconds", Map.of(
+                "type", "HttpData",
+                "baseUrl", "http://provider-backend:8080/api/provider/data",
+                "proxyQueryParams", Boolean.TRUE.toString()
+        ), atomicConstraint("inForceDate", "lteq", "contractAgreement+20s"));
+    }
+
+    private static JsonObject genericClaimConstraint(String credentialType, String path, String operator, String rightOperand) {
+        return atomicConstraint("%s:%s.$.%s.%s".formatted(EONAX_POLICY_PREFIX, GENERIC_CLAIM_CONSTRAINT, credentialType, path), operator, rightOperand);
+    }
+
+    private static void createKey(AbstractEntity entity, String key, String value) {
+        var body = Map.of(
+                "data", Map.of(
+                        "content", value
+                )
+        );
+
+        given()
+                .baseUri("%s/v1/secret/data/%s".formatted(entity.vaultUrl(), key))
+                .contentType(ContentType.JSON)
+                .header("X-Vault-Token", VAULT_TOKEN)
+                .body(body)
+                .post()
+                .then()
+                .log().ifError()
+                .statusCode(200);
+    }
+
+    @Nested
+    class CatalogTest {
+
+        @Test
+        void catalog_provider() {
+            var assets = Set.of(
+                    ASSET_ID_REST_API,
+                    ASSET_ID_REST_API_EMBEDDED_QUERY_PARAMS,
+                    ASSET_ID_REST_API_OAUTH2,
+                    POLICY_RESTRICTED_API,
+                    ASSET_ID_REST_20_SEC_API,
+                    ASSET_ID_FAILURE_REST_API
+            );
+
+            assertThat(queryParticipantDatasets(AUTHORITY, PROVIDER.did()))
+                    .allSatisfy(dataset -> assertThat(assets).contains(dataset.getString(ID)))
+                    .allSatisfy(dataset -> assertThat(dataset.get(EDC_NAMESPACE + "createdAt")).isNotNull());
+        }
+
+        @Test
+        void catalog_consumer() {
+            assertThat(queryParticipantDatasets(AUTHORITY, CONSUMER.did())).isEmpty();
+        }
+
+    }
+
+    @Nested
+    class TransferTest {
+
+        @ParameterizedTest
+        @ArgumentsSource(TransferTestProvider.class)
+        void transfer_success(Map<String, String> queryParams, String assetId, String expected) {
+            var expectedMsg = Map.of("message", expected);
+            var transferProcessId = negotiationContractAndStartTransfer(CONSUMER, PROVIDER, assetId);
+
+            // query by contract id
+            var contractId = getContractIdFromTransferProcess(CONSUMER, transferProcessId);
+            USED_CONTRACT_ID.add(contractId);
+            await().atMost(TEST_TIMEOUT).untilAsserted(() -> {
+                var data = CONSUMER.queryData(contractId, queryParams, 200, Map.class);
+                assertThat(data).isEqualTo(expectedMsg);
+            });
+        }
+
+        @Test
+        void transfer_failure() {
+            var transferProcessId = negotiationContractAndStartTransfer(CONSUMER, PROVIDER, ASSET_ID_FAILURE_REST_API);
+
+            var contractId = getContractIdFromTransferProcess(CONSUMER, transferProcessId);
+            USED_CONTRACT_ID.add(contractId);
+            await().atMost(TEST_TIMEOUT).untilAsserted(() -> {
+                var response = CONSUMER.queryData(contractId, Map.of(), INTERNAL_SERVER_ERROR.getStatusCode(), TransferErrorResponse.class);
+                assertThat(response.getErrors()).containsExactly("Received code transferring HTTP data: 500 - Server Error.");
+            });
+        }
+
+        @Test
+        void transfer_whenContractExpiration_shouldTerminateTransferProcessAtExpiration() {
+            var message = UUID.randomUUID().toString();
+            var expectedMsg = Map.of("message", message);
+            Map<String, String> queryParams = Map.of("message", message);
+            var transferProcessId = negotiationContractAndStartTransfer(CONSUMER, PROVIDER, ASSET_ID_REST_20_SEC_API);
+            var contractId = getContractIdFromTransferProcess(CONSUMER, transferProcessId);
+            USED_CONTRACT_ID.add(contractId);
+            await().atMost(TEST_TIMEOUT).untilAsserted(() -> {
+                var data = CONSUMER.queryData(contractId, queryParams, 200, Object.class);
+                assertThat(data).isEqualTo(expectedMsg);
+            });
+
+            // check that after some time, the transfer process gets deprovisioned
+            await().atMost(TEST_TIMEOUT).untilAsserted(() -> {
+                var state = CONSUMER.participantClient().getTransferProcessState(transferProcessId);
+                assertThat(state).isEqualTo(TERMINATED.name());
+            });
+
+            await().atMost(TEST_TIMEOUT).untilAsserted(() -> CONSUMER.queryData(contractId, Map.of(), 403, TransferErrorResponse.class));
+        }
+
+        @Test
+        void transfer_whenPolicyNotMatched_shouldTerminate() {
+            var negoId = CONSUMER.participantClient().initContractNegotiation(PROVIDER.participantClient(), POLICY_RESTRICTED_API);
+            await().atMost(TEST_TIMEOUT).untilAsserted(() -> {
+                var state = CONSUMER.participantClient().getContractNegotiationState(negoId);
+                assertThat(state).isEqualTo(ContractNegotiationStates.TERMINATED.name());
+            });
+        }
+
+        private String getContractIdFromTransferProcess(AbstractParticipant consumer, String transferProcessId) {
+            return consumer.participantClient().baseManagementRequest()
+                    .when()
+                    .get("/v3/transferprocesses/" + transferProcessId)
+                    .then()
+                    .statusCode(200)
+                    .extract().body().jsonPath().getString("contractId");
+        }
+
+        public static class TransferTestProvider implements ArgumentsProvider {
+
+            @Override
+            public Stream<? extends Arguments> provideArguments(ExtensionContext extensionContext) {
+                var msg = UUID.randomUUID().toString();
+                return Stream.of(
+                        Arguments.of(Map.of("message", msg), ASSET_ID_REST_API, msg),
+                        Arguments.of(Map.of("message", msg), ASSET_ID_REST_API_OAUTH2, msg),
+                        Arguments.of(Map.of(), ASSET_ID_REST_API_EMBEDDED_QUERY_PARAMS, EMBEDDED_QUERY_PARAM)
+                );
+            }
+        } 
+
+        protected void transferProcess(AbstractParticipant consumer, AbstractParticipant provider, String contractId) {
+            var providerUrl = provider.controlPlaneProtocolUrl();
+            var consumerDid = consumer.did();
+            var body = Map.of(
+                    "@context", Map.of(
+                            "@vocab", "https://w3id.org/edc/v0.0.1/ns/"
+                    ),
+                    "@type", "TransferRequest",
+                    "counterPartyAddress", providerUrl,
+                    "protocol", "dataspace-protocol-http",
+                    "connectorId", consumerDid,
+                    "contractId", contractId,
+                    "transferType", "HttpData-PULL"
+            );
+            consumer.participantClient().baseManagementRequest()
+            .contentType(ContentType.JSON)
+            .body(body)
+            .when()
+            .post("/v3/transferprocesses")
+            .then()
+            .log().ifError()
+            .statusCode(200);
+        }
+
+        private void retireAgreement(AbstractParticipant participant, String contractId, String reason) {
+            var body = Map.of(
+                    "@context", Map.of(
+                            "eonax", "https://w3id.org/eonax/v0.0.1/ns/",
+                            "edc", "https://w3id.org/edc/v0.0.1/ns/"
+                    ),
+                    "edc:agreementId", contractId,
+                    "eonax:reason", reason
+            );
+        
+            participant.participantClient().baseManagementRequest()
+                    .contentType(ContentType.JSON)
+                    .body(body)
+                    .when()
+                    .post("/v3.1alpha/retireagreements")
+                    .then()
+                    .log().ifError()
+                    .statusCode(204);
+        }
+
+        private void reactivateAgreement(AbstractParticipant participant, String contractId) {
+            participant.participantClient().baseManagementRequest()
+                    .contentType(ContentType.JSON)
+                    .when()
+                    .delete("/v3.1alpha/retireagreements/" + contractId)
+                    .then()
+                    .log().ifError()
+                    .statusCode(204);
+        }
+
+        @Test
+        void transfer_retireAgreement_shouldBlockFurtherAccess() {
+            var message = UUID.randomUUID().toString();
+            Map<String, String> queryParams = Map.of("message", message);
+            var expectedMsg = Map.of("message", message);
+
+            // Negotiate and transfer
+            var transferProcessId = negotiationContractAndStartTransfer(CONSUMER, PROVIDER, ASSET_ID_REST_API);
+            var contractId = getContractIdFromTransferProcess(CONSUMER, transferProcessId);
+            USED_CONTRACT_ID.add(contractId);
+            // Confirm data access works
+            await().atMost(TEST_TIMEOUT).untilAsserted(() -> {
+                var data = CONSUMER.queryData(contractId, queryParams, 200, Map.class);
+                assertThat(data).isEqualTo(expectedMsg);
+            });
+
+            // Retire the agreement
+            retireAgreement(PROVIDER, contractId, "Test retirement reason");
+
+            // Confirm data access is blocked after retirement
+            await().atMost(TEST_TIMEOUT).untilAsserted(() -> {
+                var error = CONSUMER.queryData(contractId, queryParams, 403, TransferErrorResponse.class);
+                assertThat(error.getErrors()).anyMatch(msg -> msg.contains("No EDR satisfying criterion"));
+            });
+            // Reactivate the agreement
+            reactivateAgreement(PROVIDER, contractId);
+            // Confirm data access is opened after reactivation
+            transferProcess(CONSUMER, PROVIDER, contractId);
+            await().atMost(TEST_TIMEOUT).untilAsserted(() -> {
+                var data = CONSUMER.queryData(contractId, queryParams, 200, Map.class);
+                assertThat(data).isEqualTo(expectedMsg);
+            });
+        }
+
+    }
+    
+
+}

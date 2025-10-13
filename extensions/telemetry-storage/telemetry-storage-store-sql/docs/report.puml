@@ -1,0 +1,10 @@
+@startuml
+entity report {
+    * id : serial [PK]
+    --
+    * csv_name : varchar
+    * csv_link : varchar
+    * participant_did : varchar [FK]
+    * timestamp : timestamp
+}
+@enduml

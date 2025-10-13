@@ -1,0 +1,117 @@
+/*
+ *  Copyright (c) 2024 Amadeus SA
+ *
+ *  This program and the accompanying materials are made available under the
+ *  terms of the Apache License, Version 2.0 which is available at
+ *  https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  SPDX-License-Identifier: Apache-2.0
+ *
+ *  Contributors:
+ *       2024 Amadeus SA - initial API and implementation
+ */
+
+package org.eclipse.edc.telemetry.store.sql.schema;
+
+import org.eclipse.edc.spi.query.QuerySpec;
+import org.eclipse.edc.sql.translation.SqlOperatorTranslator;
+import org.eclipse.edc.sql.translation.SqlQueryStatement;
+import org.eclipse.edc.telemetry.store.sql.schema.postgres.SqlTelemetryRecordMapping;
+
+import static java.lang.String.format;
+
+public class TelemetryBaseSqlDialectStatements implements TelemetryRecordStatements {
+
+    protected final SqlOperatorTranslator operatorTranslator;
+
+    public TelemetryBaseSqlDialectStatements(SqlOperatorTranslator operatorTranslator) {
+        this.operatorTranslator = operatorTranslator;
+    }
+
+    @Override
+    public String getInsertTelemetryRecordTemplate() {
+        return executeStatement()
+                .column(getRecordIdColumn())
+                .column(getTypeColumn())
+                .jsonColumn(getPropertiesColumn())
+                .column(getStateColumn())
+                .column(getStateCountColumn())
+                .column(getStateTimestampColumn())
+                .column(getErrorDetailColumn())
+                .jsonColumn(getTraceContextColumn())
+                .column(getCreatedAtColumn())
+                .column(getUpdatedAtColumn())
+                .insertInto(getTelemetryRecordTable());
+    }
+
+    @Override
+    public String getUpdateTelemetryRecordTemplate() {
+        return executeStatement()
+                .jsonColumn(getPropertiesColumn())
+                .column(getStateColumn())
+                .column(getStateCountColumn())
+                .column(getStateTimestampColumn())
+                .column(getErrorDetailColumn())
+                .jsonColumn(getTraceContextColumn())
+                .column(getUpdatedAtColumn())
+                .update(getTelemetryRecordTable(), getRecordIdColumn());
+    }
+
+    @Override
+    public String getCountTelemetryRecordByIdClause() {
+        return format("SELECT COUNT(*) AS %s FROM %s WHERE %s = ?",
+                getCountVariableName(),
+                getTelemetryRecordTable(),
+                getRecordIdColumn());
+    }
+
+    @Override
+    public String getSelectTelemetryRecordTemplate() {
+        return format("SELECT * FROM %s AS a", getTelemetryRecordTable());
+    }
+
+    @Override
+    public String getDeleteTelemetryRecordByIdTemplate() {
+        return executeStatement()
+                .delete(getTelemetryRecordTable(), getRecordIdColumn());
+    }
+
+    @Override
+    public String getCountVariableName() {
+        return "COUNT";
+    }
+
+    @Override
+    public SqlQueryStatement createQuery(QuerySpec query) {
+        return new SqlQueryStatement(getSelectTelemetryRecordTemplate(), query, new SqlTelemetryRecordMapping(this),
+                operatorTranslator);
+    }
+
+    @Override
+    public String getDeleteLeaseTemplate() {
+        return executeStatement().delete(getLeaseTableName(), getLeaseIdColumn());
+    }
+
+    @Override
+    public String getInsertLeaseTemplate() {
+        return executeStatement()
+                .column(getLeaseIdColumn())
+                .column(getLeasedByColumn())
+                .column(getLeasedAtColumn())
+                .column(getLeaseDurationColumn())
+                .insertInto(getLeaseTableName());
+    }
+
+    @Override
+    public String getUpdateLeaseTemplate() {
+        return executeStatement()
+                .column(getLeaseIdColumn())
+                .update(getTelemetryRecordTable(), getIdColumn());
+    }
+
+    @Override
+    public String getFindLeaseByEntityTemplate() {
+        return format("SELECT * FROM %s  WHERE %s = (SELECT lease_id FROM %s WHERE %s=? )",
+                getLeaseTableName(), getLeaseIdColumn(), getTelemetryRecordTable(), getIdColumn());
+    }
+}

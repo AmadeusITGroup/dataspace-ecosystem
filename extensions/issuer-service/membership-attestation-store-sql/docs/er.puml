@@ -1,0 +1,10 @@
+@startuml
+entity membership_attestation {
+    * id : varchar [PK] <<generated>>
+    --
+    * membership_type : varchar
+    * holder_id : varchar
+    * name : varchar
+    * membership_start_date : timestamp <<default: now()>>
+}
+@enduml

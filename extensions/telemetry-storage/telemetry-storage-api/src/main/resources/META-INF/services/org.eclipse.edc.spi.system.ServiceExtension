@@ -1,0 +1,2 @@
+org.eclipse.edc.telemetrystorage.TelemetryStorageCoreExtension
+org.eclipse.edc.telemetrystorage.TelemetryServiceDefaultServicesExtension

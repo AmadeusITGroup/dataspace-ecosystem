@@ -1,0 +1,8 @@
+@startuml
+entity participant_id {
+    * id : varchar [PK]
+    --
+    * email : varchar
+    * timestamp : timestamp
+}
+@enduml
