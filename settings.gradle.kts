@@ -25,6 +25,7 @@ include(":extensions:data-plane:data-plane-public-api-v2")
 include(":extensions:data-plane:data-plane-data-consumption-metrics")
 
 include(":extensions:control-plane:asset-custom-property-subscriber")
+include(":extensions:control-plane:transfer-data-plane-signal-kafka")
 
 include(":extensions:issuer-service:membership-attestation-api")
 include(":extensions:issuer-service:membership-attestation-store-sql")

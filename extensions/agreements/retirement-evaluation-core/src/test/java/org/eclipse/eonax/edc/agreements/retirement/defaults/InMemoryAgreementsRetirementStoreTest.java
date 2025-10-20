@@ -17,11 +17,11 @@
  * SPDX-License-Identifier: Apache-2.0
  ********************************************************************************/
 
-package org.eclipse.eonax.edc.agreements.retirement.defaults;
+package org.eclipse.edc.eonax.agreements.retirement.defaults;
 
+import org.eclipse.edc.eonax.agreements.retirement.spi.store.AgreementsRetirementStore;
+import org.eclipse.edc.eonax.agreements.retirement.store.AgreementsRetirementStoreTestBase;
 import org.eclipse.edc.query.CriterionOperatorRegistryImpl;
-import org.eclipse.eonax.edc.agreements.retirement.spi.store.AgreementsRetirementStore;
-import org.eclipse.eonax.edc.agreements.retirement.store.AgreementsRetirementStoreTestBase;
 
 
 public class InMemoryAgreementsRetirementStoreTest extends AgreementsRetirementStoreTestBase {

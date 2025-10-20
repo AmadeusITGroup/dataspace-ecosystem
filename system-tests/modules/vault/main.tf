@@ -97,26 +97,22 @@ resource "kubernetes_job" "vault-keygen-job" {
     }
   }
 
+
   spec {
     ttl_seconds_after_finished = 3600
     backoff_limit              = 2
-
     template {
-
       metadata {
         name = "${var.participant_name}-vault-keygen-job"
         labels = {
           app = "${var.participant_name}-vault-keygen-job"
         }
       }
-
       spec {
         restart_policy = "Never"
-
         container {
           name  = "keygen"
           image = "hashicorp/vault"
-
           command = [
             "sh",
             "-c",
@@ -128,12 +124,10 @@ resource "kubernetes_job" "vault-keygen-job" {
               vault kv put secret/${var.participant_name}-pub content="$(cat publickey.pem)"
             EOF
           ]
-
           env {
             name  = "VAULT_ADDR"
             value = "http://${var.participant_name}-vault:${local.vault_port}"
           }
-
           env {
             name  = "VAULT_TOKEN"
             value = local.vault_token
@@ -142,8 +136,8 @@ resource "kubernetes_job" "vault-keygen-job" {
       }
     }
   }
-
   depends_on = [helm_release.vault]
+  wait_for_completion = true
 }
 
 

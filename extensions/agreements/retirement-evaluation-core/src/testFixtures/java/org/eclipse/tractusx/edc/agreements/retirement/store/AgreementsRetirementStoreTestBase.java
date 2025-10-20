@@ -17,20 +17,20 @@
  * SPDX-License-Identifier: Apache-2.0
  ********************************************************************************/
 
-package org.eclipse.eonax.edc.agreements.retirement.store;
+package org.eclipse.edc.eonax.agreements.retirement.store;
 
+import org.eclipse.edc.eonax.agreements.retirement.spi.store.AgreementsRetirementStore;
+import org.eclipse.edc.eonax.agreements.retirement.spi.types.AgreementsRetirementEntry;
 import org.eclipse.edc.spi.query.Criterion;
 import org.eclipse.edc.spi.query.QuerySpec;
-import org.eclipse.eonax.edc.agreements.retirement.spi.store.AgreementsRetirementStore;
-import org.eclipse.eonax.edc.agreements.retirement.spi.types.AgreementsRetirementEntry;
 import org.junit.jupiter.api.Test;
 
 import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.eclipse.edc.eonax.agreements.retirement.spi.store.AgreementsRetirementStore.ALREADY_EXISTS_TEMPLATE;
+import static org.eclipse.edc.eonax.agreements.retirement.spi.store.AgreementsRetirementStore.NOT_FOUND_IN_RETIREMENT_TEMPLATE;
 import static org.eclipse.edc.junit.assertions.AbstractResultAssert.assertThat;
-import static org.eclipse.eonax.edc.agreements.retirement.spi.store.AgreementsRetirementStore.ALREADY_EXISTS_TEMPLATE;
-import static org.eclipse.eonax.edc.agreements.retirement.spi.store.AgreementsRetirementStore.NOT_FOUND_IN_RETIREMENT_TEMPLATE;
 
 public abstract class AgreementsRetirementStoreTestBase {
 

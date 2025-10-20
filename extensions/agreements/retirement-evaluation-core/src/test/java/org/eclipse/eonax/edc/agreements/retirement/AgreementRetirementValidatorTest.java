@@ -17,13 +17,13 @@
  * SPDX-License-Identifier: Apache-2.0
  ********************************************************************************/
 
-package org.eclipse.eonax.edc.agreements.retirement;
+package org.eclipse.edc.eonax.agreements.retirement;
 
 
 import org.eclipse.edc.connector.controlplane.contract.spi.types.agreement.ContractAgreement;
+import org.eclipse.edc.eonax.agreements.retirement.spi.service.AgreementsRetirementService;
 import org.eclipse.edc.policy.engine.spi.PolicyContext;
 import org.eclipse.edc.policy.model.Policy;
-import org.eclipse.eonax.edc.agreements.retirement.spi.service.AgreementsRetirementService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

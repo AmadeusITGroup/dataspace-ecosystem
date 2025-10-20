@@ -7,7 +7,7 @@ dependencies {
     runtimeOnly(project(":extensions:data-plane:data-plane-data-consumption-metrics"))
     runtimeOnly(project(":core:common:telemetry-record-store"))
 
-
+    runtimeOnly(libs.edc.ext.dpf.kafka)
     runtimeOnly(libs.edc.core.edr.store)
     runtimeOnly(libs.bundles.connector)
     runtimeOnly(libs.edc.dataplane.bom)

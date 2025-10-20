@@ -28,6 +28,7 @@ public class AbstractEndToEndTests {
     private static final Monitor MONITOR = new ConsoleMonitor();
     private static final JsonLd JSON_LD = new TitaniumJsonLd(MONITOR);
     private static final Duration TEST_POLL_INTERVAL = Duration.ofMillis(500);
+    public static final String HTTP_DATA_PULL = "HttpData-PULL";
 
     protected List<JsonObject> queryParticipantDatasets(AbstractAuthority authority, String participantDid) {
         AtomicReference<List<JsonObject>> datasets = new AtomicReference<>();
@@ -49,8 +50,12 @@ public class AbstractEndToEndTests {
     }
 
     protected String negotiationContractAndStartTransfer(AbstractParticipant consumer, AbstractParticipant provider, String assetId) {
+        return negotiationContractAndStartTransfer(consumer, provider, assetId, HTTP_DATA_PULL);
+    }
+
+    protected String negotiationContractAndStartTransfer(AbstractParticipant consumer, AbstractParticipant provider, String assetId, String transferType) {
         var transferProcessId = consumer.participantClient().requestAssetFrom(assetId, provider.participantClient())
-                .withTransferType("HttpData-PULL")
+                .withTransferType(transferType)
                 .execute();
 
         await().atMost(TEST_TIMEOUT).untilAsserted(() -> {

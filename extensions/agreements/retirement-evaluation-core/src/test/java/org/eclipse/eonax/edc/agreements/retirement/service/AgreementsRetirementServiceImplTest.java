@@ -17,18 +17,18 @@
  * SPDX-License-Identifier: Apache-2.0
  ********************************************************************************/
 
-package org.eclipse.eonax.edc.agreements.retirement.service;
+package org.eclipse.edc.eonax.agreements.retirement.service;
 
 import org.eclipse.edc.connector.controlplane.contract.spi.types.agreement.ContractAgreement;
 import org.eclipse.edc.connector.controlplane.services.spi.contractagreement.ContractAgreementService;
+import org.eclipse.edc.eonax.agreements.retirement.spi.service.AgreementsRetirementService;
+import org.eclipse.edc.eonax.agreements.retirement.spi.store.AgreementsRetirementStore;
+import org.eclipse.edc.eonax.agreements.retirement.spi.types.AgreementsRetirementEntry;
 import org.eclipse.edc.spi.query.Criterion;
 import org.eclipse.edc.spi.query.QuerySpec;
 import org.eclipse.edc.spi.result.StoreResult;
 import org.eclipse.edc.transaction.spi.NoopTransactionContext;
 import org.eclipse.edc.transaction.spi.TransactionContext;
-import org.eclipse.eonax.edc.agreements.retirement.spi.service.AgreementsRetirementService;
-import org.eclipse.eonax.edc.agreements.retirement.spi.store.AgreementsRetirementStore;
-import org.eclipse.eonax.edc.agreements.retirement.spi.types.AgreementsRetirementEntry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

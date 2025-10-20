@@ -1,4 +1,4 @@
-package org.eclipse.eonax.telemetry.api;
+package org.eclipse.edc.eonax.telemetry.api;
 
 import io.restassured.specification.RequestSpecification;
 import org.eclipse.edc.junit.annotations.ApiTest;

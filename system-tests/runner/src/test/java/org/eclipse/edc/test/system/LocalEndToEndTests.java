@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.restassured.http.ContentType;
+import jakarta.json.Json;
 import jakarta.json.JsonObject;
 import org.eclipse.edc.connector.controlplane.contract.spi.types.negotiation.ContractNegotiationStates;
 import org.eclipse.edc.connector.dataplane.spi.response.TransferErrorResponse;
@@ -40,6 +41,7 @@ import static org.eclipse.edc.jsonld.spi.JsonLdKeywords.ID;
 import static org.eclipse.edc.spi.constants.CoreConstants.EDC_NAMESPACE;
 import static org.eclipse.edc.spi.core.CoreConstants.EONAX_POLICY_PREFIX;
 import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_FAILURE_REST_API;
+import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_KAFKA_STREAM;
 import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_REST_20_SEC_API;
 import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_REST_API;
 import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_REST_API_EMBEDDED_QUERY_PARAMS;
@@ -55,6 +57,7 @@ import static org.eclipse.eonax.iam.policy.PolicyConstants.MEMBERSHIP_CREDENTIAL
 @EndToEndTest
 public class LocalEndToEndTests extends AbstractEndToEndTests {
 
+    public static final String KAFKA_BROKER_PULL = "KafkaBroker-PULL";
     private static final String EVENT_HUB_CONNECTION_STRING_ALIAS = "event-hub-connection-string";
     private static final String EVENT_HUB_CONNECTION_STRING_SECRET = "Endpoint=sb://eventhubs;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;";
     private static final String LOCAL_CONSUMER_EVENT_HUB_CONNECTION_STRING = "Endpoint=sb://localhost:52717;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;";
@@ -199,6 +202,18 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
                 "baseUrl", "http://provider-backend:8080/api/provider/data",
                 "proxyQueryParams", Boolean.TRUE.toString()
         ), atomicConstraint("inForceDate", "lteq", "contractAgreement+20s"));
+
+        // Kafka properties
+        JsonObject jsonObject = Json.createObjectBuilder()
+                .add("topic", "my-topic")
+                .add("kafka.bootstrap.servers", "PLAINTEXT://localhost:32783")
+                .add("security.protocol", "SASL_PLAINTEXT")
+                .add("sasl.mechanism", "PLAIN")
+                .add("sasl.jaas.config", "org.apache.kafka.common.security.plain.PlainLoginModule required username='your-user' password='your-password'").build();
+        PROVIDER.createEntry(ASSET_ID_KAFKA_STREAM, "Test Asset Kafka", "a basic kafka stream", Map.of(
+                "type", "Kafka",
+                "properties", jsonObject
+        ), genericClaimConstraint(MEMBERSHIP_CREDENTIAL_TYPE, "name", "odrl:eq", "consumer"));
     }
 
     private static JsonObject genericClaimConstraint(String credentialType, String path, String operator, String rightOperand) {
@@ -234,7 +249,8 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
                     ASSET_ID_REST_API_OAUTH2,
                     POLICY_RESTRICTED_API,
                     ASSET_ID_REST_20_SEC_API,
-                    ASSET_ID_FAILURE_REST_API
+                    ASSET_ID_FAILURE_REST_API,
+                    ASSET_ID_KAFKA_STREAM
             );
 
             assertThat(queryParticipantDatasets(AUTHORITY, PROVIDER.did()))
@@ -265,6 +281,12 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
                 var data = CONSUMER.queryData(contractId, queryParams, 200, Map.class);
                 assertThat(data).isEqualTo(expectedMsg);
             });
+        }
+
+        @Test
+        void transfer_kafka_stream() {
+            var transferProcessId = negotiationContractAndStartTransfer(CONSUMER, PROVIDER, ASSET_ID_KAFKA_STREAM, KAFKA_BROKER_PULL);
+            getContractIdFromTransferProcess(CONSUMER, transferProcessId);
         }
 
         @Test
@@ -370,7 +392,7 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
                     .contentType(ContentType.JSON)
                     .body(body)
                     .when()
-                    .post("/v3.1alpha/retireagreements")
+                    .post("/v3/contractagreements/retirements")
                     .then()
                     .log().ifError()
                     .statusCode(204);
@@ -380,7 +402,7 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
             participant.participantClient().baseManagementRequest()
                     .contentType(ContentType.JSON)
                     .when()
-                    .delete("/v3.1alpha/retireagreements/" + contractId)
+                    .delete("/v3/contractagreements/retirements/" + contractId)
                     .then()
                     .log().ifError()
                     .statusCode(204);

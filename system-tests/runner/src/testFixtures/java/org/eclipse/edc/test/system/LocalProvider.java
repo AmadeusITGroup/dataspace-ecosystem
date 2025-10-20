@@ -9,6 +9,7 @@ public class LocalProvider extends AbstractParticipant {
     public static final String ASSET_ID_REST_API_OAUTH2 = "rest-api-oauth2";
     public static final String POLICY_RESTRICTED_API = "restricted-api";
     public static final String ASSET_ID_REST_20_SEC_API = "rest-api-20s";
+    public static final String ASSET_ID_KAFKA_STREAM = "kafka-stream";
     public static final String OAUTH2_CLIENT_SECRET_KEY = "oauth-secret";
     public static final String OAUTH2_CLIENT_SECRET = "supersecret";
 

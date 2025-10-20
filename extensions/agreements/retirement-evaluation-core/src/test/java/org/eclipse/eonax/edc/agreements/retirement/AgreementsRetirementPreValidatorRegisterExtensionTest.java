@@ -17,7 +17,7 @@
  * SPDX-License-Identifier: Apache-2.0
  ********************************************************************************/
 
-package org.eclipse.eonax.edc.agreements.retirement;
+package org.eclipse.edc.eonax.agreements.retirement;
 
 
 import org.eclipse.edc.connector.controlplane.contract.spi.policy.TransferProcessPolicyContext;

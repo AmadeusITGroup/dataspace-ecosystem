@@ -86,6 +86,7 @@ edc-api-control-config = { module = "org.eclipse.edc:control-api-configuration",
 edc-api-management = { module = "org.eclipse.edc:management-api", version.ref = "edc" }
 edc-dpf-api-public-v2 = { module = "org.eclipse.edc:data-plane-public-api-v2", version.ref = "edc" }
 edc-ext-dpf-http = { module = "org.eclipse.edc:data-plane-http", version.ref = "edc" }
+edc-ext-dpf-kafka = { module = "org.eclipse.edc:data-plane-kafka", version.ref = "edc" }
 edc-ext-dpf-util = { module = "org.eclipse.edc:data-plane-util", version.ref = "edc" }
 edc-ext-dpf-core = { module = "org.eclipse.edc:data-plane-core", version.ref = "edc" }
 edc-sql-lease = { module = "org.eclipse.edc:sql-lease", version.ref = "edc" }

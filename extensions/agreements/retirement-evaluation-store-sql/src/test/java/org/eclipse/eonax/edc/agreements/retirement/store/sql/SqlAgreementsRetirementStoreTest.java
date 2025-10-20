@@ -17,15 +17,15 @@
  * SPDX-License-Identifier: Apache-2.0
  ********************************************************************************/
 
-package org.eclipse.eonax.edc.agreements.retirement.store.sql;
+package org.eclipse.edc.eonax.agreements.retirement.store.sql;
 
+import org.eclipse.edc.eonax.agreements.retirement.spi.store.AgreementsRetirementStore;
+import org.eclipse.edc.eonax.agreements.retirement.store.AgreementsRetirementStoreTestBase;
 import org.eclipse.edc.json.JacksonTypeManager;
 import org.eclipse.edc.junit.annotations.PostgresqlIntegrationTest;
 import org.eclipse.edc.spi.types.TypeManager;
 import org.eclipse.edc.sql.QueryExecutor;
 import org.eclipse.edc.sql.testfixtures.PostgresqlStoreSetupExtension;
-import org.eclipse.eonax.edc.agreements.retirement.spi.store.AgreementsRetirementStore;
-import org.eclipse.eonax.edc.agreements.retirement.store.AgreementsRetirementStoreTestBase;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
