@@ -5,6 +5,7 @@ plugins {
 dependencies {
     runtimeOnly(project(":extensions:common:vc-revocation-patch"))
     runtimeOnly(project(":extensions:issuer-service:membership-attestation-api"))
+    runtimeOnly(project(":extensions:issuer-service:domain-attestation-api"))
 
     runtimeOnly(libs.edc.issuerservice.db.attestations)
     runtimeOnly(libs.edc.issuerservice.bom) {

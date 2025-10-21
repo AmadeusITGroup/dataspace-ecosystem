@@ -21,6 +21,7 @@ dependencies {
 
     testFixturesImplementation(project(":spi:common-spi"))
     testFixturesImplementation(project(":extensions:common:policies"))
+    testFixturesImplementation(project(":extensions:issuer-service:domain-attestation-api"))
     testFixturesImplementation(project(":extensions:issuer-service:membership-attestation-api"))
     testFixturesImplementation(libs.edc.issuerservice.api.credentialdefinition)
     testFixturesImplementation(libs.edc.issuerservice.api.attestation)

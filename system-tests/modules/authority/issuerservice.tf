@@ -40,7 +40,7 @@ resource "helm_release" "issuerservice" {
             "useHttps" : false
           }
         },
-
+        domain: "route",
         "logging" : <<EOT
         .level=DEBUG
         org.eclipse.edc.level=ALL

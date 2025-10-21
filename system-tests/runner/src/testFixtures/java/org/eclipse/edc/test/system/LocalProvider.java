@@ -3,6 +3,7 @@ package org.eclipse.edc.test.system;
 public class LocalProvider extends AbstractParticipant {
 
     public static final String ASSET_ID_REST_API = "rest-api";
+    public static final String ASSET_ID_REST_API_DOMAIN = "rest-api-domain";
     public static final String ASSET_ID_FAILURE_REST_API = "failure-rest-api";
     public static final String ASSET_ID_REST_API_EMBEDDED_QUERY_PARAMS = "rest-api-embedded-query-params";
     public static final String EMBEDDED_QUERY_PARAM = "someEmbeddedQueryParam";

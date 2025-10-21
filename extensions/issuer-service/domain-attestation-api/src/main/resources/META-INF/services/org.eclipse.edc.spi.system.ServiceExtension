@@ -1,0 +1,2 @@
+org.eclipse.edc.issuerservice.DomainIssuerServiceCoreExtension
+org.eclipse.edc.issuerservice.DomainIssuerServiceDefaultServicesExtension

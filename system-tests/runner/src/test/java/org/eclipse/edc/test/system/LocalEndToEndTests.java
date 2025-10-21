@@ -40,10 +40,12 @@ import static org.eclipse.edc.connector.controlplane.transfer.spi.types.Transfer
 import static org.eclipse.edc.jsonld.spi.JsonLdKeywords.ID;
 import static org.eclipse.edc.spi.constants.CoreConstants.EDC_NAMESPACE;
 import static org.eclipse.edc.spi.core.CoreConstants.EONAX_POLICY_PREFIX;
+import static org.eclipse.edc.test.system.AbstractAuthority.DOMAIN_ROUTE;
 import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_FAILURE_REST_API;
 import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_KAFKA_STREAM;
 import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_REST_20_SEC_API;
 import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_REST_API;
+import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_REST_API_DOMAIN;
 import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_REST_API_EMBEDDED_QUERY_PARAMS;
 import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_REST_API_OAUTH2;
 import static org.eclipse.edc.test.system.LocalProvider.EMBEDDED_QUERY_PARAM;
@@ -51,6 +53,7 @@ import static org.eclipse.edc.test.system.LocalProvider.OAUTH2_CLIENT_SECRET;
 import static org.eclipse.edc.test.system.LocalProvider.OAUTH2_CLIENT_SECRET_KEY;
 import static org.eclipse.edc.test.system.LocalProvider.POLICY_RESTRICTED_API;
 import static org.eclipse.edc.test.system.PostgresDataVerifier.verifyData;
+import static org.eclipse.eonax.iam.policy.PolicyConstants.DOMAIN_CREDENTIAL_TYPE;
 import static org.eclipse.eonax.iam.policy.PolicyConstants.GENERIC_CLAIM_CONSTRAINT;
 import static org.eclipse.eonax.iam.policy.PolicyConstants.MEMBERSHIP_CREDENTIAL_TYPE;
 
@@ -75,9 +78,9 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
 
     public static void initializeParticipant(AbstractEntity participant) {
         AUTHORITY.createParticipant(participant.name(), participant.did());
-        participant.requestMembershipCredential(AUTHORITY.did(), MEMBERSHIP_CREDENTIAL_TYPE);
+        participant.requestCredential(AUTHORITY.did(), MEMBERSHIP_CREDENTIAL_TYPE);
+        participant.requestCredential(AUTHORITY.did(), DOMAIN_CREDENTIAL_TYPE);
     }
-
 
     @BeforeAll
     static void beforeAll() {
@@ -91,10 +94,12 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
         // prepare authority
         createKey(AUTHORITY, EVENT_HUB_CONNECTION_STRING_ALIAS, EVENT_HUB_CONNECTION_STRING_SECRET);
         AUTHORITY.defineMembershipCredential();
+        AUTHORITY.defineDomainCredential();
 
         // prepare participants
         List.of(PROVIDER, CONSUMER, AUTHORITY).forEach(LocalEndToEndTests::initializeParticipant);
 
+        List.of(CONSUMER, PROVIDER, AUTHORITY).forEach(AbstractEndToEndTests::getCredentials);
         // seed provider data
         seedData();
     }
@@ -164,6 +169,13 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
                 "baseUrl", "http://provider-backend:8080/api/provider/data",
                 "proxyQueryParams", Boolean.TRUE.toString()
         ), genericClaimConstraint(MEMBERSHIP_CREDENTIAL_TYPE, "name", "odrl:eq", "consumer"));
+
+        // basic api
+        PROVIDER.createEntry(ASSET_ID_REST_API_DOMAIN, "Test Asset REST", "a basic REST API", Map.of(
+                "type", "HttpData",
+                "baseUrl", "http://provider-backend:8080/api/provider/data",
+                "proxyQueryParams", Boolean.TRUE.toString()
+        ), genericClaimConstraint(DOMAIN_CREDENTIAL_TYPE, "domain", "odrl:eq", DOMAIN_ROUTE));
 
         // api returning not authorized
         PROVIDER.createEntry(ASSET_ID_FAILURE_REST_API, "Failure REST API", "a REST API returning not authorized", Map.of(
@@ -245,6 +257,7 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
         void catalog_provider() {
             var assets = Set.of(
                     ASSET_ID_REST_API,
+                    ASSET_ID_REST_API_DOMAIN,
                     ASSET_ID_REST_API_EMBEDDED_QUERY_PARAMS,
                     ASSET_ID_REST_API_OAUTH2,
                     POLICY_RESTRICTED_API,
@@ -348,6 +361,7 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
                 var msg = UUID.randomUUID().toString();
                 return Stream.of(
                         Arguments.of(Map.of("message", msg), ASSET_ID_REST_API, msg),
+                        Arguments.of(Map.of("message", msg), ASSET_ID_REST_API_DOMAIN, msg),
                         Arguments.of(Map.of("message", msg), ASSET_ID_REST_API_OAUTH2, msg),
                         Arguments.of(Map.of(), ASSET_ID_REST_API_EMBEDDED_QUERY_PARAMS, EMBEDDED_QUERY_PARAM)
                 );

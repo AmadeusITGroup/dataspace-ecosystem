@@ -1,6 +1,7 @@
 package org.eclipse.edc.test.system;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.json.JsonArray;
 import jakarta.json.JsonObject;
 import jakarta.json.JsonValue;
 import org.eclipse.edc.jsonld.TitaniumJsonLd;
@@ -64,6 +65,30 @@ public class AbstractEndToEndTests {
         });
 
         return transferProcessId;
+    }
+
+    protected static void getCredentials(AbstractEntity participant)  {
+        await().atMost(TEST_TIMEOUT).untilAsserted(() -> {
+            boolean hasMembershipCredential = false;
+            boolean hasDomainCredential = false;
+            List<JsonObject> verifiableCredentials = participant.getCredentials(MAPPER);
+            for (JsonObject verifiableCredential : verifiableCredentials) {
+                JsonObject vc = verifiableCredential.getJsonObject("verifiableCredential");
+                JsonObject credential = vc.getJsonObject("credential");
+                JsonArray types = credential.getJsonArray("type");
+                for (int j = 0; j < types.size(); j++) {
+                    String type = types.getString(j);
+                    if (type.equals("MembershipCredential")) {
+                        hasMembershipCredential = true;
+                    }
+                    if (type.equals("DomainCredential")) {
+                        hasDomainCredential = true;
+                    }
+                }
+            }
+            assert hasMembershipCredential : "Missing MembershipCredential type";
+            assert hasDomainCredential : "Missing DomainCredential type";
+        });
     }
 
     private static Predicate<JsonObject> isCatalogOf(String did) {

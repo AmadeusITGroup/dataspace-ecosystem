@@ -10,6 +10,7 @@ var distZip = tasks.getByName("distZip")
 dependencies {
     runtimeOnly(project(":launchers:issuer-service:issuer-service-base"))
     runtimeOnly(project(":extensions:issuer-service:membership-attestation-store-sql"))
+    runtimeOnly(project(":extensions:issuer-service:domain-attestation-store-sql"))
 
     runtimeOnly(libs.edc.issuerservice.bom.sql)
     runtimeOnly(libs.edc.ext.vault.hashicorp)
