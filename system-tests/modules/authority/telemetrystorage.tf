@@ -18,6 +18,7 @@ resource "helm_release" "telemetrystorage" {
   values = [
     yamlencode({
       "telemetrystorage" : {
+        "initContainers" : [],
         "image" : {
           "repository" : local.telemetry_storage_image
           "pullPolicy" : "Never"
@@ -38,12 +39,6 @@ resource "helm_release" "telemetrystorage" {
         java.util.logging.ConsoleHandler.level=ALL
         java.util.logging.SimpleFormatter.format=[%1$tY-%1$tm-%1$td %1$tH:%1$tM:%1$tS] [%4$-7s] %5$s%6$s%n
                EOT
-
-        "config" : <<EOT
-web.http.telemetrystorage.port=8181
-web.http.telemetrystorage.path=/telemetrystorage
-edc.vault.hashicorp.token.scheduled-renew-enabled=false
-        EOT
 
         "ingress" : {
           "enabled" : true
@@ -75,6 +70,7 @@ edc.vault.hashicorp.token.scheduled-renew-enabled=false
             "token" : {
               "secret" : {
                 "name" : module.vault.vault_secret_name
+                "tokenKey":"rootToken"
               }
             }
           }
