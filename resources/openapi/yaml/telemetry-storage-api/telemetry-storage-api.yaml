@@ -1,0 +1,49 @@
+openapi: 3.0.1
+info:
+  description: This API is used to process telemetry events
+  title: Telemetry Storage API
+  version: "1"
+paths:
+  /telemetry-events:
+    post:
+      description: Processes a telemetry event.
+      operationId: processTelemetryEvent
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TelemetryEventDto"
+      responses:
+        "200":
+          description: The telemetry event was processed successfully.
+        "400":
+          content:
+            application/json:
+              schema:
+                type: string
+          description: "Request body was malformed, or the request could not be processed"
+      tags:
+      - Telemetry Storage API
+components:
+  schemas:
+    TelemetryEventDto:
+      type: object
+      properties:
+        contractId:
+          type: string
+        csvId:
+          type: integer
+          format: int32
+        id:
+          type: string
+        msgSize:
+          type: integer
+          format: int32
+        participantId:
+          type: string
+        responseStatusCode:
+          type: integer
+          format: int32
+        timestamp:
+          type: string
+          format: date-time

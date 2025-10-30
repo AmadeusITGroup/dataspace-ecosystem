@@ -20,3 +20,9 @@ dependencies {
     testImplementation(libs.awaitility)
     testImplementation(testFixtures(libs.edc.core.jersey))
 }
+
+edcBuild {
+    swagger {
+        apiGroup.set("telemetry-storage-api")
+    }
+}
