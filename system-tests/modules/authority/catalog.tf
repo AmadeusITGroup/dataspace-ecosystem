@@ -5,6 +5,7 @@ locals {
   crawler_execution_period = 10
   federated_catalog_image = (
     var.environment == "local" ? "localhost/federated-catalog-postgresql-hashicorpvault" :
+    var.environment == "devbox" ? "${var.devbox-registry}/federated-catalog-postgresql-hashicorpvault" :
     "federated-catalog-postgresql-hashicorpvault"
   )
 }
@@ -20,12 +21,17 @@ resource "helm_release" "federated-catalog" {
 
   values = [
     yamlencode({
+      "imagePullSecrets": var.environment == "devbox" ? [
+        {
+          "name": var.devbox-registry-cred
+        }
+      ] : []
       "federatedcatalog" : {
         "initContainers" : [],
         "image" : {
           "repository" : local.federated_catalog_image
           "tag" : "latest"
-          "pullPolicy" : "Never"
+          "pullPolicy" : var.environment == "local" ? "Never" : "IfNotPresent"
         },
         "did" : {
           "web" : {

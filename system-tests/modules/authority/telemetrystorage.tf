@@ -2,6 +2,7 @@ locals {
   telemetrystorage_release_name = "${var.authority_name}-telemetrystorage"
   telemetry_storage_image = (
     var.environment == "local" ? "localhost/telemetry-storage-postgresql-hashicorpvault" :
+    var.environment == "devbox" ? "${var.devbox-registry}/telemetry-storage-postgresql-hashicorpvault" :
     "telemetry-storage-postgresql-hashicorpvault"
   )
 }
@@ -17,11 +18,16 @@ resource "helm_release" "telemetrystorage" {
 
   values = [
     yamlencode({
+      "imagePullSecrets": var.environment == "devbox" ? [
+        {
+          "name": var.devbox-registry-cred
+        }
+      ] : []
       "telemetrystorage" : {
         "initContainers" : [],
         "image" : {
           "repository" : local.telemetry_storage_image
-          "pullPolicy" : "Never"
+          "pullPolicy" : var.environment == "local" ? "Never" : "IfNotPresent"
           "tag" : "latest"
         },
         "did" : {

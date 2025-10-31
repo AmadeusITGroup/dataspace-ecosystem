@@ -15,7 +15,9 @@ locals {
   ############################################################################################
   public_url = "http://${local.dataplane_release_name}:8181/api/public/"
   data_plane_image = (
-    var.environment == "local" ? "localhost/data-plane-postgresql-hashicorpvault" : "data-plane-postgresql-hashicorpvault"
+    var.environment == "local" ? "localhost/data-plane-postgresql-hashicorpvault" :
+    var.environment == "devbox" ? "${var.devbox-registry}/data-plane-postgresql-hashicorpvault" :
+    "data-plane-postgresql-hashicorpvault"
   )
 }
 
@@ -30,11 +32,16 @@ resource "helm_release" "dataplane" {
 
   values = [
     yamlencode({
+      "imagePullSecrets": var.environment == "devbox" ? [
+        {
+          "name": var.devbox-registry-cred
+        }
+      ] : []
       "dataplane" : {
         "initContainers" : [],
         "image" : {
           "repository" : local.data_plane_image
-          "pullPolicy" : "Never"
+          "pullPolicy" : var.environment == "local" ? "Never" : "IfNotPresent"
           "tag" : "latest"
         },
         "did" : {

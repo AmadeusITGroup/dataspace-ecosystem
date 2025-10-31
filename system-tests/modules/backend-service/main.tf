@@ -1,6 +1,8 @@
 locals {
   backend_service_image = (
-    var.environment == "local" ? "localhost/backend-service-provider:latest" : "backend-service-provider:latest"
+    var.environment == "local" ? "localhost/backend-service-provider:latest" :
+    var.environment == "devbox" ? "${var.devbox-registry}/backend-service-provider:latest" :
+    "backend-service-provider:latest"
   )
   port = 8080
 }
@@ -27,6 +29,13 @@ resource "kubernetes_deployment" "backend" {
         }
       }
       spec {
+        dynamic "image_pull_secrets" {
+          for_each = var.environment == "devbox" ? [1] : []
+          content {
+            name = var.devbox-registry-cred
+          }
+        }
+
         container {
           image             = local.backend_service_image
           name              = "${var.name}-backend"

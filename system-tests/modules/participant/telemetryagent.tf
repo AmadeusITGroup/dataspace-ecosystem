@@ -1,6 +1,7 @@
 locals {
   telemetry_agent_image = (
     var.environment == "local" ? "localhost/telemetry-agent-postgresql-hashicorpvault" :
+    var.environment == "devbox" ? "${var.devbox-registry}/telemetry-agent-postgresql-hashicorpvault" :
     "telemetry-agent-postgresql-hashicorpvault"
   )
   namespace                    = "local-eventhub-eventhubs"
@@ -24,12 +25,17 @@ resource "helm_release" "telemetryagent" {
 
   values = [
     yamlencode({
+      "imagePullSecrets": var.environment == "devbox" ? [
+        {
+          "name": var.devbox-registry-cred
+        }
+      ] : []
       "telemetryagent" : {
         "initContainers" : [],
         "image" : {
           "repository" : local.telemetry_agent_image
           "tag" : "latest"
-          "pullPolicy" : "Never"
+          "pullPolicy" : var.environment == "local" ? "Never" : "IfNotPresent"
         },
         "keys" : {
           "sts" : {

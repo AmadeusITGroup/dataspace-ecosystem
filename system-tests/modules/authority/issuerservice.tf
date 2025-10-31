@@ -2,8 +2,10 @@ locals {
   issuerservice_release_name = "${var.authority_name}-issuerservice"
   issuerservice_image = (
     var.environment == "local" ? "localhost/issuer-service-postgresql-hashicorpvault" :
+    var.environment == "devbox" ? "${var.devbox-registry}/issuer-service-postgresql-hashicorpvault" :
     "issuer-service-postgresql-hashicorpvault"
   )
+
   issuance_url = "http://${local.issuerservice_release_name}:8282/api/issuance"
 }
 
@@ -18,11 +20,16 @@ resource "helm_release" "issuerservice" {
 
   values = [
     yamlencode({
+      "imagePullSecrets": var.environment == "devbox" ? [
+        {
+          "name": var.devbox-registry-cred
+        }
+      ] : []
       "issuerservice" : {
         "initContainers" : [],
         "image" : {
           "repository" : local.issuerservice_image
-          "pullPolicy" : "Never"
+          "pullPolicy" : var.environment == "local" ? "Never" : "IfNotPresent"
           "tag" : "latest"
         },
         "keys" : {

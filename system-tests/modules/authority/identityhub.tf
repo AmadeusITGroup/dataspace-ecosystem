@@ -3,8 +3,10 @@ locals {
   did_url                  = "did:web:${local.identityhub_release_name}%3A8383:api:did"
   authority_identity_hub_image = (
     var.environment == "local" ? "localhost/identity-hub-postgresql-hashicorpvault" :
+    var.environment == "devbox" ? "${var.devbox-registry}/identity-hub-postgresql-hashicorpvault" :
     "identity-hub-postgresql-hashicorpvault"
   )
+
   sts_port                = 8484
   sts_path                = "/api/sts"
   sts_url                 = "http://${local.identityhub_release_name}:${local.sts_port}${local.sts_path}/token"
@@ -29,12 +31,17 @@ resource "helm_release" "identity-hub" {
 
   values = [
     yamlencode({
+      "imagePullSecrets": var.environment == "devbox" ? [
+        {
+          "name": var.devbox-registry-cred
+        }
+      ] : []
       "identityhub" : {
         "initContainers" : [],
         "image" : {
           "repository" : local.authority_identity_hub_image
           "tag" : "latest"
-          "pullPolicy" : "Never"
+          "pullPolicy" : var.environment == "local" ? "Never" : "IfNotPresent"
         },
         "keys" : {
           "sts" : {

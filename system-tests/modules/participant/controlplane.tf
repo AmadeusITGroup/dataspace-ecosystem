@@ -11,8 +11,10 @@ locals {
   # in the same Kubernetes cluster in the real life
   ############################################################################################
   protocol_url = "http://${local.controlplane_release_name}:8282/api/dsp"
+
   control_plane_image = (
     var.environment == "local" ? "localhost/control-plane-postgresql-hashicorpvault" :
+    var.environment == "devbox" ? "${var.devbox-registry}/control-plane-postgresql-hashicorpvault" :
     "control-plane-postgresql-hashicorpvault"
   )
 }
@@ -28,11 +30,16 @@ resource "helm_release" "controlplane" {
 
   values = [
     yamlencode({
+      "imagePullSecrets": var.environment == "devbox" ? [
+        {
+          "name": var.devbox-registry-cred
+        }
+      ] : []
       "controlplane" : {
         "initContainers" : [],
         "image" : {
           "repository" : local.control_plane_image
-          "pullPolicy" : "Never"
+          "pullPolicy" : var.environment == "local" ? "Never" : "IfNotPresent"
           "tag" : "latest"
         },
         "sts" : {

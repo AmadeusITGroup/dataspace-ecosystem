@@ -3,8 +3,10 @@ locals {
   connection_string_alias       = "event-hub-connection-string"
   telemetry_service_image = (
     var.environment == "local" ? "localhost/telemetry-service-postgresql-hashicorpvault" :
+    var.environment == "devbox" ? "${var.devbox-registry}/telemetry-service-postgresql-hashicorpvault" :
     "telemetry-service-postgresql-hashicorpvault"
   )
+  
   credential_url = "http://${local.telemetryservice_release_name}:8181/api/credential"
 }
 
@@ -19,11 +21,16 @@ resource "helm_release" "telemetryservice" {
 
   values = [
     yamlencode({
+      "imagePullSecrets": var.environment == "devbox" ? [
+        {
+          "name": var.devbox-registry-cred
+        }
+      ] : []
       "telemetryservice" : {
         "initContainers" : [],
         "image" : {
           "repository" : local.telemetry_service_image
-          "pullPolicy" : "Never"
+          "pullPolicy" : var.environment == "local" ? "Never" : "IfNotPresent"
           "tag" : "latest"
         },
         "did" : {

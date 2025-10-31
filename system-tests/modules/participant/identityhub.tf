@@ -9,8 +9,10 @@ locals {
 
   participant_identity_hub_image = (
     var.environment == "local" ? "localhost/identity-hub-postgresql-hashicorpvault" :
+    var.environment == "devbox" ? "${var.devbox-registry}/identity-hub-postgresql-hashicorpvault" :
     "identity-hub-postgresql-hashicorpvault"
   )
+
   identityhub_credentials_url = "http://${local.identityhub_release_name}:8282/api/credentials"
 }
 
@@ -25,12 +27,17 @@ resource "helm_release" "identity-hub" {
 
   values = [
     yamlencode({
+      "imagePullSecrets": var.environment == "devbox" ? [
+        {
+          "name": var.devbox-registry-cred
+        }
+      ] : []
       "identityhub" : {
         "initContainers" : [],
         "image" : {
           "repository" : local.participant_identity_hub_image
           "tag" : "latest"
-          "pullPolicy" : "Never"
+          "pullPolicy" : var.environment == "local" ? "Never" : "IfNotPresent"
         },
         "keys" : {
           "sts" : {
