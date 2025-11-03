@@ -25,6 +25,7 @@ import static org.eclipse.edc.jsonld.spi.JsonLdKeywords.VOCAB;
 import static org.eclipse.edc.spi.constants.CoreConstants.EDC_NAMESPACE;
 import static org.eclipse.edc.spi.core.CoreConstants.EONAX_POLICY_NS;
 import static org.eclipse.edc.spi.core.CoreConstants.EONAX_POLICY_PREFIX;
+import static org.eclipse.edc.test.system.ParticipantConstants.CLUSTER_HOSTNAME;
 import static org.eclipse.edc.test.system.ParticipantConstants.CONTROL_PLANE_DSP_PORT;
 import static org.eclipse.edc.test.system.ParticipantConstants.IDENTITY_HUB_DID_PORT;
 import static org.eclipse.eonax.iam.policy.PolicyConstants.MEMBERSHIP_CONSTRAINT;
@@ -38,12 +39,12 @@ abstract class AbstractParticipant extends AbstractEntity {
 
     @Override
     protected String identityHubIdentityUrl() {
-        return "http://localhost:80/%s/ih/identity".formatted(name());
+        return "http://%s/%s/ih/identity".formatted(CLUSTER_HOSTNAME, name());
     }
 
     @Override
     protected String vaultUrl() {
-        return "http://localhost:80/%s/vault".formatted(name());
+        return "http://%s/%s/vault".formatted(CLUSTER_HOSTNAME, name());
     }
 
     protected String controlPlaneProtocolUrl() {
@@ -51,11 +52,11 @@ abstract class AbstractParticipant extends AbstractEntity {
     }
 
     protected String controlPlaneManagementUrl() {
-        return "http://localhost:80/%s/cp/management".formatted(name());
+        return "http://%s/%s/cp/management".formatted(CLUSTER_HOSTNAME, name());
     }
 
     protected String dataPlaneDataUrl() {
-        return "http://localhost:80/%s/dp/data".formatted(name());
+        return "http://%s/%s/dp/data".formatted(CLUSTER_HOSTNAME, name());
     }
 
     protected void createEntry(String assetId, String name, String description, Map<String, Object> dataAddressProps, JsonObject... additionalConstraints) {

@@ -22,6 +22,7 @@ import org.eclipse.edc.jsonld.spi.JsonLd;
 import static io.restassured.RestAssured.given;
 import static io.restassured.http.ContentType.JSON;
 import static org.eclipse.eonax.iam.policy.PolicyConstants.DOMAIN_CREDENTIAL_TYPE;
+import static org.eclipse.edc.test.system.ParticipantConstants.CLUSTER_HOSTNAME;
 
 abstract class AbstractAuthority extends AbstractEntity {
 
@@ -35,11 +36,11 @@ abstract class AbstractAuthority extends AbstractEntity {
 
     @Override
     protected String vaultUrl() {
-        return "http://localhost:80/%s/vault".formatted(name());
+        return "http://%s/%s/vault".formatted(CLUSTER_HOSTNAME, name());
     }
 
     protected String telemetryUrl() {
-        return "http://localhost:80/%s/telemetry-events".formatted(name());
+        return "http://%s/%s/telemetry-events".formatted(CLUSTER_HOSTNAME, name());
     }
 
     protected String csvManagerUrl() {
@@ -48,15 +49,15 @@ abstract class AbstractAuthority extends AbstractEntity {
 
     @Override
     protected String identityHubIdentityUrl() {
-        return "http://localhost:80/%s/ih/identity".formatted(name());
+        return "http://%s/%s/ih/identity".formatted(CLUSTER_HOSTNAME, name());
     }
 
     protected String catalogUrl() {
-        return "http://localhost:80/%s/catalog".formatted(name());
+        return "http://%s/%s/catalog".formatted(CLUSTER_HOSTNAME, name());
     }
 
     protected String issuerServiceAdminUrl() {
-        return "http://localhost:80/%s/is/issueradmin".formatted(name());
+        return "http://%s/%s/is/issueradmin".formatted(CLUSTER_HOSTNAME, name());
     }
 
     public void defineMembershipCredential() {

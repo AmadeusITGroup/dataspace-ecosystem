@@ -3,6 +3,16 @@ plugins {
     `java-test-fixtures`
 }
 
+// Configure test task to pass system properties
+tasks.test {
+    // Pass all system properties that start with "cluster." to the test JVM
+    System.getProperties().forEach { key, value ->
+        if (key.toString().startsWith("cluster.")) {
+            systemProperty(key.toString(), value.toString())
+        }
+    }
+}
+
 dependencies {
     testImplementation(libs.edc.spi.identity.did)
     testImplementation(libs.awaitility)

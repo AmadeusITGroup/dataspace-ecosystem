@@ -61,6 +61,7 @@ import static org.eclipse.edc.test.system.LocalProvider.EMBEDDED_QUERY_PARAM;
 import static org.eclipse.edc.test.system.LocalProvider.OAUTH2_CLIENT_SECRET;
 import static org.eclipse.edc.test.system.LocalProvider.OAUTH2_CLIENT_SECRET_KEY;
 import static org.eclipse.edc.test.system.LocalProvider.POLICY_RESTRICTED_API;
+import static org.eclipse.edc.test.system.ParticipantConstants.printConfiguration;
 import static org.eclipse.edc.test.system.PostgresDataVerifier.verifyData;
 import static org.eclipse.eonax.iam.policy.PolicyConstants.DOMAIN_CREDENTIAL_TYPE;
 import static org.eclipse.eonax.iam.policy.PolicyConstants.GENERIC_CLAIM_CONSTRAINT;
@@ -99,6 +100,9 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
 
     @BeforeAll
     static void beforeAll() {
+        // Print test configuration for debugging
+        printConfiguration();
+        
         consumer = new EventHubClientBuilder()
                 .fullyQualifiedNamespace(EVENT_HUB_NAMESPACE)
                 .eventHubName(EVENT_HUB_NAME)

@@ -42,3 +42,6 @@ Chart.lock
 !/**/charts/
 !externalLibs/*.jar
 **/image.tar
+
+## OpenLens configuration files
+**/.openlens/
