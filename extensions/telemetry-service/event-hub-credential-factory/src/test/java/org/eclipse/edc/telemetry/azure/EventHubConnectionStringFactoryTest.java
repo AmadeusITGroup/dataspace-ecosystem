@@ -15,9 +15,10 @@ public class EventHubConnectionStringFactoryTest {
 
     private static final String CONNECTION_STRING_ALIAS = UUID.randomUUID().toString();
     private static final String CONNECTION_STRING = "Endpoint=sb://example.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=testKey";
+    private static final Long VALIDITY = 10L;
 
     private final Vault vault = mock();
-    private final EventHubConnectionStringFactory factory = new EventHubConnectionStringFactory(vault, CONNECTION_STRING_ALIAS);
+    private final EventHubConnectionStringFactory factory = new EventHubConnectionStringFactory(vault, CONNECTION_STRING_ALIAS, VALIDITY);
 
     @Test
     void get_withValidConnectionString_returnsTokenRepresentation() {

@@ -13,14 +13,13 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static java.lang.String.format;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.eclipse.edc.statemachine.AbstractStateEntityManager.DEFAULT_ITERATION_WAIT;
 
 public class TelemetryServiceCredentialManager {
 
-    private static final int CREDENTIAL_RENEWAL_RATE = 50; // renew credential when it reaches half its TTL
-
+    private static final long DEFAULT_RETRY_DELAY_SECONDS = 10L;
+    
     private final WaitStrategy waitStrategy = () -> DEFAULT_ITERATION_WAIT;
     private final AtomicBoolean active = new AtomicBoolean();
     private final int shutdownTimeout = 10;
@@ -71,18 +70,22 @@ public class TelemetryServiceCredentialManager {
 
     private void performLogic() {
         try {
+            monitor.debug("Performing logic to get token");
             var result = telemetryServiceClient.fetchCredential();
             long delay = 0;
             if (result.succeeded()) {
                 waitStrategy.success();
                 var credential = result.getContent();
                 cache.save(credential);
-                delay = credential.getExpiresIn() * 10 * CREDENTIAL_RENEWAL_RATE;
+                delay = credential.getExpiresIn() / 2; // Renew credential when it reaches half its TTL
             } else {
                 monitor.warning("Failed to fetch credential from Telemetry Service: " + result.getFailureDetail());
             }
 
-            scheduleNextIterationIn(delay);
+            long finalDelay = delay > 0 ? delay : DEFAULT_RETRY_DELAY_SECONDS;
+            monitor.debug(format("scheduleNextIteration in: %d seconds", finalDelay));
+            
+            scheduleNextIterationIn(finalDelay);
         } catch (Error e) {
             active.set(false);
             monitor.severe(format("Credential manager [%s] unrecoverable error", name), e);
@@ -93,7 +96,7 @@ public class TelemetryServiceCredentialManager {
     }
 
     @NotNull
-    private Future<?> scheduleNextIterationIn(long delayMillis) {
-        return executor.schedule(loop(), delayMillis, MILLISECONDS);
+    private Future<?> scheduleNextIterationIn(long delaySeconds) {
+        return executor.schedule(loop(), delaySeconds, SECONDS);
     }
 }

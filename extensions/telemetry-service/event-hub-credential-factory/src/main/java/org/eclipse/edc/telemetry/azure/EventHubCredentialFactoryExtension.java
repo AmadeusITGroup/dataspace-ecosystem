@@ -39,7 +39,7 @@ public class EventHubCredentialFactoryExtension implements ServiceExtension {
     @Provider
     public TelemetryServiceCredentialFactory credentialFactory() {
         return eventHubUri != null ? new EventHubSasTokenFactory(clock, vault, validity, eventHubUri, keyName, keyAlias) :
-                new EventHubConnectionStringFactory(vault, connectionStringAlias);
+                new EventHubConnectionStringFactory(vault, connectionStringAlias, validity);
     }
 
 }

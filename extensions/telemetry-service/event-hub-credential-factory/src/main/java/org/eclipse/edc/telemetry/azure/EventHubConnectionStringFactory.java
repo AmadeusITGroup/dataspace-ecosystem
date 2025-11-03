@@ -15,11 +15,12 @@ public class EventHubConnectionStringFactory implements TelemetryServiceCredenti
 
     private final Vault vault;
     private final String connectionStringAlias;
-    private final long expiry = 10000;
+    private final long validity;
 
-    public EventHubConnectionStringFactory(Vault vault, String connectionStringAlias) {
+    public EventHubConnectionStringFactory(Vault vault, String connectionStringAlias, long validity) {
         this.connectionStringAlias = Objects.requireNonNull(connectionStringAlias, "connectionStringAlias");
         this.vault = vault;
+        this.validity = validity;
     }
 
     @Override
@@ -27,7 +28,7 @@ public class EventHubConnectionStringFactory implements TelemetryServiceCredenti
         return Optional.ofNullable(vault.resolveSecret(connectionStringAlias))
                 .map(cs -> TokenRepresentation.Builder.newInstance()
                         .token(cs)
-                        .expiresIn(expiry)
+                        .expiresIn(validity)
                         .additional(Map.of(TelemetryServiceConstants.CREDENTIAL_TYPE, TelemetryServiceCredentialType.CONNECTION_STRING))
                         .build())
                 .map(Result::success)
