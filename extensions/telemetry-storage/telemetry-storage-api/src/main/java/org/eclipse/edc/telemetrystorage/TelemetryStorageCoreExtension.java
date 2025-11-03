@@ -18,7 +18,7 @@ public class TelemetryStorageCoreExtension implements ServiceExtension {
     @Inject
     private WebService webService;
     @Inject
-    private TelemetryEventStore attestationStore;
+    private TelemetryEventStore telemetryEventStore;
     @Inject
     private Monitor monitor;
 
@@ -30,7 +30,7 @@ public class TelemetryStorageCoreExtension implements ServiceExtension {
     @Override
     public void initialize(ServiceExtensionContext context) {
 
-        webService.registerResource(new TelemetryStorageApiController(attestationStore, monitor));
+        webService.registerResource(new TelemetryStorageApiController(telemetryEventStore, monitor));
     }
 
 }

@@ -18,9 +18,9 @@ resource "helm_release" "telemetrystorage" {
 
   values = [
     yamlencode({
-      "imagePullSecrets": var.environment == "devbox" ? [
+      "imagePullSecrets" : var.environment == "devbox" ? [
         {
-          "name": var.devbox-registry-cred
+          "name" : var.devbox-registry-cred
         }
       ] : []
       "telemetrystorage" : {
@@ -76,7 +76,7 @@ resource "helm_release" "telemetrystorage" {
             "token" : {
               "secret" : {
                 "name" : module.vault.vault_secret_name
-                "tokenKey":"rootToken"
+                "tokenKey" : "rootToken"
               }
             }
           }
@@ -188,5 +188,5 @@ resource "kubernetes_job_v1" "billing-db-insert" {
     backoff_limit = 4
   }
   wait_for_completion = true
-  depends_on = [helm_release.telemetrystorage]
+  depends_on          = [helm_release.telemetrystorage]
 }

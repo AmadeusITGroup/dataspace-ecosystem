@@ -64,7 +64,8 @@ kind load docker-image \
   telemetry-service-postgresql-hashicorpvault:latest \
   telemetry-agent-postgresql-hashicorpvault:latest \
   backend-service-provider:latest \
-  telemetry-agent-postgresql-hashicorpvault:latest \
+  telemetry-storage-postgresql-hashicorpvault:latest \
+  telemetry-csv-manager-postgresql-hashicorpvault:latest \
   -n eonax-cluster
 ```
 

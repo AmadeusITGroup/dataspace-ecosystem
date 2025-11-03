@@ -1,5 +1,9 @@
 package org.eclipse.edc.test.system;
 
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.json.JsonArray;
@@ -14,11 +18,6 @@ import org.eclipse.edc.issuerservice.api.admin.credentials.v1.unstable.model.Att
 import org.eclipse.edc.issuerservice.api.admin.holder.v1.unstable.model.HolderDto;
 import org.eclipse.edc.issuerservice.spi.issuance.model.MappingDefinition;
 import org.eclipse.edc.jsonld.spi.JsonLd;
-
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 import static io.restassured.RestAssured.given;
 import static io.restassured.http.ContentType.JSON;
@@ -41,6 +40,10 @@ abstract class AbstractAuthority extends AbstractEntity {
 
     protected String telemetryUrl() {
         return "http://localhost:80/%s/telemetry-events".formatted(name());
+    }
+
+    protected String csvManagerUrl() {
+        return "http://localhost:80/%s/billing-reports".formatted(name());
     }
 
     @Override

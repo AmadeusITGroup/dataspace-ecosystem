@@ -6,7 +6,11 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.security.Keys;
 import io.restassured.http.ContentType;
+import io.restassured.response.Response;
 import jakarta.json.Json;
 import jakarta.json.JsonObject;
 import org.eclipse.edc.connector.controlplane.contract.spi.types.negotiation.ContractNegotiationStates;
@@ -15,6 +19,7 @@ import org.eclipse.edc.junit.annotations.EndToEndTest;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -22,8 +27,12 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
 
+import java.security.Key;
+import java.sql.Timestamp;
 import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -56,11 +65,17 @@ import static org.eclipse.edc.test.system.PostgresDataVerifier.verifyData;
 import static org.eclipse.eonax.iam.policy.PolicyConstants.DOMAIN_CREDENTIAL_TYPE;
 import static org.eclipse.eonax.iam.policy.PolicyConstants.GENERIC_CLAIM_CONSTRAINT;
 import static org.eclipse.eonax.iam.policy.PolicyConstants.MEMBERSHIP_CREDENTIAL_TYPE;
+import static org.hamcrest.Matchers.containsString;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 
 @EndToEndTest
 public class LocalEndToEndTests extends AbstractEndToEndTests {
 
     public static final String KAFKA_BROKER_PULL = "KafkaBroker-PULL";
+    // TEST-ONLY SECRET: This hardcoded secret is used exclusively for JWT generation in tests.
+    public static final String SECRET = "a-string-secret-at-least-256-bits-long";
+    public static String dummyJwt;
     private static final String EVENT_HUB_CONNECTION_STRING_ALIAS = "event-hub-connection-string";
     private static final String EVENT_HUB_CONNECTION_STRING_SECRET = "Endpoint=sb://eventhubs;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;";
     private static final String LOCAL_CONSUMER_EVENT_HUB_CONNECTION_STRING = "Endpoint=sb://localhost:52717;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;";
@@ -102,6 +117,18 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
         List.of(CONSUMER, PROVIDER, AUTHORITY).forEach(AbstractEndToEndTests::getCredentials);
         // seed provider data
         seedData();
+
+        Key key = Keys.hmacShaKeyFor(SECRET.getBytes());
+
+        dummyJwt = Jwts.builder()
+                .header()
+                .add("alg", "HS256")
+                .add("typ", "JWT")
+                .and()
+                .claims(Map.of("roles", List.of("Participant.consumer")))
+                .signWith(key, SignatureAlgorithm.HS256)
+                .compact();
+
     }
 
 
@@ -345,7 +372,7 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
             });
         }
 
-        private String getContractIdFromTransferProcess(AbstractParticipant consumer, String transferProcessId) {
+        public static String getContractIdFromTransferProcess(AbstractParticipant consumer, String transferProcessId) {
             return consumer.participantClient().baseManagementRequest()
                     .when()
                     .get("/v3/transferprocesses/" + transferProcessId)
@@ -366,7 +393,7 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
                         Arguments.of(Map.of(), ASSET_ID_REST_API_EMBEDDED_QUERY_PARAMS, EMBEDDED_QUERY_PARAM)
                 );
             }
-        } 
+        }
 
         protected void transferProcess(AbstractParticipant consumer, AbstractParticipant provider, String contractId) {
             var providerUrl = provider.controlPlaneProtocolUrl();
@@ -383,13 +410,13 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
                     "transferType", "HttpData-PULL"
             );
             consumer.participantClient().baseManagementRequest()
-            .contentType(ContentType.JSON)
-            .body(body)
-            .when()
-            .post("/v3/transferprocesses")
-            .then()
-            .log().ifError()
-            .statusCode(200);
+                    .contentType(ContentType.JSON)
+                    .body(body)
+                    .when()
+                    .post("/v3/transferprocesses")
+                    .then()
+                    .log().ifError()
+                    .statusCode(200);
         }
 
         private void retireAgreement(AbstractParticipant participant, String contractId, String reason) {
@@ -401,7 +428,7 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
                     "edc:agreementId", contractId,
                     "eonax:reason", reason
             );
-        
+
             participant.participantClient().baseManagementRequest()
                     .contentType(ContentType.JSON)
                     .body(body)
@@ -455,8 +482,173 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
                 assertThat(data).isEqualTo(expectedMsg);
             });
         }
-
     }
-    
 
+
+    // Using order here should be considered technical debt and be tackled in the future.
+    // Here I am using order to make the report test be the first one to be executed.
+    // Unfortunately, our tests are not independent between each other in the sense that the data created is cleaned after their execution
+    // If this test runs after the remaining ones the validation that is used to generate the report fails so if I run it before the others I have a clean state in the DB.
+    // FDPT-84293
+    @Nested
+    @Order(1)
+    class ReportTest {
+
+        public static String buildTelemetryJson(
+                String id,
+                String contractId,
+                String participantDid,
+                int responseStatusCode,
+                int msgSize,
+                Integer csvId,
+                Timestamp timestamp
+        ) {
+            try {
+                ObjectNode root = OBJECT_MAPPER.createObjectNode();
+                root.put("id", id);
+                root.put("contractId", contractId);
+                root.put("participantId", participantDid);
+                root.put("responseStatusCode", responseStatusCode);
+                root.put("msgSize", msgSize);
+
+                if (csvId != null) {
+                    root.put("csvId", csvId);
+                } else {
+                    root.putNull("csvId");
+                }
+
+                root.put("timestamp", timestamp.toInstant().toString());
+
+                return OBJECT_MAPPER.writeValueAsString(root);
+
+            } catch (Exception e) {
+                throw new RuntimeException("Error building telemetry JSON", e);
+            }
+        }
+
+        public static String buildGenerationJson(
+                String participantName,
+                Integer month,
+                Integer year
+        ) {
+            try {
+                ObjectNode root = OBJECT_MAPPER.createObjectNode();
+                root.put("participantName", participantName);
+                root.put("month", month);
+                root.put("year", year);
+
+                return OBJECT_MAPPER.writeValueAsString(root);
+
+            } catch (Exception e) {
+                throw new RuntimeException("Error building generation JSON", e);
+            }
+        }
+
+        @Test
+        void testReportGenerationSucceeds() {
+            String ctId = UUID.randomUUID().toString();
+            int month = 9;
+            int year = 2025;
+            Timestamp timestamp = Timestamp.valueOf(LocalDateTime.of(year, month, 20, 20, 18));
+            String eventConsumer = buildTelemetryJson("1", ctId, CONSUMER.did(), 200, 20, null, timestamp);
+            String eventProvider = buildTelemetryJson("2", ctId, PROVIDER.did(), 200, 20, null, timestamp);
+
+            given()
+                    .baseUri("%s".formatted(AUTHORITY.telemetryUrl()))
+                    .contentType(JSON)
+                    .body(eventConsumer)
+                    .post()
+                    .then()
+                    .log().ifError()
+                    .statusCode(201);
+
+            given()
+                    .baseUri("%s".formatted(AUTHORITY.telemetryUrl()))
+                    .contentType(JSON)
+                    .body(eventProvider)
+                    .post()
+                    .then()
+                    .log().ifError()
+                    .statusCode(201);
+
+            String generationJson = buildGenerationJson(CONSUMER.name(), month, year);
+
+            given()
+                    .baseUri("%s".formatted(AUTHORITY.csvManagerUrl()))
+                    .body(generationJson)
+                    .contentType(JSON)
+                    .post()
+                    .then()
+                    .log().ifError()
+                    .statusCode(201);
+
+            Map<String, Object> getReportParams = new HashMap<>();
+            getReportParams.put("month", month);
+            getReportParams.put("year", year);
+
+            Response responseBody = given()
+                    .baseUri("%s".formatted(AUTHORITY.csvManagerUrl()))
+                    .params(getReportParams)
+                    .contentType(JSON)
+                    .header("Authorization", "Bearer " + dummyJwt)
+                    .get()
+                    .then()
+                    .log().ifError()
+                    .statusCode(200).contentType(containsString("text/csv"))
+                    .extract().response();
+
+            String expectedCsvReportBuilder = "contractId,sum,count\n" +
+                    ctId + "," + 20 + "," + 1;
+            assertEquals(expectedCsvReportBuilder, responseBody.getBody().asString().trim());
+        }
+
+        @Test
+        void testReportGenerationFailsDueToConsumerProducerValidation() {
+            String ctId = UUID.randomUUID().toString();
+            int month = 8;
+            int year = 2025;
+            Timestamp timestamp = Timestamp.valueOf(LocalDateTime.of(year, month, 20, 20, 18));
+            // Only creates an event for the consumer and not the provider to trigger a failure in the report generation validation
+            String eventConsumer = buildTelemetryJson("1", ctId, CONSUMER.did(), 200, 20, null, timestamp);
+
+            given()
+                    .baseUri("%s".formatted(AUTHORITY.telemetryUrl()))
+                    .contentType(JSON)
+                    .body(eventConsumer)
+                    .post()
+                    .then()
+                    .log().ifError()
+                    .statusCode(201);
+
+            String generationJson = buildGenerationJson(CONSUMER.name(), month, year);
+
+            given()
+                    .baseUri("%s".formatted(AUTHORITY.csvManagerUrl()))
+                    .body(generationJson)
+                    .contentType(JSON)
+                    .post()
+                    .then()
+                    .log().ifError()
+                    .statusCode(201);
+
+            Map<String, Object> getReportParams = new HashMap<>();
+            getReportParams.put("month", month);
+            getReportParams.put("year", year);
+
+            Response responseBody = given()
+                    .baseUri("%s".formatted(AUTHORITY.csvManagerUrl()))
+                    .params(getReportParams)
+                    .contentType(JSON)
+                    .header("Authorization", "Bearer " + dummyJwt)
+                    .get()
+                    .then()
+                    .log().ifError()
+                    .statusCode(200).contentType(containsString("text/csv"))
+                    .extract().response();
+
+            String expectedCsvReportBuilder = "contractId,sum,count\n" +
+                    ctId + "," + 20 + "," + 1;
+            assertEquals(expectedCsvReportBuilder, responseBody.getBody().asString().trim());
+        }
+    }
 }

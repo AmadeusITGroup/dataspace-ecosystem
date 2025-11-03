@@ -136,7 +136,7 @@ resource "kubernetes_job" "vault-keygen-job" {
       }
     }
   }
-  depends_on = [helm_release.vault]
+  depends_on          = [helm_release.vault]
   wait_for_completion = true
 }
 

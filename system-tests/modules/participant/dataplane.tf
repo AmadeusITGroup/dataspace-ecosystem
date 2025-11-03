@@ -32,9 +32,9 @@ resource "helm_release" "dataplane" {
 
   values = [
     yamlencode({
-      "imagePullSecrets": var.environment == "devbox" ? [
+      "imagePullSecrets" : var.environment == "devbox" ? [
         {
-          "name": var.devbox-registry-cred
+          "name" : var.devbox-registry-cred
         }
       ] : []
       "dataplane" : {
@@ -114,7 +114,7 @@ edc.dataplane.state-machine.iteration-wait-millis=${var.data_plane_state_machine
             "token" : {
               "secret" : {
                 "name" : module.vault.vault_secret_name,
-                "tokenKey":"rootToken"
+                "tokenKey" : "rootToken"
               }
             }
           }

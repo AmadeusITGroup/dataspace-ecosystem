@@ -30,9 +30,9 @@ resource "helm_release" "controlplane" {
 
   values = [
     yamlencode({
-      "imagePullSecrets": var.environment == "devbox" ? [
+      "imagePullSecrets" : var.environment == "devbox" ? [
         {
-          "name": var.devbox-registry-cred
+          "name" : var.devbox-registry-cred
         }
       ] : []
       "controlplane" : {
@@ -118,7 +118,7 @@ edc.policy.monitor.state-machine.iteration-wait-millis=${var.policy_monitor_stat
             "token" : {
               "secret" : {
                 "name" : module.vault.vault_secret_name,
-                "tokenKey":"rootToken"
+                "tokenKey" : "rootToken"
               }
             }
           }

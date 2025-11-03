@@ -13,6 +13,9 @@ dependencies {
     testImplementation(project(":spi:telemetry-service-spi"))
     testImplementation(project(":extensions:common:policies"))
     testImplementation(project(":spi:common-spi"))
+    testImplementation(libs.jjwt.api)
+    testImplementation(libs.jjwt.impl)
+    testImplementation(libs.jjwt.jackson)
 
     testImplementation(libs.postgres)
 

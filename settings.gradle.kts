@@ -46,6 +46,9 @@ include(":extensions:telemetry-storage")
 include(":extensions:telemetry-storage:telemetry-storage-api")
 include(":extensions:telemetry-storage:telemetry-storage-store-sql")
 
+include(":extensions:telemetry-csv-manager")
+include(":extensions:telemetry-csv-manager:telemetry-csv-manager-api")
+
 include(":spi")
 include(":spi:common-spi")
 include(":spi:telemetry-agent-spi")
@@ -94,6 +97,11 @@ include(":launchers:telemetry-storage")
 include(":launchers:telemetry-storage:telemetry-storage-base")
 include(":launchers:telemetry-storage:telemetry-storage-postgresql-hashicorpvault")
 include(":launchers:telemetry-storage:telemetry-storage-postgresql-azurevault")
+
+include(":launchers:telemetry-csv-manager")
+include(":launchers:telemetry-csv-manager:telemetry-csv-manager-base")
+include(":launchers:telemetry-csv-manager:telemetry-csv-manager-postgresql-hashicorpvault")
+include(":launchers:telemetry-csv-manager:telemetry-csv-manager-postgresql-azurevault")
 
 include(":system-tests:backend-service-provider")
 include(":system-tests:runner")

@@ -29,7 +29,9 @@ module "billing-db" {
 
 }
 module "eventhub" {
-  source = "./eventhub"
+  source                 = "./eventhub"
+  account_name_azurite   = var.account_name_azurite
+  account_secret_azurite = var.account_secret_azurite
 }
 
 resource "kubernetes_secret" "db-user-credentials" {

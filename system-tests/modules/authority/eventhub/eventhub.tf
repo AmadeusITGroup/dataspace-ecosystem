@@ -78,6 +78,17 @@ resource "kubernetes_stateful_set" "eventhubs" {
           }
 
           env {
+            name  = "STORAGE_ACCOUNT_NAME"
+            value = var.account_name_azurite
+          }
+
+          env {
+            name  = "STORAGE_ACCOUNT_KEY"
+            value = var.account_secret_azurite
+          }
+
+
+          env {
             name  = "BLOB_SERVER"
             value = kubernetes_service.azurite.metadata.0.name
           }

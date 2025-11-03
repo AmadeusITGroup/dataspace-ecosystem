@@ -11,6 +11,15 @@ variable "environment" {
   type        = string
 }
 
+variable "account_secret_azurite" {
+  description = "Account secret for event hub"
+  sensitive   = true
+}
+
+variable "account_name_azurite" {
+  description = "Account name for event hub"
+}
+
 variable "devbox-registry" {
   description = "The container registry for devbox environment"
   type        = string

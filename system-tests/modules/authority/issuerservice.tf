@@ -20,9 +20,9 @@ resource "helm_release" "issuerservice" {
 
   values = [
     yamlencode({
-      "imagePullSecrets": var.environment == "devbox" ? [
+      "imagePullSecrets" : var.environment == "devbox" ? [
         {
-          "name": var.devbox-registry-cred
+          "name" : var.devbox-registry-cred
         }
       ] : []
       "issuerservice" : {
@@ -47,7 +47,7 @@ resource "helm_release" "issuerservice" {
             "useHttps" : false
           }
         },
-        domain: "route",
+        domain : "route",
         "logging" : <<EOT
         .level=DEBUG
         org.eclipse.edc.level=ALL
@@ -113,7 +113,7 @@ edc.vault.hashicorp.token.scheduled-renew-enabled=false
             "token" : {
               "secret" : {
                 "name" : module.vault.vault_secret_name,
-                "tokenKey":"rootToken"
+                "tokenKey" : "rootToken"
               }
             }
           }

@@ -25,9 +25,9 @@ resource "helm_release" "telemetryagent" {
 
   values = [
     yamlencode({
-      "imagePullSecrets": var.environment == "devbox" ? [
+      "imagePullSecrets" : var.environment == "devbox" ? [
         {
-          "name": var.devbox-registry-cred
+          "name" : var.devbox-registry-cred
         }
       ] : []
       "telemetryagent" : {
@@ -101,7 +101,7 @@ edc.vault.hashicorp.token.scheduled-renew-enabled=false
             "token" : {
               "secret" : {
                 "name" : module.vault.vault_secret_name,
-                "tokenKey":"rootToken"
+                "tokenKey" : "rootToken"
               }
             }
           }

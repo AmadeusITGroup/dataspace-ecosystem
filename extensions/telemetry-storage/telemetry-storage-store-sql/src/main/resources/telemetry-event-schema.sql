@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS participant_id
         constraint participant_id_pk
             primary key,
     email     varchar   not null,
+    participantName varchar   null, -- this should be not null, but since this is a new field and the table might be deployed already, we need to avoid schema validation issues. 
     timestamp timestamp default now() not null
 );
 
@@ -41,3 +42,7 @@ id              varchar   not null
     constraint unique_contract_participant_timestamp
         unique (contract_id, participant_did, timestamp)
 );
+
+CREATE INDEX idx_telemetry_event_participant_timestamp_contract
+    ON telemetry_event (participant_did, timestamp, contract_id);
+

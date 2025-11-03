@@ -168,4 +168,3 @@ buildscript {
         classpath("org.eclipse.edc.edc-build:org.eclipse.edc.edc-build.gradle.plugin:${edcGradlePluginsVersion}")
     }
 }
-

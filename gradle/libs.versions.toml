@@ -19,6 +19,7 @@ jupiter = "5.11.4"
 postgres = "42.7.3"
 swagger = "2.2.27"
 micrometer = "1.14.2"
+jjwt = "0.13.0"
 
 [libraries]
 edc-spi-core = { module = "org.eclipse.edc:core-spi", version.ref = "edc" }
@@ -151,6 +152,9 @@ junit-jupiter-api = { module = "org.junit.jupiter:junit-jupiter-api", version.re
 postgres = { module = "org.postgresql:postgresql", version.ref = "postgres" }
 azure-messaging-eventhub = { group = "com.azure", name = "azure-messaging-eventhubs", version.ref = "azureMessagingEventHub" }
 jersey-multipart = { module = "org.glassfish.jersey.media:jersey-media-multipart", version.ref = "jersey" }
+jjwt-api = { module = "io.jsonwebtoken:jjwt-api", version.ref = "jjwt" }
+jjwt-impl = { module = "io.jsonwebtoken:jjwt-impl", version.ref = "jjwt" }
+jjwt-jackson = { module = "io.jsonwebtoken:jjwt-jackson", version.ref = "jjwt" }
 
 [bundles]
 connector = ["edc-core-boot", "edc-core-connector", "edc-observability-api", "edc-jdklogger",

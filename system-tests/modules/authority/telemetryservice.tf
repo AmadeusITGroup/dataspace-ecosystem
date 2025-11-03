@@ -6,7 +6,7 @@ locals {
     var.environment == "devbox" ? "${var.devbox-registry}/telemetry-service-postgresql-hashicorpvault" :
     "telemetry-service-postgresql-hashicorpvault"
   )
-  
+
   credential_url = "http://${local.telemetryservice_release_name}:8181/api/credential"
 }
 
@@ -21,9 +21,9 @@ resource "helm_release" "telemetryservice" {
 
   values = [
     yamlencode({
-      "imagePullSecrets": var.environment == "devbox" ? [
+      "imagePullSecrets" : var.environment == "devbox" ? [
         {
-          "name": var.devbox-registry-cred
+          "name" : var.devbox-registry-cred
         }
       ] : []
       "telemetryservice" : {
@@ -93,7 +93,7 @@ edc.vault.hashicorp.token.scheduled-renew-enabled=false
             "token" : {
               "secret" : {
                 "name" : module.vault.vault_secret_name
-                "tokenKey":"rootToken"
+                "tokenKey" : "rootToken"
               }
             }
           }

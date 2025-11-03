@@ -16,9 +16,9 @@ module "postgres" {
 ######################
 
 module "backend-provider" {
-  source      = "./modules/backend-service"
-  name        = var.provider_name
-  environment = var.environment
+  source               = "./modules/backend-service"
+  name                 = var.provider_name
+  environment          = var.environment
   devbox-registry      = var.devbox-registry
   devbox-registry-cred = var.devbox-registry-cred
 }
@@ -35,8 +35,8 @@ module "participant" {
   db_server_fqdn                         = module.postgres.postgres_server_fqdn
   postgres_admin_credentials_secret_name = module.postgres.postgres_admin_credentials_secret_name
   environment                            = var.environment
-  devbox-registry      = var.devbox-registry
-  devbox-registry-cred = var.devbox-registry-cred
+  devbox-registry                        = var.devbox-registry
+  devbox-registry-cred                   = var.devbox-registry-cred
 }
 #
 ###############
@@ -50,7 +50,9 @@ module "authority" {
   db_server_fqdn                         = module.postgres.postgres_server_fqdn
   postgres_admin_credentials_secret_name = module.postgres.postgres_admin_credentials_secret_name
   environment                            = var.environment
-  devbox-registry      = var.devbox-registry
-  devbox-registry-cred = var.devbox-registry-cred
+  account_name_azurite                   = var.account_name_azurite
+  account_secret_azurite                 = var.account_secret_azurite
+  devbox-registry                        = var.devbox-registry
+  devbox-registry-cred                   = var.devbox-registry-cred
 }
 
