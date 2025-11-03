@@ -50,7 +50,7 @@ public class EventHubSasTokenFactory implements TelemetryServiceCredentialFactor
                 .map(signature -> toSasToken(signature, expiry))
                 .map(sasToken -> TokenRepresentation.Builder.newInstance()
                         .token(sasToken)
-                        .expiresIn(expiry)
+                        .expiresIn(validity)
                         .additional(Map.of(TelemetryServiceConstants.CREDENTIAL_TYPE, TelemetryServiceCredentialType.SAS_TOKEN))
                         .build());
     }
