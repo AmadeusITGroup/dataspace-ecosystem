@@ -2,7 +2,8 @@ locals {
   telemetrycsvmanager_release_name = "${var.authority_name}-telemetrycsvmanager"
   telemetry_csv_manager_image = (
     var.environment == "local" ? "localhost/telemetry-csv-manager-postgresql-hashicorpvault" :
-    "telemetry-csv-manager-postgresql-hashicorpvault"
+    var.environment == "devbox" ? "${var.devbox-registry}/telemetry-csv-manager-postgresql-hashicorpvault" :
+     "telemetry-csv-manager-postgresql-hashicorpvault"
   )
 }
 
@@ -17,10 +18,15 @@ resource "helm_release" "telemetrycsvmanager" {
 
   values = [
     yamlencode({
+      "imagePullSecrets" : var.environment == "devbox" ? [
+        {
+          "name" : var.devbox-registry-cred
+        }
+      ] : []
       "telemetrycsvmanager" : {
         "image" : {
           "repository" : local.telemetry_csv_manager_image
-          "pullPolicy" : "Never"
+          "pullPolicy" : var.environment == "local" ? "Never" : "IfNotPresent"
           "tag" : "latest"
         },
         "did" : {

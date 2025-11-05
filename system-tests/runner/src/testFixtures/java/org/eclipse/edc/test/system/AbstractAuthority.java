@@ -44,7 +44,7 @@ abstract class AbstractAuthority extends AbstractEntity {
     }
 
     protected String csvManagerUrl() {
-        return "http://localhost:80/%s/billing-reports".formatted(name());
+        return "http://%s/%s/billing-reports".formatted(CLUSTER_HOSTNAME, name());
     }
 
     @Override
