@@ -27,7 +27,7 @@ public class ParticipantId {
     private LocalDateTime timestamp;
 
     @Column
-    private String participantName;
+    private String name;
 
     @OneToMany(mappedBy = "participant", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Report> reports;
@@ -38,7 +38,7 @@ public class ParticipantId {
     public ParticipantId() {
     }
 
-    public ParticipantId(String id, String email, String participantName) {
+    public ParticipantId(String id, String email, String name) {
         if (id == null || StringUtils.isBlank(id)) {
             throw new IllegalArgumentException("id cannot be null or blank");
         }
@@ -47,14 +47,14 @@ public class ParticipantId {
             throw new IllegalArgumentException("email cannot be null or blank");
         }
 
-        if (participantName == null || StringUtils.isBlank(participantName)) {
+        if (name == null || StringUtils.isBlank(name)) {
             throw new IllegalArgumentException("participantName cannot be null or blank");
         }
 
         this.id = id;
         this.email = email;
         this.timestamp = LocalDateTime.now();
-        this.participantName = participantName;
+        this.name = name;
     }
 
     public String getId() {
@@ -97,11 +97,11 @@ public class ParticipantId {
         this.telemetryEvents = telemetryEvents;
     }
 
-    public String getParticipantName() {
-        return participantName;
+    public String getName() {
+        return name;
     }
 
-    public void setParticipantName(String participantName) {
-        this.participantName = participantName;
+    public void setName(String participantName) {
+        this.name = participantName;
     }
 }

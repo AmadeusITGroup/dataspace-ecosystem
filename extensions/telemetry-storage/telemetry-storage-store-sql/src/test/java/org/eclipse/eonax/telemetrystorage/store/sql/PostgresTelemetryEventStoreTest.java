@@ -32,8 +32,8 @@ class PostgresTelemetryEventStoreTest extends TelemetryEventStoreTestBase {
         var schema = TestUtils.getResourceFileContentAsString("telemetry-event-schema.sql");
         extension.runQuery(schema);
         // Insert elements into the participant_id table
-        extension.runQuery("INSERT INTO participant_id (id, email, participantName, timestamp) VALUES ('participant1', 'participant1@example.com', 'participant1', now())");
-        extension.runQuery("INSERT INTO participant_id (id, email, participantName, timestamp) VALUES ('participant2', 'participant2@example.com', 'participant2', now())");
+        extension.runQuery("INSERT INTO participant_id (id, email, name, timestamp) VALUES ('participant1', 'participant1@example.com', 'participant1', now())");
+        extension.runQuery("INSERT INTO participant_id (id, email, name, timestamp) VALUES ('participant2', 'participant2@example.com', 'participant2', now())");
 
     }
 

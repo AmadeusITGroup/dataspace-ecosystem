@@ -77,7 +77,7 @@ public class ReportRepositoryTest {
         assertNotNull(reportParticipant);
         assertEquals(USER_EMAIL, reportParticipant.getEmail());
         assertEquals(P1_DID, reportParticipant.getId());
-        assertEquals(PARTICIPANT_NAME, reportParticipant.getParticipantName());
+        assertEquals(PARTICIPANT_NAME, reportParticipant.getName());
     }
 
     @Test
@@ -101,14 +101,14 @@ public class ReportRepositoryTest {
         assertEquals(1, reports.size());
         Report foundReport = reports.get(0);
         assertEquals(USER_EMAIL, foundReport.getParticipant().getEmail());
-        assertEquals(PARTICIPANT_NAME, foundReport.getParticipant().getParticipantName());
+        assertEquals(PARTICIPANT_NAME, foundReport.getParticipant().getName());
         assertEquals(CSV_NAME_2, foundReport.getCsvName());
         assertEquals(CSV_LINK_2, foundReport.getCsvLink());
     }
 
     @ParameterizedTest
     @MethodSource("invalidParticipantArguments")
-    void testSaveReportWithInvalidArgumentsFails(String csvName, String csvLink, String participantName) {
+    void testSaveReportWithInvalidArgumentsFails(String csvName, String csvLink) {
         participantRepo.saveTransactional(new ParticipantId(P1_DID, USER_EMAIL, PARTICIPANT_NAME));
         assertThrows(IllegalArgumentException.class, () -> new Report(csvName, csvLink, participantRepo.find(PARTICIPANT_NAME)));
     }

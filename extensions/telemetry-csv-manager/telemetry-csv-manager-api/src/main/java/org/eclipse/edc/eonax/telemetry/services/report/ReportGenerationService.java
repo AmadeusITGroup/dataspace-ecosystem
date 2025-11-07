@@ -104,13 +104,13 @@ public class ReportGenerationService {
         try {
             generateCsv(participant, targetDateTime);
         } catch (Exception e) {
-            monitor.severe("Error generating report for participant " + participant.getParticipantName() + ": " + e.getMessage(), e);
+            monitor.severe("Error generating report for participant " + participant.getName() + ": " + e.getMessage(), e);
             throw e;
         }
     }
 
     void generateCsv(ParticipantId participant, LocalDateTime targetDateTime) {
-        monitor.info("Generating report for participant " + participant.getParticipantName());
+        monitor.info("Generating report for participant " + participant.getName());
 
         List<ContractStats> contractStats = telemetryEventRepository.findContractStatsForMonth(participant.getId(), targetDateTime.getMonthValue(), targetDateTime.getYear());
 
@@ -118,7 +118,7 @@ public class ReportGenerationService {
 
         List<TelemetryEvent> events = telemetryEventRepository.findByParticipantIdForMonth(participant.getId(), targetDateTime.getMonthValue(), targetDateTime.getYear());
         String csvContent = ReportUtil.generateCsvReportContent(contractStats);
-        String fileName = ReportUtil.generateReportFileName(participant.getParticipantName());
+        String fileName = ReportUtil.generateReportFileName(participant.getName());
         String path = getObjectPath(false, targetDateTime, fileName);
         String objectUrl = azureStorageService.upload(path, csvContent.getBytes(StandardCharsets.UTF_8));
         // We should implement a retry mechanism here FDPT-84156
@@ -145,8 +145,8 @@ public class ReportGenerationService {
                 boolean eventCountMatches = Objects.equals(counterpartyStat.eventCount(), participantContractStat.eventCount());
                 if (!(msgSizeMatches && eventCountMatches)) {
                     String errorMessage = ReportUtil.generateErrorMessage(2, msgSizeMatches, eventCountMatches);
-                    String counterpartyName = participant.getId().equals(partyId.getId()) ? counterPartyId.getParticipantName() : partyId.getParticipantName();
-                    monitor.severe("Discrepancy found for contract " + participantContractStat.contractId() + " between participant " + participant.getParticipantName() + " and counterparty " + counterpartyName + " : " + errorMessage);
+                    String counterpartyName = participant.getId().equals(partyId.getId()) ? counterPartyId.getName() : partyId.getName();
+                    monitor.severe("Discrepancy found for contract " + participantContractStat.contractId() + " between participant " + participant.getName() + " and counterparty " + counterpartyName + " : " + errorMessage);
                     ERRORS.add(new ReportGenerationError(targetDateTime, participantContractStat.contractId(), participant.getId(), counterpartyId, participantContractStat.msgSize(), counterpartyStat.msgSize(), participantContractStat.eventCount(),
                             counterpartyStat.eventCount(), errorMessage));
                     discrepancies.add(participantContractStat.contractId());

@@ -9,7 +9,7 @@ public class ParticipantRepository extends GenericRepository<ParticipantId> {
     }
 
     public ParticipantId findByParticipantName(String participantName) {
-        return em.createQuery("SELECT p FROM ParticipantId p WHERE p.participantName = :participantName", ParticipantId.class)
+        return em.createQuery("SELECT p FROM ParticipantId p WHERE p.name = :participantName", ParticipantId.class)
                 .setParameter("participantName", participantName)
                 .getSingleResult();
     }

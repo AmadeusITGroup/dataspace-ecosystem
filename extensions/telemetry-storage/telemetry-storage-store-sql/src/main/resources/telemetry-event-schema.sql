@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS participant_id
         constraint participant_id_pk
             primary key,
     email     varchar   not null,
-    participantName varchar   null, -- this should be not null, but since this is a new field and the table might be deployed already, we need to avoid schema validation issues. 
+    name varchar   null, -- this should be not null, but since this is a new field and the table might be deployed already, we need to avoid schema validation issues.
     timestamp timestamp default now() not null
 );
 
