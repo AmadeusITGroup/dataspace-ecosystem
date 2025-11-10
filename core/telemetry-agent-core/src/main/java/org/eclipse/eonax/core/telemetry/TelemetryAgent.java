@@ -22,6 +22,7 @@ import static org.eclipse.edc.spi.persistence.StateEntityStore.hasState;
 public class TelemetryAgent extends AbstractStateEntityManager<TelemetryRecord, TelemetryRecordStore> {
 
     private TelemetryRecordPublisherFactory publisherFactory;
+    private TelemetryRecordPublisher currentPublisher;
     private TokenCache cache;
 
     private TelemetryAgent() {
@@ -47,9 +48,24 @@ public class TelemetryAgent extends AbstractStateEntityManager<TelemetryRecord, 
     }
 
 
-    private Optional<TelemetryRecordPublisher> createPublisher() {
+    private synchronized Optional<TelemetryRecordPublisher> createPublisher() {
+        // Close previous publisher if it exists
+        if (currentPublisher != null) {
+            try {
+                currentPublisher.close();
+                monitor.debug("Closed previous publisher");
+            } catch (Exception e) {
+                monitor.warning("Failed to close previous publisher: " + e.getMessage());
+            }
+            currentPublisher = null;
+        }
+        
         return Optional.ofNullable(cache.get())
-                .map(c -> Optional.of(publisherFactory.createClient(c)))
+                .map(c -> {
+                    var publisher = publisherFactory.createClient(c);
+                    currentPublisher = publisher;
+                    return Optional.of(publisher);
+                })
                 .orElseGet(() -> {
                     monitor.warning("Failed to get credentials from cache");
                     return Optional.empty();
