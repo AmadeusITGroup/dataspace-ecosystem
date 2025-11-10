@@ -24,6 +24,7 @@ resource "helm_release" "telemetrycsvmanager" {
         }
       ] : []
       "telemetrycsvmanager" : {
+        "initContainers" : [],
         "image" : {
           "repository" : local.telemetry_csv_manager_image
           "pullPolicy" : var.environment == "local" ? "Never" : "IfNotPresent"
@@ -87,6 +88,7 @@ edc.vault.hashicorp.token.scheduled-renew-enabled=false
             "token" : {
               "secret" : {
                 "name" : module.vault.vault_secret_name
+                "tokenKey" : "rootToken"
               }
             }
           }
