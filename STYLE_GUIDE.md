@@ -1,4 +1,4 @@
-# Eona-X EDC Code Style Guide
+# Dataspace Ecosystem Code Style Guide
 
 This repository uses a specific code style configuration for the Java programming language. The configuration is based
 on the [Google Java Style Guide](https://checkstyle.sourceforge.io/google_style.html), with some modifications to suit

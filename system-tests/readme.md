@@ -1,4 +1,4 @@
-# Eona-X - Minimum Viable Dataspace
+# Dataspace Ecosystem - Minimum Viable Dataspace
 
 ## Prerequisite
 
@@ -42,7 +42,7 @@ kubectl wait --namespace ingress-nginx \
   --timeout=90s
 ```
 
-## Deploy Eona-X components in the cluster
+## Deploy Dataspace Ecosystem components in the cluster
 
 ## Using Docker
 
