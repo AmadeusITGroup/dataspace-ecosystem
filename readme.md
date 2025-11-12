@@ -126,7 +126,17 @@ We can select one of the tasks available in the output of this command and simpl
 
 In this example, the generated OpenApi spec will be placed in the folder ```extensions/agreements/retirement-evaluation-api/build/docs/openapi```
 
-## 8. License
+## 8. Contributing
+
+We welcome community feedback and engagement! Please read our [Contributing Guide](CONTRIBUTING.md) to understand our current contribution process and policies.
+
+For guidelines on submitting and reviewing pull requests (when contributions are enabled), please refer to our [PR Etiquette Guide](PR_ETIQUETTE.md).
+
+Also ensure your contributions align with our [Code of Conduct](CODE_OF_CONDUCT.md) and follow our [Code Style Guide](STYLE_GUIDE.md).
+
+**Important**: Before using this code, please review our [Disclaimer](DISCLAIMER.md) regarding security validation and production deployment.
+
+## 9. License
 
 Distributed under the Apache 2.0 License.
 See [LICENSE](LICENSE) for more information.

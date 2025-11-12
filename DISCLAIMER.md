@@ -1,15 +1,11 @@
 # DISCLAIMER
 
-## ⚠️ IMPORTANT NOTICE ⚠️
-
-**This repository and all its contents are intended for LOCAL TESTING AND DEVELOPMENT PURPOSES ONLY.**
-
 ---
 
 ### Code Disclaimer
 
 **Our Commitment:**
-We are committed to providing secure code to the best of our ability. The code in this repository:
+We strive to provide secure code to the best of our ability. The code in this repository:
 
 - Has passed automated security scans (e.g., GitHub security scanners) and follows recognized best practices
 - Incorporates industry-standard security patterns and defensive programming techniques
@@ -17,9 +13,11 @@ We are committed to providing secure code to the best of our ability. The code i
 - Includes security-focused documentation and configuration examples
 
 **Important Notice:**
-While we strive to provide secure and well-tested code, **this software requires proper security validation before production use**. The code:
+While we strive to provide secure and well-tested code, this software is provided "AS IS", without any warranties of any kind, express or implied.
+By using this code, you agree that all risks associated with its use are your responsibility. 
+In particular, **this software requires proper security validation before production use**. The code:
 
-- Is **NOT intended for production deployment without review by qualified security personnel**
+- Is **NOT intended for production deployment without reviews by qualified security personnel**
 - May require customization, configuration, and hardening for specific production environments
 - Should be validated by your organization's GSOC (Global Security Operations Center) or equivalent governance security teams
 
@@ -30,7 +28,7 @@ Before any production use, users must:
 - Ensure the code meets their organization's security and compliance standards  
 - Have the implementation reviewed and approved by qualified security personnel
 - Validate functionality and performance in their specific deployment context
-- Implement additional security controls as required by their threat model
+- Implement additional security items as required by their threat model
 
 ---
 
@@ -40,35 +38,7 @@ Any Docker images associated with this repository are:
 
 - **FOR LOCAL TESTING AND DEVELOPMENT ONLY**
 - **NOT hardened for production environments**
-- **NOT regularly updated for security patches**
 - **NOT intended for production deployment**
-
-Users must build and validate their own production-grade images.
-
----
-
-### Images and Assets Disclaimer
-
-All images, graphics, logos, and other visual assets included in this repository are:
-
-- **FOR TESTING AND DEVELOPMENT PURPOSES ONLY**
-- **NOT intended for commercial or production use**
-
----
-
-### Usage Guidelines
-
-✅ **Acceptable Use:**
-- Local development and testing
-- Educational purposes
-- Proof of concept demonstrations
-- Internal development workflows
-
-❌ **NOT Acceptable:**
-- Production deployments without proper security review and approval
-- Commercial applications using included assets
-- Public-facing services using unvalidated code or images
-- Distribution of included assets without proper licensing
 
 ---
 
@@ -87,15 +57,19 @@ By using this repository, you acknowledge that:
 
 ### Before Any Production Deployment
 
-If you intend to use concepts or code from this repository in production:
+If you intend to use concepts or code from this repository in production (not exhaustive list):
 
 1. **Conduct thorough security review and penetration testing**
-2. **Replace all placeholder images and assets with properly licensed alternatives**
-3. **Build your own production-grade Docker images with security hardening**
-4. **Implement comprehensive security controls (authentication, authorization, encryption, etc.)**
-5. **Ensure compliance with your organization's security policies and industry standards**
-6. **Establish monitoring, logging, and incident response procedures**
+2. **Build your own production-grade Docker images with security hardening**
+3. **Implement comprehensive security controls (authentication, authorization, encryption, etc.)**
+4. **Ensure compliance with your organization's security policies and industry standards**
+5. **Establish monitoring, logging, and incident response procedures**
+6. **The maintainers are not responsible for any misuse, inappropriate implementation, or harmful applications of this software by users**
 
 ---
 
 **Final Note: We are committed to secure development practices and providing quality code. However, the complexity and variety of production environments make user-specific security validation essential. Always engage your security team for proper review before production deployment.**
+
+License:
+This project is distributed under the Apache 2.0 License. Please review the full text here:
+https://www.apache.org/licenses/LICENSE-2.0
