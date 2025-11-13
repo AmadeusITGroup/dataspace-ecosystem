@@ -3,6 +3,8 @@ package org.eclipse.edc.issuerservice.api;
 
 import io.restassured.common.mapper.TypeRef;
 import io.restassured.specification.RequestSpecification;
+import org.eclipse.dse.spi.issuerservice.DomainAttestation;
+import org.eclipse.dse.spi.issuerservice.DomainAttestationStore;
 import org.eclipse.edc.identityhub.api.Versions;
 import org.eclipse.edc.issuerservice.defaults.InMemoryDomainAttestationStore;
 import org.eclipse.edc.junit.annotations.ApiTest;
@@ -10,8 +12,6 @@ import org.eclipse.edc.spi.query.Criterion;
 import org.eclipse.edc.spi.query.QuerySpec;
 import org.eclipse.edc.spi.result.StoreResult;
 import org.eclipse.edc.web.jersey.testfixtures.RestControllerTestBase;
-import org.eclipse.eonax.spi.issuerservice.DomainAttestation;
-import org.eclipse.eonax.spi.issuerservice.DomainAttestationStore;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 

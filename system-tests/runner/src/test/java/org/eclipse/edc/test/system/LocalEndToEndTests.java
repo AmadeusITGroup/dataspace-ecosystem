@@ -44,11 +44,14 @@ import static io.restassured.http.ContentType.JSON;
 import static jakarta.ws.rs.core.Response.Status.INTERNAL_SERVER_ERROR;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
+import static org.eclipse.dse.iam.policy.PolicyConstants.DOMAIN_CREDENTIAL_TYPE;
+import static org.eclipse.dse.iam.policy.PolicyConstants.GENERIC_CLAIM_CONSTRAINT;
+import static org.eclipse.dse.iam.policy.PolicyConstants.MEMBERSHIP_CREDENTIAL_TYPE;
 import static org.eclipse.edc.connector.controlplane.test.system.utils.PolicyFixtures.atomicConstraint;
 import static org.eclipse.edc.connector.controlplane.transfer.spi.types.TransferProcessStates.TERMINATED;
 import static org.eclipse.edc.jsonld.spi.JsonLdKeywords.ID;
 import static org.eclipse.edc.spi.constants.CoreConstants.EDC_NAMESPACE;
-import static org.eclipse.edc.spi.core.CoreConstants.EONAX_POLICY_PREFIX;
+import static org.eclipse.edc.spi.core.CoreConstants.DSE_POLICY_PREFIX;
 import static org.eclipse.edc.test.system.AbstractAuthority.DOMAIN_ROUTE;
 import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_FAILURE_REST_API;
 import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_KAFKA_STREAM;
@@ -63,9 +66,6 @@ import static org.eclipse.edc.test.system.LocalProvider.OAUTH2_CLIENT_SECRET_KEY
 import static org.eclipse.edc.test.system.LocalProvider.POLICY_RESTRICTED_API;
 import static org.eclipse.edc.test.system.ParticipantConstants.printConfiguration;
 import static org.eclipse.edc.test.system.PostgresDataVerifier.verifyData;
-import static org.eclipse.eonax.iam.policy.PolicyConstants.DOMAIN_CREDENTIAL_TYPE;
-import static org.eclipse.eonax.iam.policy.PolicyConstants.GENERIC_CLAIM_CONSTRAINT;
-import static org.eclipse.eonax.iam.policy.PolicyConstants.MEMBERSHIP_CREDENTIAL_TYPE;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -260,7 +260,7 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
     }
 
     private static JsonObject genericClaimConstraint(String credentialType, String path, String operator, String rightOperand) {
-        return atomicConstraint("%s:%s.$.%s.%s".formatted(EONAX_POLICY_PREFIX, GENERIC_CLAIM_CONSTRAINT, credentialType, path), operator, rightOperand);
+        return atomicConstraint("%s:%s.$.%s.%s".formatted(DSE_POLICY_PREFIX, GENERIC_CLAIM_CONSTRAINT, credentialType, path), operator, rightOperand);
     }
 
     private static void createKey(AbstractEntity entity, String key, String value) {

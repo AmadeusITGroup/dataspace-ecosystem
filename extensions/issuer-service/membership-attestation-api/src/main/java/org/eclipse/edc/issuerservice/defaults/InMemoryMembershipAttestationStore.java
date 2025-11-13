@@ -1,12 +1,12 @@
 package org.eclipse.edc.issuerservice.defaults;
 
+import org.eclipse.dse.spi.issuerservice.MembershipAttestation;
+import org.eclipse.dse.spi.issuerservice.MembershipAttestationStore;
 import org.eclipse.edc.spi.query.CriterionOperatorRegistry;
 import org.eclipse.edc.spi.query.QueryResolver;
 import org.eclipse.edc.spi.query.QuerySpec;
 import org.eclipse.edc.spi.result.StoreResult;
 import org.eclipse.edc.store.ReflectionBasedQueryResolver;
-import org.eclipse.eonax.spi.issuerservice.MembershipAttestation;
-import org.eclipse.eonax.spi.issuerservice.MembershipAttestationStore;
 
 import java.util.Map;
 import java.util.Optional;

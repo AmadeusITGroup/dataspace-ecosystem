@@ -1,11 +1,11 @@
 package org.eclipse.edc.telemetry.azure;
 
+import org.eclipse.dse.spi.telemetry.TelemetryServiceConstants;
+import org.eclipse.dse.spi.telemetry.TelemetryServiceCredentialFactory;
+import org.eclipse.dse.spi.telemetry.TelemetryServiceCredentialType;
 import org.eclipse.edc.spi.iam.TokenRepresentation;
 import org.eclipse.edc.spi.result.Result;
 import org.eclipse.edc.spi.security.Vault;
-import org.eclipse.eonax.spi.telemetry.TelemetryServiceConstants;
-import org.eclipse.eonax.spi.telemetry.TelemetryServiceCredentialFactory;
-import org.eclipse.eonax.spi.telemetry.TelemetryServiceCredentialType;
 import org.jetbrains.annotations.NotNull;
 
 import java.net.URLEncoder;

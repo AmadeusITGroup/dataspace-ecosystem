@@ -1,12 +1,12 @@
 package org.eclipse.edc.telemetrystorage.defaults;
 
+import org.eclipse.dse.spi.telemetrystorage.TelemetryEvent;
+import org.eclipse.dse.spi.telemetrystorage.TelemetryEventStore;
 import org.eclipse.edc.spi.query.CriterionOperatorRegistry;
 import org.eclipse.edc.spi.query.QueryResolver;
 import org.eclipse.edc.spi.query.QuerySpec;
 import org.eclipse.edc.spi.result.StoreResult;
 import org.eclipse.edc.store.ReflectionBasedQueryResolver;
-import org.eclipse.eonax.spi.telemetrystorage.TelemetryEvent;
-import org.eclipse.eonax.spi.telemetrystorage.TelemetryEventStore;
 
 import java.util.Map;
 import java.util.Optional;

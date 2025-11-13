@@ -8,9 +8,9 @@ plugins {
 }
 
 val annotationProcessorVersion: String by project
-val eonaxWebsiteUrl: String by project
-val eonaxScmConnection: String by project
-val eonaxScmUrl: String by project
+val dseWebsiteUrl: String by project
+val dseScmConnection: String by project
+val dseScmUrl: String by project
 
 val loadToKind = project.hasProperty("loadToKind")
 
@@ -30,9 +30,9 @@ allprojects {
             groupId = project.group.toString()
             projectName.set(project.name)
             description.set("edc :: ${project.name}")
-            projectUrl.set(eonaxWebsiteUrl)
-            scmConnection.set(eonaxScmConnection)
-            scmUrl.set(eonaxScmUrl)
+            projectUrl.set(dseWebsiteUrl)
+            scmConnection.set(dseScmConnection)
+            scmUrl.set(dseScmUrl)
         }
     }
 
@@ -136,7 +136,7 @@ subprojects {
             val loadToKindTask = tasks.register("loadToKind") {
                 doFirst {
                     exec {
-                        commandLine("kind", "load", "image-archive", "${dockerContextDir.path}/image.tar", "-n", "eonax-cluster")
+                        commandLine("kind", "load", "image-archive", "${dockerContextDir.path}/image.tar", "-n", "dse-cluster")
                         println("Image loaded to kind: $imageName")
                     }
                 }

@@ -16,6 +16,8 @@ package org.eclipse.edc.telemetry.store.sql;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.eclipse.dse.edc.spi.telemetryagent.TelemetryRecord;
+import org.eclipse.dse.edc.spi.telemetryagent.TelemetryRecordStore;
 import org.eclipse.edc.spi.persistence.EdcPersistenceException;
 import org.eclipse.edc.spi.query.Criterion;
 import org.eclipse.edc.spi.query.QuerySpec;
@@ -26,8 +28,6 @@ import org.eclipse.edc.sql.store.AbstractSqlStore;
 import org.eclipse.edc.telemetry.store.sql.schema.TelemetryRecordStatements;
 import org.eclipse.edc.transaction.datasource.spi.DataSourceRegistry;
 import org.eclipse.edc.transaction.spi.TransactionContext;
-import org.eclipse.eonax.edc.spi.telemetryagent.TelemetryRecord;
-import org.eclipse.eonax.edc.spi.telemetryagent.TelemetryRecordStore;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

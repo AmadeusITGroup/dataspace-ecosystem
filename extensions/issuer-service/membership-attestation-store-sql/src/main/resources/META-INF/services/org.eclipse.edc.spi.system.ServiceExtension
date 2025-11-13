@@ -1,1 +1,1 @@
-org.eclipse.eonax.issuerservice.store.sql.SqlMembershipAttestationStoreExtension
+org.eclipse.dse.issuerservice.store.sql.SqlMembershipAttestationStoreExtension

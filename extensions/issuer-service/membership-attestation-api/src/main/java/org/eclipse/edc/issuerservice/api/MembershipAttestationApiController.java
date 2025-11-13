@@ -7,10 +7,10 @@ import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
+import org.eclipse.dse.spi.issuerservice.MembershipAttestation;
+import org.eclipse.dse.spi.issuerservice.MembershipAttestationStore;
 import org.eclipse.edc.identityhub.api.Versions;
 import org.eclipse.edc.spi.query.QuerySpec;
-import org.eclipse.eonax.spi.issuerservice.MembershipAttestation;
-import org.eclipse.eonax.spi.issuerservice.MembershipAttestationStore;
 
 import java.time.Instant;
 import java.util.List;

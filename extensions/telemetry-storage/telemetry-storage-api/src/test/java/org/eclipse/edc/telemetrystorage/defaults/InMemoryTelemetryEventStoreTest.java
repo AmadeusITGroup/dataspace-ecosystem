@@ -1,8 +1,8 @@
 package org.eclipse.edc.telemetrystorage.defaults;
 
+import org.eclipse.dse.spi.telemetrystorage.TelemetryEvent;
 import org.eclipse.edc.runtime.metamodel.annotation.Inject;
 import org.eclipse.edc.spi.query.CriterionOperatorRegistry;
-import org.eclipse.eonax.spi.telemetrystorage.TelemetryEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

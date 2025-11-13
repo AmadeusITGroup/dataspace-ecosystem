@@ -1,12 +1,12 @@
 package org.eclipse.edc.telemetrystorage;
 
+import org.eclipse.dse.spi.telemetrystorage.TelemetryEventStore;
 import org.eclipse.edc.runtime.metamodel.annotation.Extension;
 import org.eclipse.edc.runtime.metamodel.annotation.Inject;
 import org.eclipse.edc.runtime.metamodel.annotation.Provider;
 import org.eclipse.edc.spi.query.CriterionOperatorRegistry;
 import org.eclipse.edc.spi.system.ServiceExtension;
 import org.eclipse.edc.telemetrystorage.defaults.InMemoryTelemetryEventStore;
-import org.eclipse.eonax.spi.telemetrystorage.TelemetryEventStore;
 
 
 @Extension(value = TelemetryServiceDefaultServicesExtension.NAME)

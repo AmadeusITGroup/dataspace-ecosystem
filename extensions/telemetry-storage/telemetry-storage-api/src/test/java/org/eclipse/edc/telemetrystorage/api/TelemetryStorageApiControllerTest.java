@@ -1,12 +1,12 @@
 package org.eclipse.edc.telemetrystorage.api;
 
 import io.restassured.specification.RequestSpecification;
+import org.eclipse.dse.spi.telemetrystorage.TelemetryEvent;
+import org.eclipse.dse.spi.telemetrystorage.TelemetryEventStore;
 import org.eclipse.edc.junit.annotations.ApiTest;
 import org.eclipse.edc.spi.monitor.Monitor;
 import org.eclipse.edc.spi.result.StoreResult;
 import org.eclipse.edc.web.jersey.testfixtures.RestControllerTestBase;
-import org.eclipse.eonax.spi.telemetrystorage.TelemetryEvent;
-import org.eclipse.eonax.spi.telemetrystorage.TelemetryEventStore;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 

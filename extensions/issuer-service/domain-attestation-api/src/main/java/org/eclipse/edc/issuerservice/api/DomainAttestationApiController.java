@@ -8,11 +8,11 @@ import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import org.apache.commons.lang3.StringUtils;
+import org.eclipse.dse.spi.issuerservice.DomainAttestation;
+import org.eclipse.dse.spi.issuerservice.DomainAttestationStore;
 import org.eclipse.edc.identityhub.api.Versions;
 import org.eclipse.edc.spi.query.QuerySpec;
 import org.eclipse.edc.web.spi.exception.NotAuthorizedException;
-import org.eclipse.eonax.spi.issuerservice.DomainAttestation;
-import org.eclipse.eonax.spi.issuerservice.DomainAttestationStore;
 
 import java.util.Collection;
 

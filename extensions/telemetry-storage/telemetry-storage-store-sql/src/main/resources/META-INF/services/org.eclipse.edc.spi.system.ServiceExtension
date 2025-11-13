@@ -1,1 +1,1 @@
-org.eclipse.eonax.telemetrystorage.store.sql.SqlTelemetryEventExtension
+org.eclipse.dse.telemetrystorage.store.sql.SqlTelemetryEventExtension

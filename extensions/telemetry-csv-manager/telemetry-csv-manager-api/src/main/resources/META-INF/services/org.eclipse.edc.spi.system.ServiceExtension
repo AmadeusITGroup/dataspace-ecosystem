@@ -1,2 +1,2 @@
-org.eclipse.edc.eonax.telemetry.TelemetryCsvManagerCoreExtension
-org.eclipse.edc.eonax.telemetry.services.report.ReportGeneratorSchedulerExtension
+org.eclipse.edc.dse.telemetry.TelemetryCsvManagerCoreExtension
+org.eclipse.edc.dse.telemetry.services.report.ReportGeneratorSchedulerExtension

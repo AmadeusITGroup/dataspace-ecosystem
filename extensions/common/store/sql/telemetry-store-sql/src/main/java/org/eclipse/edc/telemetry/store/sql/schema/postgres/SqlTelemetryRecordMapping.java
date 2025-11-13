@@ -14,14 +14,14 @@
 
 package org.eclipse.edc.telemetry.store.sql.schema.postgres;
 
+import org.eclipse.dse.edc.spi.telemetryagent.TelemetryRecord;
+import org.eclipse.dse.edc.spi.telemetryagent.TelemetryRecordStates;
 import org.eclipse.edc.spi.query.Criterion;
 import org.eclipse.edc.sql.lease.StatefulEntityMapping;
 import org.eclipse.edc.sql.translation.JsonFieldTranslator;
 import org.eclipse.edc.sql.translation.SqlOperator;
 import org.eclipse.edc.sql.translation.WhereClause;
 import org.eclipse.edc.telemetry.store.sql.schema.TelemetryRecordStatements;
-import org.eclipse.eonax.edc.spi.telemetryagent.TelemetryRecord;
-import org.eclipse.eonax.edc.spi.telemetryagent.TelemetryRecordStates;
 
 import java.util.function.Function;
 

@@ -11,7 +11,7 @@ variable "authority_name" {
 }
 
 variable "kube_context" {
-  default = "kind-eonax-cluster"
+  default = "kind-dse-cluster"
 }
 
 variable "kube_config_path" {

@@ -5,9 +5,9 @@ import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.Response;
+import org.eclipse.dse.spi.telemetrystorage.TelemetryEvent;
+import org.eclipse.dse.spi.telemetrystorage.TelemetryEventStore;
 import org.eclipse.edc.spi.monitor.Monitor;
-import org.eclipse.eonax.spi.telemetrystorage.TelemetryEvent;
-import org.eclipse.eonax.spi.telemetrystorage.TelemetryEventStore;
 
 import java.util.UUID;
 

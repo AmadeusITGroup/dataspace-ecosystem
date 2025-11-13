@@ -1,9 +1,9 @@
 package org.eclipse.edc.issuerservice.defaults;
 
+import org.eclipse.dse.spi.issuerservice.DomainAttestationStore;
+import org.eclipse.dse.spi.issuerservice.DomainAttestationStoreTestBase;
 import org.eclipse.edc.junit.annotations.ComponentTest;
 import org.eclipse.edc.query.CriterionOperatorRegistryImpl;
-import org.eclipse.eonax.spi.issuerservice.DomainAttestationStore;
-import org.eclipse.eonax.spi.issuerservice.DomainAttestationStoreTestBase;
 
 @ComponentTest
 public class InMemoryDomainAttestationStoreTest extends DomainAttestationStoreTestBase {

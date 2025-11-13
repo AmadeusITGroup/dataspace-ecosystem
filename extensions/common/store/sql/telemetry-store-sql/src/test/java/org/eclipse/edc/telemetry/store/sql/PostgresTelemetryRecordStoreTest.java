@@ -14,6 +14,7 @@
 
 package org.eclipse.edc.telemetry.store.sql;
 
+import org.eclipse.dse.edc.spi.telemetryagent.TelemetryStoreTestBase;
 import org.eclipse.edc.json.JacksonTypeManager;
 import org.eclipse.edc.junit.annotations.ComponentTest;
 import org.eclipse.edc.junit.testfixtures.TestUtils;
@@ -22,7 +23,6 @@ import org.eclipse.edc.sql.testfixtures.LeaseUtil;
 import org.eclipse.edc.sql.testfixtures.PostgresqlStoreSetupExtension;
 import org.eclipse.edc.telemetry.store.sql.schema.TelemetryBaseSqlDialectStatements;
 import org.eclipse.edc.telemetry.store.sql.schema.postgres.PostgresTelemetryRecordStatements;
-import org.eclipse.eonax.edc.spi.telemetryagent.TelemetryStoreTestBase;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;

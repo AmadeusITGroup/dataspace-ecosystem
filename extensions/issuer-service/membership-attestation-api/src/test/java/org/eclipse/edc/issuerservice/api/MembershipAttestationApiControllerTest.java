@@ -2,14 +2,14 @@ package org.eclipse.edc.issuerservice.api;
 
 import io.restassured.common.mapper.TypeRef;
 import io.restassured.specification.RequestSpecification;
+import org.eclipse.dse.spi.issuerservice.MembershipAttestation;
+import org.eclipse.dse.spi.issuerservice.MembershipAttestationStore;
 import org.eclipse.edc.identityhub.api.Versions;
 import org.eclipse.edc.junit.annotations.ApiTest;
 import org.eclipse.edc.spi.query.Criterion;
 import org.eclipse.edc.spi.query.QuerySpec;
 import org.eclipse.edc.spi.result.StoreResult;
 import org.eclipse.edc.web.jersey.testfixtures.RestControllerTestBase;
-import org.eclipse.eonax.spi.issuerservice.MembershipAttestation;
-import org.eclipse.eonax.spi.issuerservice.MembershipAttestationStore;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 

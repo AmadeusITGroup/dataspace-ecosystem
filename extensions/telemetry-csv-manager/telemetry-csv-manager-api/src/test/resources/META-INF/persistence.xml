@@ -6,9 +6,9 @@
              version="3.0">
 
     <persistence-unit name="myPUTest" transaction-type="RESOURCE_LOCAL">
-        <class>org.eclipse.edc.eonax.telemetry.model.ParticipantId</class>
-        <class>org.eclipse.edc.eonax.telemetry.model.Report</class>
-        <class>org.eclipse.edc.eonax.telemetry.model.TelemetryEvent</class>
+        <class>org.eclipse.edc.dse.telemetry.model.ParticipantId</class>
+        <class>org.eclipse.edc.dse.telemetry.model.Report</class>
+        <class>org.eclipse.edc.dse.telemetry.model.TelemetryEvent</class>
 
         <properties>
             <property name="jakarta.persistence.jdbc.driver" value="org.h2.Driver"/>

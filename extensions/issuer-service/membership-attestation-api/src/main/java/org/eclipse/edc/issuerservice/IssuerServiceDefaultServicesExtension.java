@@ -1,12 +1,12 @@
 package org.eclipse.edc.issuerservice;
 
+import org.eclipse.dse.spi.issuerservice.MembershipAttestationStore;
 import org.eclipse.edc.issuerservice.defaults.InMemoryMembershipAttestationStore;
 import org.eclipse.edc.runtime.metamodel.annotation.Extension;
 import org.eclipse.edc.runtime.metamodel.annotation.Inject;
 import org.eclipse.edc.runtime.metamodel.annotation.Provider;
 import org.eclipse.edc.spi.query.CriterionOperatorRegistry;
 import org.eclipse.edc.spi.system.ServiceExtension;
-import org.eclipse.eonax.spi.issuerservice.MembershipAttestationStore;
 
 @Extension(value = IssuerServiceDefaultServicesExtension.NAME)
 public class IssuerServiceDefaultServicesExtension implements ServiceExtension {

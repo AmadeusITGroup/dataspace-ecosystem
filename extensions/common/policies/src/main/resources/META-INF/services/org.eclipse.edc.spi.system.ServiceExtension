@@ -1,2 +1,2 @@
-org.eclipse.eonax.iam.core.IatpPatchExtension
-org.eclipse.eonax.iam.policy.PolicyEvaluationExtension
+org.eclipse.dse.iam.core.IatpPatchExtension
+org.eclipse.dse.iam.policy.PolicyEvaluationExtension

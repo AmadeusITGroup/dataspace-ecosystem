@@ -1,12 +1,12 @@
 package org.eclipse.edc.telemetry.azure;
 
+import org.eclipse.dse.spi.telemetry.TelemetryServiceCredentialFactory;
 import org.eclipse.edc.runtime.metamodel.annotation.Extension;
 import org.eclipse.edc.runtime.metamodel.annotation.Inject;
 import org.eclipse.edc.runtime.metamodel.annotation.Provider;
 import org.eclipse.edc.runtime.metamodel.annotation.Setting;
 import org.eclipse.edc.spi.security.Vault;
 import org.eclipse.edc.spi.system.ServiceExtension;
-import org.eclipse.eonax.spi.telemetry.TelemetryServiceCredentialFactory;
 
 import java.time.Clock;
 
@@ -15,15 +15,15 @@ public class EventHubCredentialFactoryExtension implements ServiceExtension {
 
     public static final String NAME = "Event Hub Credential Factory";
 
-    @Setting(description = "SAS token validity in seconds", defaultValue = "300", key = "eonax.credential-factory.azure.event-hub.sas.validity", required = false)
+    @Setting(description = "SAS token validity in seconds", defaultValue = "300", key = "dse.credential-factory.azure.event-hub.sas.validity", required = false)
     public long validity;
-    @Setting(description = "Event hub uri", key = "eonax.credential-factory.azure.event-hub.sas.uri", required = false)
+    @Setting(description = "Event hub uri", key = "dse.credential-factory.azure.event-hub.sas.uri", required = false)
     public String eventHubUri;
-    @Setting(description = "Event hub key name", key = "eonax.credential-factory.azure.event-hub.sas.key.name", required = false)
+    @Setting(description = "Event hub key name", key = "dse.credential-factory.azure.event-hub.sas.key.name", required = false)
     public String keyName;
-    @Setting(description = "Event hub key vault alias", key = "eonax.credential-factory.azure.event-hub.sas.key.alias", required = false)
+    @Setting(description = "Event hub key vault alias", key = "dse.credential-factory.azure.event-hub.sas.key.alias", required = false)
     public String keyAlias;
-    @Setting(description = "Event hub connection string vault alias", key = "eonax.credential-factory.azure.event-hub.connection-string.alias", required = false)
+    @Setting(description = "Event hub connection string vault alias", key = "dse.credential-factory.azure.event-hub.connection-string.alias", required = false)
     public String connectionStringAlias;
 
     @Inject

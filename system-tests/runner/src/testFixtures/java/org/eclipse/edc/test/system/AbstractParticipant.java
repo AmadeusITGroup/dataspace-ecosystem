@@ -17,18 +17,18 @@ import java.util.UUID;
 import static io.restassured.RestAssured.given;
 import static io.restassured.http.ContentType.JSON;
 import static jakarta.json.Json.createObjectBuilder;
+import static org.eclipse.dse.iam.policy.PolicyConstants.MEMBERSHIP_CONSTRAINT;
 import static org.eclipse.edc.connector.controlplane.test.system.utils.PolicyFixtures.atomicConstraint;
 import static org.eclipse.edc.jsonld.spi.JsonLdKeywords.CONTEXT;
 import static org.eclipse.edc.jsonld.spi.JsonLdKeywords.ID;
 import static org.eclipse.edc.jsonld.spi.JsonLdKeywords.TYPE;
 import static org.eclipse.edc.jsonld.spi.JsonLdKeywords.VOCAB;
 import static org.eclipse.edc.spi.constants.CoreConstants.EDC_NAMESPACE;
-import static org.eclipse.edc.spi.core.CoreConstants.EONAX_POLICY_NS;
-import static org.eclipse.edc.spi.core.CoreConstants.EONAX_POLICY_PREFIX;
+import static org.eclipse.edc.spi.core.CoreConstants.DSE_POLICY_NS;
+import static org.eclipse.edc.spi.core.CoreConstants.DSE_POLICY_PREFIX;
 import static org.eclipse.edc.test.system.ParticipantConstants.CLUSTER_HOSTNAME;
 import static org.eclipse.edc.test.system.ParticipantConstants.CONTROL_PLANE_DSP_PORT;
 import static org.eclipse.edc.test.system.ParticipantConstants.IDENTITY_HUB_DID_PORT;
-import static org.eclipse.eonax.iam.policy.PolicyConstants.MEMBERSHIP_CONSTRAINT;
 
 abstract class AbstractParticipant extends AbstractEntity {
 
@@ -70,7 +70,7 @@ abstract class AbstractParticipant extends AbstractEntity {
         var asset = client.createAsset(assetId, assetProps, dataAddressProps);
 
         var constraints = new ArrayList<JsonObject>();
-        constraints.add(atomicConstraint("%s:%s".formatted(EONAX_POLICY_PREFIX, MEMBERSHIP_CONSTRAINT), "odrl:eq", "active"));
+        constraints.add(atomicConstraint("%s:%s".formatted(DSE_POLICY_PREFIX, MEMBERSHIP_CONSTRAINT), "odrl:eq", "active"));
         constraints.addAll(Arrays.asList(additionalConstraints));
 
         var permissions = constraints.stream().map(this::createPermission).toList();
@@ -82,7 +82,7 @@ abstract class AbstractParticipant extends AbstractEntity {
         var requestBody = createObjectBuilder()
                 .add(CONTEXT, createObjectBuilder()
                         .add(VOCAB, EDC_NAMESPACE)
-                        .add(EONAX_POLICY_PREFIX, EONAX_POLICY_NS))
+                        .add(DSE_POLICY_PREFIX, DSE_POLICY_NS))
                 .add(TYPE, "PolicyDefinition")
                 .add("policy", policy)
                 .build();

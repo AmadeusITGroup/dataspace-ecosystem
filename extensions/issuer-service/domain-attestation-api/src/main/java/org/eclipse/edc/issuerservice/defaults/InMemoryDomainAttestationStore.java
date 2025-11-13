@@ -1,12 +1,12 @@
 package org.eclipse.edc.issuerservice.defaults;
 
+import org.eclipse.dse.spi.issuerservice.DomainAttestation;
+import org.eclipse.dse.spi.issuerservice.DomainAttestationStore;
 import org.eclipse.edc.spi.query.CriterionOperatorRegistry;
 import org.eclipse.edc.spi.query.QueryResolver;
 import org.eclipse.edc.spi.query.QuerySpec;
 import org.eclipse.edc.spi.result.StoreResult;
 import org.eclipse.edc.store.ReflectionBasedQueryResolver;
-import org.eclipse.eonax.spi.issuerservice.DomainAttestation;
-import org.eclipse.eonax.spi.issuerservice.DomainAttestationStore;
 
 import java.util.Map;
 import java.util.Optional;

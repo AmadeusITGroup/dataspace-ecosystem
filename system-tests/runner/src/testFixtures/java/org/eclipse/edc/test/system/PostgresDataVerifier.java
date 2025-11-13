@@ -16,8 +16,7 @@ public class PostgresDataVerifier {
 
 
         try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
-             PreparedStatement preparedStatement = connection.prepareStatement(query)) {
-
+                PreparedStatement preparedStatement = connection.prepareStatement(query)) {
             preparedStatement.setString(1, contractId);
 
             try (ResultSet resultSet = preparedStatement.executeQuery()) {

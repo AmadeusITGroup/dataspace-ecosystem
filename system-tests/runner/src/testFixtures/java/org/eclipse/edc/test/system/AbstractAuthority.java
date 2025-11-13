@@ -1,9 +1,5 @@
 package org.eclipse.edc.test.system;
 
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.json.JsonArray;
@@ -19,9 +15,14 @@ import org.eclipse.edc.issuerservice.api.admin.holder.v1.unstable.model.HolderDt
 import org.eclipse.edc.issuerservice.spi.issuance.model.MappingDefinition;
 import org.eclipse.edc.jsonld.spi.JsonLd;
 
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+
 import static io.restassured.RestAssured.given;
 import static io.restassured.http.ContentType.JSON;
-import static org.eclipse.eonax.iam.policy.PolicyConstants.DOMAIN_CREDENTIAL_TYPE;
+import static org.eclipse.dse.iam.policy.PolicyConstants.DOMAIN_CREDENTIAL_TYPE;
 import static org.eclipse.edc.test.system.ParticipantConstants.CLUSTER_HOSTNAME;
 
 abstract class AbstractAuthority extends AbstractEntity {
