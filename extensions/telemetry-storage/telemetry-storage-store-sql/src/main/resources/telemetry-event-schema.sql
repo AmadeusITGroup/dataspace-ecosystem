@@ -43,6 +43,6 @@ id              varchar   not null
         unique (contract_id, participant_did, timestamp)
 );
 
-CREATE INDEX idx_telemetry_event_participant_timestamp_contract
+CREATE INDEX IF NOT EXISTS idx_telemetry_event_participant_timestamp_contract
     ON telemetry_event (participant_did, timestamp, contract_id);
 
