@@ -1,0 +1,6 @@
+apiVersion: v2
+name: telemetryservice
+description: Deploy the Dataspace Telemetry Service.
+
+type: application
+version: 0.1.0
