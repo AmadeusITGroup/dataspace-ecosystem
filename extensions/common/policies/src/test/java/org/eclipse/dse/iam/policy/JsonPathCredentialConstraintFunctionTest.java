@@ -28,7 +28,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.eclipse.dse.iam.policy.AbstractDynamicCredentialConstraintFunction.VC_CLAIM;
 import static org.eclipse.dse.iam.policy.PolicyConstants.DSE_GENERIC_CLAIM_CONSTRAINT;
 import static org.eclipse.dse.iam.policy.PolicyConstants.MEMBERSHIP_CREDENTIAL_TYPE;
-import static org.eclipse.edc.policy.model.Operator.IN;
 
 class JsonPathCredentialConstraintFunctionTest {
 
@@ -58,7 +57,7 @@ class JsonPathCredentialConstraintFunctionTest {
         var result = function.evaluate(null, Operator.valueOf(operator), null, null, policyContext);
 
         assertThat(result).isFalse();
-        assertThat(policyContext).satisfies(expectedProblem("Invalid operator: this constraint only allows the following operators: [EQ, NEQ], but received '%s'.".formatted(operator)));
+        assertThat(policyContext).satisfies(expectedProblem("Invalid operator: this constraint only allows the following operators: [EQ, NEQ, IN], but received '%s'.".formatted(operator)));
     }
 
     @ParameterizedTest
@@ -81,7 +80,62 @@ class JsonPathCredentialConstraintFunctionTest {
         var result = function.evaluate(leftOperand("foo"), Operator.IN, "test", null, policyContext);
 
         assertThat(result).isFalse();
-        assertThat(policyContext).satisfies(expectedProblem("When operator is %s, right-operand must be of type List but were '%s'.".formatted(IN.toString(), String.class)));
+        assertThat(policyContext).satisfies(expectedProblem("Array string must be enclosed in square brackets: test"));
+    }
+
+    @Test
+    void evaluate_operatorIn_arrayStringWithSingleQuotes() {
+        var vc = createVc(MEMBERSHIP_CREDENTIAL_TYPE, Map.of("hello", "world"));
+        var policyContext = createPolicyContext(List.of(vc));
+
+        var result = function.evaluate(leftOperand("hello"), Operator.IN, "['foo', 'world', 'bar']", null, policyContext);
+
+        assertThat(result).isTrue();
+        assertThat(policyContext.getProblems()).isEmpty();
+    }
+
+    @Test
+    void evaluate_operatorIn_arrayStringWithDoubleQuotes() {
+        var vc = createVc(MEMBERSHIP_CREDENTIAL_TYPE, Map.of("hello", "world"));
+        var policyContext = createPolicyContext(List.of(vc));
+
+        var result = function.evaluate(leftOperand("hello"), Operator.IN, "[\"foo\", \"world\", \"bar\"]", null, policyContext);
+
+        assertThat(result).isTrue();
+        assertThat(policyContext.getProblems()).isEmpty();
+    }
+
+    @Test
+    void evaluate_operatorIn_arrayStringWithoutQuotes() {
+        var vc = createVc(MEMBERSHIP_CREDENTIAL_TYPE, Map.of("hello", "world"));
+        var policyContext = createPolicyContext(List.of(vc));
+
+        var result = function.evaluate(leftOperand("hello"), Operator.IN, "[foo, world, bar]", null, policyContext);
+
+        assertThat(result).isTrue();
+        assertThat(policyContext.getProblems()).isEmpty();
+    }
+
+    @Test
+    void evaluate_operatorIn_arrayStringNotFound() {
+        var vc = createVc(MEMBERSHIP_CREDENTIAL_TYPE, Map.of("hello", "world"));
+        var policyContext = createPolicyContext(List.of(vc));
+
+        var result = function.evaluate(leftOperand("hello"), Operator.IN, "['foo', 'bar']", null, policyContext);
+
+        assertThat(result).isFalse();
+        assertThat(policyContext.getProblems()).isEmpty();
+    }
+
+    @Test
+    void evaluate_operatorIn_emptyArrayString() {
+        var vc = createVc(MEMBERSHIP_CREDENTIAL_TYPE, Map.of("hello", "world"));
+        var policyContext = createPolicyContext(List.of(vc));
+
+        var result = function.evaluate(leftOperand("hello"), Operator.IN, "[]", null, policyContext);
+
+        assertThat(result).isFalse();
+        assertThat(policyContext.getProblems()).isEmpty();
     }
 
     @Test
@@ -137,6 +191,10 @@ class JsonPathCredentialConstraintFunctionTest {
                     Arguments.of(Map.of("my/namespace/" + "foo", "bar"), leftOperand("foo"), Operator.EQ, "bar", true),
                     Arguments.of(Map.of("foo", "bar"), leftOperand("foo"), Operator.NEQ, "xxx", true),
                     Arguments.of(Map.of("foo", "bar"), leftOperand("foo"), Operator.IN, List.of("hello", "bar", "world"), true),
+                    Arguments.of(Map.of("foo", "bar"), leftOperand("foo"), Operator.IN, "['hello', 'bar', 'world']", true),
+                    Arguments.of(Map.of("foo", "bar"), leftOperand("foo"), Operator.IN, "[\"hello\", \"bar\", \"world\"]", true),
+                    Arguments.of(Map.of("foo", "bar"), leftOperand("foo"), Operator.IN, "[hello, bar, world]", true),
+                    Arguments.of(Map.of("foo", "bar"), leftOperand("foo"), Operator.IN, "['hello', 'world']", false),
                     Arguments.of(Map.of("foo", "bar"), leftOperand("foo"), Operator.EQ, "barr", false),
                     Arguments.of(Map.of("foo", Map.of("hello", "world")), leftOperand("foo.hello"), Operator.EQ, "world", true),
                     Arguments.of(Map.of("foo", Map.of("hello", "world")), leftOperand("foo.hello"), Operator.EQ, "world", true)

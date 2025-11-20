@@ -93,6 +93,11 @@ simply run the following Terraform command to deploy the dataspace:
 terraform -chdir=system-tests init
 terraform -chdir=system-tests apply -auto-approve -var="environment=local"
 ```
+To destroy the dataspace run the following command:
+```bash
+terraform -chdir=system-tests destroy -auto-approve -var="environment=local"
+```
+
 
 ## Run the tests
 
@@ -107,7 +112,10 @@ kubectl port-forward eventhubs-0 52717:5672
 kubectl port-forward postgresql-0 57521:5432 &
 ```
 
+Afterwards, you can execute the following command to run the tests:
+
 ```bash
 ./gradlew :system-tests:runner:test -DincludeTags="EndToEndTest"
 ```
 
+Note: The tests can only be run once. If you want to rerun them, destroy first the dataspace and then re-deploy it

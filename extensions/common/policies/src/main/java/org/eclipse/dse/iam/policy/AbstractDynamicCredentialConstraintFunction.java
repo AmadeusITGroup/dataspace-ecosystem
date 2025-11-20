@@ -18,7 +18,7 @@ public abstract class AbstractDynamicCredentialConstraintFunction<C extends Part
 
     protected boolean checkOperator(Operator actual, PolicyContext context, Collection<Operator> expectedOperators) {
         if (!expectedOperators.contains(actual)) {
-            context.reportProblem("Invalid operator: this constraint only allows the following operators: %s, but received '%s'.".formatted(EQUALITY_OPERATORS, actual));
+            context.reportProblem("Invalid operator: this constraint only allows the following operators: %s, but received '%s'.".formatted(expectedOperators, actual));
             return false;
         }
         return true;
