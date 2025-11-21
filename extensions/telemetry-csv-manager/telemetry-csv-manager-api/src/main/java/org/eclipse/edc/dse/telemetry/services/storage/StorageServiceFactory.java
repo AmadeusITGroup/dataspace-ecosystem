@@ -11,6 +11,7 @@ public class StorageServiceFactory {
                                              String azuriteStorageContainer, String azureClientId, String azureClientSecret,
                                              String azureTenantId, String azureStorageContainer, String azureStorageEndpoint) {
 
+        monitor.info("Object Storage Type Selected: " + storageType);
         if (AZURITE.equalsIgnoreCase(storageType)) {
             return new AzuriteStorageService(monitor,
                     azuriteConnectionString,

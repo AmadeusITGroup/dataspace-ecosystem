@@ -14,6 +14,7 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 
 @Entity
 @Table(name = "report")
@@ -104,5 +105,19 @@ public class Report {
 
     public void setTelemetryEvents(List<TelemetryEvent> telemetryEvents) {
         this.telemetryEvents = telemetryEvents;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == null || getClass() != o.getClass()) return false;
+        Report report = (Report) o;
+        return Objects.equals(id, report.id) && Objects.equals(csvName, report.csvName) && Objects.equals(csvLink, report.csvLink) &&
+                Objects.equals(participant, report.participant) && Objects.equals(timestamp, report.timestamp) &&
+                Objects.equals(telemetryEvents, report.telemetryEvents);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id, csvName, csvLink, participant, timestamp, telemetryEvents);
     }
 }

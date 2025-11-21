@@ -8,6 +8,7 @@ import org.eclipse.edc.dse.telemetry.model.Report;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -59,7 +60,8 @@ public class ReportRepositoryTest {
 
 
     @Test
-    void testSaveAndFindReportSucceeds() {
+    @DisplayName("Should save and find Report when valid arguments are provided")
+    void shouldSucceed_WhenSaveAndFindReport() {
         em.getTransaction().begin();
         ParticipantId participant = new ParticipantId(P1_DID, USER_EMAIL, PARTICIPANT_NAME);
         participantRepo.save(participant);
@@ -81,7 +83,8 @@ public class ReportRepositoryTest {
     }
 
     @Test
-    void testFindAllReportsSucceeds() {
+    @DisplayName("Should find all reports")
+    void shouldFindAllReports_WhenFindAll() {
         participantRepo.saveTransactional(new ParticipantId(P2_DID, "u2@example.com", "p2"));
         reportRepository.saveTransactional(new Report(CSV_NAME, CSV_LINK, participantRepo.findAll().get(0)));
         reportRepository.saveTransactional(new Report(CSV_NAME_2, CSV_LINK_2, participantRepo.findAll().get(0)));
@@ -91,7 +94,8 @@ public class ReportRepositoryTest {
     }
 
     @Test
-    void testReportFindByParticipantSucceeds() {
+    @DisplayName("Should find report by participant ID")
+    void shouldFindReport_WhenFindByParticipant() {
         participantRepo.saveTransactional(new ParticipantId(P2_DID, "u2@example.com", "p2"));
         participantRepo.saveTransactional(new ParticipantId(P1_DID, USER_EMAIL, PARTICIPANT_NAME));
         reportRepository.saveTransactional(new Report(CSV_NAME, CSV_LINK, participantRepo.findAll().get(0)));
@@ -106,7 +110,7 @@ public class ReportRepositoryTest {
         assertEquals(CSV_LINK_2, foundReport.getCsvLink());
     }
 
-    @ParameterizedTest
+    @ParameterizedTest(name = "{index} => Report saving should fail when csvName={0}, csvLink={1}")
     @MethodSource("invalidParticipantArguments")
     void testSaveReportWithInvalidArgumentsFails(String csvName, String csvLink) {
         participantRepo.saveTransactional(new ParticipantId(P1_DID, USER_EMAIL, PARTICIPANT_NAME));

@@ -24,13 +24,13 @@ public class TelemetryEventRepository extends GenericRepository<TelemetryEvent> 
                 .getResultList();
     }
 
-    public List<ContractStats> findContractStatsForMonth(String participantId, Integer month, Integer year) {
+    public List<ContractStats> findStatsGroupedByContractIdAndStatusCode(String participantId, Integer month, Integer year) {
         LocalDate startDate = LocalDate.of(year, month, 1);
         LocalDateTime start = startDate.atStartOfDay();
         LocalDateTime end = startDate.plusMonths(1).atStartOfDay();
         return em.createQuery(
-                        "SELECT new org.eclipse.edc.dse.telemetry.repository.ContractStats(e.contractId,SUM(e.msgSize),COUNT(e)) FROM TelemetryEvent e " +
-                                "WHERE e.participant.id = :participantId AND e.timestamp >= :startDate AND e.timestamp < :endDate GROUP BY e.contractId",
+                        "SELECT new org.eclipse.edc.dse.telemetry.repository.ContractStats(e.contractId, e.responseStatusCode, SUM(e.msgSize),COUNT(e)) FROM TelemetryEvent e " +
+                                "WHERE e.participant.id = :participantId AND e.timestamp >= :startDate AND e.timestamp < :endDate GROUP BY e.contractId, e.responseStatusCode",
                         ContractStats.class)
                 .setParameter("participantId", participantId)
                 .setParameter("startDate", start)
@@ -38,19 +38,36 @@ public class TelemetryEventRepository extends GenericRepository<TelemetryEvent> 
                 .getResultList();
     }
 
-    public ContractStats findContractStatsForContractIdForMonth(String participantId, Integer month, Integer year, String contractId) {
+    public ContractStats findStatsForContractIdAndStatusCodeGroupedByContractIdAndStatusCode(String participantId, Integer month, Integer year, String contractId, Integer statusCode) {
         LocalDate startDate = LocalDate.of(year, month, 1);
         LocalDateTime start = startDate.atStartOfDay();
         LocalDateTime end = startDate.plusMonths(1).atStartOfDay();
         return em.createQuery(
-                        "SELECT new org.eclipse.edc.dse.telemetry.repository.ContractStats(e.contractId,SUM(e.msgSize),COUNT(e)) FROM TelemetryEvent e " +
+                        "SELECT new org.eclipse.edc.dse.telemetry.repository.ContractStats(e.contractId, e.responseStatusCode, SUM(e.msgSize),COUNT(e)) FROM TelemetryEvent e " +
+                                "WHERE e.participant.id = :participantId AND e.timestamp >= :startDate AND e.timestamp < :endDate AND e.contractId = :contractId AND e.responseStatusCode = :statusCode " +
+                                "GROUP BY e.contractId, e.responseStatusCode",
+                        ContractStats.class)
+                .setParameter("participantId", participantId)
+                .setParameter("startDate", start)
+                .setParameter("endDate", end)
+                .setParameter("contractId", contractId)
+                .setParameter("statusCode", statusCode)
+                .getSingleResultOrNull();
+    }
+
+    public ContractStats findStatsForContractIdGroupedByContractId(String participantId, Integer month, Integer year, String contractId) {
+        LocalDate startDate = LocalDate.of(year, month, 1);
+        LocalDateTime start = startDate.atStartOfDay();
+        LocalDateTime end = startDate.plusMonths(1).atStartOfDay();
+        return em.createQuery(
+                        "SELECT new org.eclipse.edc.dse.telemetry.repository.ContractStats(e.contractId, 0 ,SUM(e.msgSize),COUNT(e)) FROM TelemetryEvent e " +
                                 "WHERE e.participant.id = :participantId AND e.timestamp >= :startDate AND e.timestamp < :endDate AND e.contractId = :contractId GROUP BY e.contractId",
                         ContractStats.class)
                 .setParameter("participantId", participantId)
                 .setParameter("startDate", start)
                 .setParameter("endDate", end)
                 .setParameter("contractId", contractId)
-                .getSingleResult();
+                .getSingleResultOrNull();
     }
 
     public List<ParticipantId> findContractParties(String contractId) {

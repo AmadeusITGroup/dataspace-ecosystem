@@ -46,16 +46,20 @@ public class TelemetryCsvManagerApiController implements TelemetryCsvManagerApi 
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces("text/csv")
     public Response getReport(@HeaderParam("Authorization") String authHeader, @QueryParam("month") Integer month, @QueryParam("year") Integer year) {
-        monitor.info("Fetching Report...");
+        monitor.info("Fetching report...");
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            monitor.warning("Authorization header missing or malformed");
             return Response.status(Response.Status.UNAUTHORIZED).entity("Missing JWT token").build();
         }
 
         if (checksInvalidPeriod(month)) {
+            monitor.warning("Invalid month provided: " + month);
             return Response.status(Response.Status.BAD_REQUEST).entity("Invalid date range provided").build();
         }
 
         String jwtToken = authHeader.split(" ")[1]; // Removes Bearer part from header
+        monitor.debug("JWT token received");
+
         String[] jwtParts = jwtToken.split("\\.");
         if (jwtParts.length != 3) {
             return Response.status(Response.Status.UNAUTHORIZED).entity("Invalid JWT token").build();
@@ -66,30 +70,43 @@ public class TelemetryCsvManagerApiController implements TelemetryCsvManagerApi 
 
             // Validate exactly one element -> participant
             if (roles.size() != 1) {
+                this.monitor.warning("Invalid roles provided for JWT: " + roles);
                 return Response.status(Response.Status.UNAUTHORIZED).entity("Invalid JWT token").build();
             }
 
             String[] roleParts = roles.get(0).split("\\.");
             if (roleParts.length < 2 || roleParts[1] == null || roleParts[1].isEmpty()) {
+                this.monitor.warning("Unexpected number of roles in JWT: " + roles.size());
                 return Response.status(Response.Status.FORBIDDEN).entity("Missing or invalid participant in roles").build();
             }
             String participantName = roleParts[1];
 
-            String reportFilename = ReportUtil.generateReportFileName(participantName);
-            String objectPath = ReportUtil.getObjectPath(false, LocalDateTime.of(year, month, 1, 0, 0), reportFilename);
+            boolean participantExists = scheduler.checkParticipantExists(participantName);
+            if (!participantExists) {
+                this.monitor.warning("Participant not found: " + participantName);
+                return Response.status(Response.Status.FORBIDDEN).entity("Participant does not exist").build();
+            }
+
+            LocalDateTime dateTime = LocalDateTime.of(year, month, 1, 0, 0);
+            String reportFilename = ReportUtil.generateReportFileName(participantName, dateTime);
+            String objectPath = ReportUtil.getObjectPath(false, dateTime, reportFilename);
             byte[] csvData = getReportFromRemoteStorage(objectPath);
             if (csvData == null) {
+                this.monitor.warning("No report found at path: " + objectPath + " for participant " + participantName + " month " + month + " year " + year);
                 return Response.status(Response.Status.NOT_FOUND).entity("No report found for specified period").build();
             } else {
+                this.monitor.info("Report successfully retrieved for participant: " + participantName);
                 return Response.ok(csvData)
                         .type("text/csv")
                         .header("Content-Disposition", "attachment; filename=\"" + reportFilename + "\"")
                         .build();
             }
         } catch (JwtException e) {
+            this.monitor.severe("JWT parsing failed: " + e.getMessage(), e);
             return Response.status(Response.Status.UNAUTHORIZED).entity("Invalid JWT: " + e.getMessage()).build();
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
+        } catch (Exception e) {
+            this.monitor.severe("Unexpected error during report retrieval", e);
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("Failed to retrieve report due to an unexpected error.").build();
         }
     }
 
@@ -119,11 +136,14 @@ public class TelemetryCsvManagerApiController implements TelemetryCsvManagerApi 
         Integer year = reportGenerationRequest.year();
         Integer month = reportGenerationRequest.month();
 
+        this.monitor.info("Generating report for participant " + participantName + " month " + month + " year " + year);
         if (participantName == null || participantName.isEmpty()) {
+            this.monitor.warning("Invalid participant name provided: " + participantName);
             return Response.status(Response.Status.BAD_REQUEST).entity("Participant name not provided").build();
         }
 
         if (checksInvalidPeriod(month)) {
+            monitor.warning("Invalid month provided: " + month);
             return Response.status(Response.Status.BAD_REQUEST).entity("Invalid date range provided").build();
         }
 
@@ -135,15 +155,19 @@ public class TelemetryCsvManagerApiController implements TelemetryCsvManagerApi 
                 String conflictMessage = "This report already exists, participant: " +
                         reportGenerationRequest.participantName() + " month: " + reportGenerationRequest.month() +
                         " year: " + reportGenerationRequest.year();
+                this.monitor.warning(conflictMessage);
                 return Response.status(Response.Status.CONFLICT).entity(conflictMessage).build();
             }
+            monitor.severe("BlobStorageException occurred", e);
             throw e;
         } catch (Exception e) {
+            this.monitor.severe("Unexpected error during report generation", e);
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("Generation failed").build();
         }
     }
 
     private byte[] getReportFromRemoteStorage(String objectPath) {
+        monitor.debug("Attempting to download report from storage at path: " + objectPath);
         try (InputStream downloadedInputStream = azureStorageService.download(objectPath)) {
             return downloadedInputStream.readAllBytes();
         } catch (Exception e) {

@@ -29,6 +29,7 @@ public class RealAzureStorageService extends AzureStorageService {
     @Override
     public BlobContainerClient getContainer() {
         if (this.serviceClient == null) {
+            this.monitor.info("Creating Blob Container Client for Azure Storage");
             ClientSecretCredential credential = new ClientSecretCredentialBuilder()
                     .clientId(clientId)
                     .clientSecret(clientSecret)

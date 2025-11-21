@@ -10,6 +10,7 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 
 
 @Entity
@@ -103,5 +104,18 @@ public class ParticipantId {
 
     public void setName(String participantName) {
         this.name = participantName;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == null || getClass() != o.getClass()) return false;
+        ParticipantId that = (ParticipantId) o;
+        return Objects.equals(id, that.id) && Objects.equals(email, that.email) && Objects.equals(timestamp, that.timestamp) &&
+                Objects.equals(name, that.name) && Objects.equals(reports, that.reports) && Objects.equals(telemetryEvents, that.telemetryEvents);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id, email, timestamp, name, reports, telemetryEvents);
     }
 }

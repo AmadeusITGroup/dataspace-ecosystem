@@ -21,6 +21,7 @@ public class AzuriteStorageService extends AzureStorageService {
     @Override
     public BlobContainerClient getContainer() {
         if (this.serviceClient == null) {
+            this.monitor.info("Creating Blob Container Client for Azurite Storage");
             BlobServiceClient serviceClient = new BlobServiceClientBuilder()
                     .connectionString(connectionString)
                     .buildClient();

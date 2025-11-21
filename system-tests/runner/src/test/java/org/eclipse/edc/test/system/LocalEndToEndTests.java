@@ -77,6 +77,7 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
     // TEST-ONLY SECRET: This hardcoded secret is used exclusively for JWT generation in tests.
     public static final String SECRET = "a-string-secret-at-least-256-bits-long";
     public static String dummyJwt;
+    public static String dummyJwtNonExistentParticipant;
     private static final String EVENT_HUB_CONNECTION_STRING_ALIAS = "event-hub-connection-string";
     private static final String EVENT_HUB_CONNECTION_STRING_SECRET = "Endpoint=sb://eventhubs;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;";
     private static final String LOCAL_CONSUMER_EVENT_HUB_CONNECTION_STRING = "Endpoint=sb://localhost:52717;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;";
@@ -102,7 +103,7 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
     static void beforeAll() {
         // Print test configuration for debugging
         printConfiguration();
-        
+
         consumer = new EventHubClientBuilder()
                 .fullyQualifiedNamespace(EVENT_HUB_NAMESPACE)
                 .eventHubName(EVENT_HUB_NAME)
@@ -130,6 +131,15 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
                 .add("typ", "JWT")
                 .and()
                 .claims(Map.of("roles", List.of("Participant.consumer")))
+                .signWith(key, SignatureAlgorithm.HS256)
+                .compact();
+
+        dummyJwtNonExistentParticipant = Jwts.builder()
+                .header()
+                .add("alg", "HS256")
+                .add("typ", "JWT")
+                .and()
+                .claims(Map.of("roles", List.of("Participant.doesnotexist")))
                 .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
 
@@ -601,19 +611,21 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
                     .statusCode(200).contentType(containsString("text/csv"))
                     .extract().response();
 
-            String expectedCsvReportBuilder = "contractId,sum,count\n" +
-                    ctId + "," + 20 + "," + 1;
+            String expectedCsvReportBuilder = "contract_id,data_transfer_response_status,participant_id,counterparty_id," +
+                    "participant_total_transfer_size_in_kB,counterparty_total_transfer_size_in_kB,participant_total_number_of_events," +
+                    "counterparty_total_number_of_events\n" +
+                    ctId + "," + 200 + "," + CONSUMER.name() + "," + PROVIDER.name() + "," + 0.02 + "," + 0.02 + "," + 1 + "," + 1;
             assertEquals(expectedCsvReportBuilder, responseBody.getBody().asString().trim());
         }
 
         @Test
-        void testReportGenerationFailsDueToConsumerProducerValidation() {
+        void testReportGenerationWithOnlyOnePartySucceeds() {
             String ctId = UUID.randomUUID().toString();
-            int month = 8;
+            int month = 12;
             int year = 2025;
             Timestamp timestamp = Timestamp.valueOf(LocalDateTime.of(year, month, 20, 20, 18));
             // Only creates an event for the consumer and not the provider to trigger a failure in the report generation validation
-            String eventConsumer = buildTelemetryJson("1", ctId, CONSUMER.did(), 200, 20, null, timestamp);
+            String eventConsumer = buildTelemetryJson("3", ctId, CONSUMER.did(), 400, 20, null, timestamp);
 
             given()
                     .baseUri("%s".formatted(AUTHORITY.telemetryUrl()))
@@ -650,9 +662,55 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
                     .statusCode(200).contentType(containsString("text/csv"))
                     .extract().response();
 
-            String expectedCsvReportBuilder = "contractId,sum,count\n" +
-                    ctId + "," + 20 + "," + 1;
+            String expectedCsvReportBuilder = "contract_id,data_transfer_response_status,participant_id,counterparty_id," +
+                    "participant_total_transfer_size_in_kB,counterparty_total_transfer_size_in_kB,participant_total_number_of_events," +
+                    "counterparty_total_number_of_events\n" +
+                    ctId + "," + 400 + "," + CONSUMER.name() + ",N/A," + 0.02 + "," + 0 + "," + 1 + "," + 0;
             assertEquals(expectedCsvReportBuilder, responseBody.getBody().asString().trim());
+        }
+
+        @Test
+        void testRetrieveReportWithNonExistentParticipantFails() {
+            String ctId = UUID.randomUUID().toString();
+            int month = 1;
+            int year = 2025;
+            Timestamp timestamp = Timestamp.valueOf(LocalDateTime.of(year, month, 20, 20, 18));
+            // Only creates an event for the consumer and not the provider to trigger a failure in the report generation validation
+            String eventConsumer = buildTelemetryJson("4", ctId, CONSUMER.did(), 200, 20, null, timestamp);
+
+            given()
+                    .baseUri("%s".formatted(AUTHORITY.telemetryUrl()))
+                    .contentType(JSON)
+                    .body(eventConsumer)
+                    .post()
+                    .then()
+                    .log().ifError()
+                    .statusCode(201);
+
+            String generationJson = buildGenerationJson(CONSUMER.name(), month, year);
+
+            given()
+                    .baseUri("%s".formatted(AUTHORITY.csvManagerUrl()))
+                    .body(generationJson)
+                    .contentType(JSON)
+                    .post()
+                    .then()
+                    .log().ifError()
+                    .statusCode(201);
+
+            Map<String, Object> getReportParams = new HashMap<>();
+            getReportParams.put("month", month);
+            getReportParams.put("year", year);
+
+            given()
+                    .baseUri("%s".formatted(AUTHORITY.csvManagerUrl()))
+                    .params(getReportParams)
+                    .contentType(JSON)
+                    .header("Authorization", "Bearer " + dummyJwtNonExistentParticipant)
+                    .get()
+                    .then()
+                    .log().ifError()
+                    .statusCode(403);
         }
     }
 }

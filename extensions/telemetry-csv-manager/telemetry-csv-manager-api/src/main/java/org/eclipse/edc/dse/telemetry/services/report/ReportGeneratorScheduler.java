@@ -82,7 +82,23 @@ public class ReportGeneratorScheduler {
             this.monitor.severe("Error running report scheduler", e);
             throw e;
         } finally {
-            service.generateErrorReport(LocalDateTime.now(), ReportGenerationService.getErrors());
+            //service.generateErrorReport(LocalDateTime.now(), ReportGenerationService.getErrors());
+            if (em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+    
+    public boolean checkParticipantExists(String participantName) {
+        this.monitor.debug("Checking participant " + participantName + " exists");
+        EntityManager em = JpaUtil.createEntityManager();
+        try {
+            ReportGenerationService service = buildGenerationService(em);
+            return service.findParticipant(participantName) != null;
+        } catch (Exception e) {
+            this.monitor.debug("Error checking if participant " + participantName + " exists", e);
+            throw e;
+        } finally {
             if (em.isOpen()) {
                 em.close();
             }
@@ -94,12 +110,12 @@ public class ReportGeneratorScheduler {
         EntityManager em = JpaUtil.createEntityManager();
         ReportGenerationService service = buildGenerationService(em);
         try {
-            service.validateParticipantAndGenerateReport(participantName, reportDateTime);
+            service.generateReport(participantName, reportDateTime);
         } catch (Exception e) {
             this.monitor.severe("Error running report scheduler", e);
             throw e;
         } finally {
-            service.generateErrorReport(reportDateTime, ReportGenerationService.getErrors());
+            //service.generateErrorReport(reportDateTime, ReportGenerationService.getErrors());
             if (em.isOpen()) {
                 em.close();
             }

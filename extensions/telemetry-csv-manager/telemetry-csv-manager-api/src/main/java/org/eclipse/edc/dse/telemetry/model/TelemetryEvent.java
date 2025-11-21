@@ -10,6 +10,7 @@ import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 @Entity
 @Table(name = "telemetry_event",
@@ -103,5 +104,19 @@ public class TelemetryEvent {
 
     public void setTimestamp(LocalDateTime timestamp) {
         this.timestamp = timestamp;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == null || getClass() != o.getClass()) return false;
+        TelemetryEvent that = (TelemetryEvent) o;
+        return responseStatusCode == that.responseStatusCode && msgSize == that.msgSize && Objects.equals(id, that.id) &&
+                Objects.equals(contractId, that.contractId) && Objects.equals(participant, that.participant) &&
+                Objects.equals(csvReport, that.csvReport) && Objects.equals(timestamp, that.timestamp);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id, contractId, participant, responseStatusCode, msgSize, csvReport, timestamp);
     }
 }

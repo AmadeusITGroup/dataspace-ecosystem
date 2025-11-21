@@ -1,9 +1,9 @@
 package org.eclipse.edc.dse.telemetry.services.report;
 
-
 import org.eclipse.edc.dse.telemetry.services.storage.AzureStorageService;
 import org.eclipse.edc.spi.monitor.Monitor;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
@@ -28,7 +28,8 @@ class ReportGeneratorSchedulerTest {
     }
 
     @Test
-    void testDelayBefore2ndOfMonth() {
+    @DisplayName("Should calculate correct delay when before 2nd of month")
+    void shouldCalculateCorrectDelay_WhenBefore2ndOfMonth() {
         // simulate now: 1st Oct, 10:00 AM
         Clock fixedClock = Clock.fixed(
                 ZonedDateTime.of(2025, 10, 1, 10, 0, 0, 0, ZoneId.systemDefault()).toInstant(),
@@ -43,7 +44,8 @@ class ReportGeneratorSchedulerTest {
     }
 
     @Test
-    void testDelayAfter2ndOfMonth() {
+    @DisplayName("Should calculate correct delay when after 2nd of month")
+    void shouldCalculateCorrectDelay_WhenAfter2ndOfMonth() {
         // simulate now: 2nd Oct, 03:00 AM
         Clock fixedClock = Clock.fixed(
                 ZonedDateTime.of(2025, 10, 2, 3, 0, 0, 0, ZoneId.systemDefault()).toInstant(),
