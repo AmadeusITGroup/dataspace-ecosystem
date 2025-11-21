@@ -91,6 +91,7 @@ simply run the following Terraform command to deploy the dataspace:
 
 ```bash
 terraform -chdir=system-tests init
+terraform -chdir=system-tests destroy -auto-approve -var="environment=local"
 terraform -chdir=system-tests apply -auto-approve -var="environment=local"
 ```
 To destroy the dataspace run the following command:

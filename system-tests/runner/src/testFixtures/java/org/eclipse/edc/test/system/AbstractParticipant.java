@@ -148,6 +148,10 @@ abstract class AbstractParticipant extends AbstractEntity {
                 .build();
     }
 
+    public void finishDataTransfer(String transferId){
+       participantClient().terminateTransfer(transferId);
+    }
+
     public static class ParticipantClient extends Participant {
 
         protected LazySupplier<URI> dataPlaneData;

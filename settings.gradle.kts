@@ -4,6 +4,7 @@ include(":core")
 include(":core:telemetry-agent-core")
 include(":core:telemetry-service-core")
 include(":core:common:telemetry-record-store")
+include(":core:kafka-proxy-k8s-manager-core")
 
 include(":extensions")
 include(":extensions:agreements")
@@ -97,6 +98,10 @@ include(":launchers:telemetry-storage")
 include(":launchers:telemetry-storage:telemetry-storage-base")
 include(":launchers:telemetry-storage:telemetry-storage-postgresql-hashicorpvault")
 include(":launchers:telemetry-storage:telemetry-storage-postgresql-azurevault")
+include(":launchers:kafka-proxy-k8s-manager")
+include(":launchers:kafka-proxy-k8s-manager:kafka-proxy-k8s-manager-base")
+
+include(":plugins")
 
 include(":launchers:telemetry-csv-manager")
 include(":launchers:telemetry-csv-manager:telemetry-csv-manager-base")

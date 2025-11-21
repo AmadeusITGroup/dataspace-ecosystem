@@ -27,16 +27,21 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.security.Key;
 import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static io.restassured.RestAssured.given;
@@ -68,6 +73,7 @@ import static org.eclipse.edc.test.system.ParticipantConstants.printConfiguratio
 import static org.eclipse.edc.test.system.PostgresDataVerifier.verifyData;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
 @EndToEndTest
@@ -92,6 +98,8 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final List<String> USED_CONTRACT_ID = new ArrayList<>();
     private static EventHubConsumerAsyncClient consumer;
+
+    private static String kafkacatPod = null;
 
     public static void initializeParticipant(AbstractEntity participant) {
         AUTHORITY.createParticipant(participant.name(), participant.did());
@@ -259,14 +267,32 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
         // Kafka properties
         JsonObject jsonObject = Json.createObjectBuilder()
                 .add("topic", "my-topic")
-                .add("kafka.bootstrap.servers", "PLAINTEXT://localhost:32783")
-                .add("security.protocol", "SASL_PLAINTEXT")
-                .add("sasl.mechanism", "PLAIN")
-                .add("sasl.jaas.config", "org.apache.kafka.common.security.plain.PlainLoginModule required username='your-user' password='your-password'").build();
+                .add("kafka.bootstrap.servers", "proxy-provider-oauth2:30003")
+                .add("security.protocol", "SASL_SSL")
+                .add("sasl.mechanism", "OAUTHBEARER")
+                .add("tls_ca_secret", "proxy-provider-tls-ca")
+                .add("sasl.jaas.config", "org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginModule required " +
+                        "clientId='<your-client-id>' clientSecret='<your-client-secret>' tenantId='<your-tenant-id>' scope='<your-client-id>/.default'").build();
         PROVIDER.createEntry(ASSET_ID_KAFKA_STREAM, "Test Asset Kafka", "a basic kafka stream", Map.of(
                 "type", "Kafka",
                 "properties", jsonObject
         ), genericClaimConstraint(MEMBERSHIP_CREDENTIAL_TYPE, "name", "odrl:eq", "consumer"));
+
+        JsonObject jsonObject2 = Json.createObjectBuilder()
+                .add("topic", "tst-topic")
+                .add("kafka.bootstrap.servers", "proxy-provider:30001")
+                .add("security.protocol", "SASL_SSL")
+                .add("sasl.mechanism", "PLAIN")
+                .add("tls_ca_secret", "proxy-provider-tls-ca")
+                .add("sasl.jaas.config",
+                        "org.apache.kafka.common.security.plain.PlainLoginModule required " +
+                                "username='provider1' password='secret1'")
+                .build();
+        PROVIDER.createEntry(ASSET_ID_KAFKA_STREAM + "-tst-2", "Test Asset Kafka", "a basic kafka stream", Map.of(
+                "type", "Kafka",
+                "properties", jsonObject2
+        ), genericClaimConstraint(MEMBERSHIP_CREDENTIAL_TYPE, "name", "odrl:eq", "consumer"));
+
     }
 
     private static JsonObject genericClaimConstraint(String credentialType, String path, String operator, String rightOperand) {
@@ -304,7 +330,8 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
                     POLICY_RESTRICTED_API,
                     ASSET_ID_REST_20_SEC_API,
                     ASSET_ID_FAILURE_REST_API,
-                    ASSET_ID_KAFKA_STREAM
+                    ASSET_ID_KAFKA_STREAM,
+                    ASSET_ID_KAFKA_STREAM + "-tst-2"
             );
 
             assertThat(queryParticipantDatasets(AUTHORITY, PROVIDER.did()))
@@ -337,10 +364,92 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
             });
         }
 
+        public static String deriveStandardizedServiceName() {
+            return "kp-consumer-service";
+        }
+
         @Test
-        void transfer_kafka_stream() {
+        void transfer_kafka_stream_oauth() {
             var transferProcessId = negotiationContractAndStartTransfer(CONSUMER, PROVIDER, ASSET_ID_KAFKA_STREAM, KAFKA_BROKER_PULL);
             getContractIdFromTransferProcess(CONSUMER, transferProcessId);
+            CONSUMER.finishDataTransfer(transferProcessId);
+        }
+
+        private void publishMessagesToKafka() {
+            try {
+                kafkacatPod = discoverPodName("", "kafkacat-");
+                KafkaIntermediary.provider_publish(kafkacatPod);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+        @Test
+        void transfer_kafka_stream() throws Exception {
+            var transferProcessId = negotiationContractAndStartTransfer(
+                    CONSUMER, PROVIDER, ASSET_ID_KAFKA_STREAM + "-tst-2", KAFKA_BROKER_PULL
+            );
+
+
+            String serviceName = deriveStandardizedServiceName();
+            int servicePort = 30001;  // Fixed port for the standardized service
+            String topic = "tst-topic";
+            String expectedMessage = "Hello from provider!";
+
+            getContractIdFromTransferProcess(CONSUMER, transferProcessId);
+            // Wait longer to ensure proxy is deployed and ready (discovery + deployment time)
+            Thread.sleep(15000);
+
+            // Publish message on provider side
+            publishMessagesToKafka();
+
+            boolean messageReceived = KafkaIntermediary.waitForKafkaMessage(
+                    serviceName, servicePort, topic, expectedMessage, Duration.ofSeconds(20), kafkacatPod
+            );
+            CONSUMER.finishDataTransfer(transferProcessId);
+            assertTrue(messageReceived,
+                    () -> "Expected message not found in Kafka topic within timeout: " + expectedMessage);
+        }
+
+        private static String discoverPodName(String transferId, String filter)
+                throws IOException, InterruptedException {
+            long start = System.currentTimeMillis();
+            String podName = null;
+            while (System.currentTimeMillis() - start < 30 * 1000L) {
+                Process process = new ProcessBuilder(
+                        "kubectl",
+                        "--context", "kind-dse-cluster",
+                        "get", "pods",
+                        "-n", "default",
+                        "-o", "jsonpath={.items[*].metadata.name}"
+                ).start();
+                process.waitFor();
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+                    String output = reader.lines().collect(Collectors.joining(" ")).trim();
+                    if (!output.isEmpty()) {
+                        podName = Arrays.stream(output.split("\\s+"))
+                                .filter(name -> name.contains(filter + transferId))
+                                .findFirst()
+                                .orElse(null);
+                    }
+                }
+                if (podName != null) {
+                    return podName;
+                }
+                Thread.sleep(1000);
+            }
+            throw new RuntimeException("Timed out waiting for consumer pod for transferId " + transferId);
+        }
+
+        private static int getPodPort(String podName) throws IOException, InterruptedException {
+            Process process = new ProcessBuilder(
+                    "kubectl", "get", "pod", podName,
+                    "-o", "jsonpath={.spec.containers[0].ports[0].containerPort}"
+            ).start();
+            process.waitFor();
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+                return Integer.parseInt(reader.readLine().trim());
+            }
         }
 
         @Test

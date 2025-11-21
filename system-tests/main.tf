@@ -2,6 +2,41 @@ locals {
   participants = [var.provider_name, var.consumer_name]
 }
 
+###########################
+## TLS CERTIFICATES      ##
+###########################
+
+# Generate TLS certificates for consumer kafka-proxy listener
+module "consumer_tls_certificates" {
+  source = "./modules/tls-certificates"
+
+  secret_name = "consumer-kafka-proxy-listener-tls"
+  namespace   = "default"
+  common_name = "consumer-kafka-proxy-listener"
+
+  dns_names = [
+    "localhost",
+    "*.default.svc.cluster.local",
+    "consumer-kafkaproxy-kafka-proxy",
+    "consumer-kafkaproxy-kafka-proxy.default.svc.cluster.local",
+  ]
+}
+
+# Generate TLS certificates for provider kafka-proxy listener
+module "provider_tls_certificates" {
+  source = "./modules/tls-certificates"
+
+  secret_name = "provider-kafka-proxy-listener-tls"
+  namespace   = "default"
+  common_name = "provider-kafka-proxy-listener"
+
+  dns_names = [
+    "localhost",
+    "*.default.svc.cluster.local",
+    "provider-kafkaproxy-kafka-proxy",
+    "provider-kafkaproxy-kafka-proxy.default.svc.cluster.local",
+  ]
+}
 
 ###################
 ## POSTGRESQL DB ##
@@ -37,6 +72,27 @@ module "participant" {
   environment                            = var.environment
   devbox-registry                        = var.devbox-registry
   devbox-registry-cred                   = var.devbox-registry-cred
+
+  # Authentication Configuration
+  auth_enabled      = var.auth_enabled
+  auth_mechanism    = var.auth_mechanism
+  auth_tenant_id    = var.auth_tenant_id
+  auth_client_id    = var.auth_client_id
+  auth_static_users = var.auth_static_users
+
+  # TLS Listener Configuration
+  tls_listener_enabled     = var.tls_listener_enabled
+  tls_listener_cert_secret = each.key == "consumer" ? module.consumer_tls_certificates.secret_name : module.provider_tls_certificates.secret_name
+  tls_listener_key_secret  = each.key == "consumer" ? module.consumer_tls_certificates.secret_name : module.provider_tls_certificates.secret_name
+  tls_listener_ca_secret   = "" # Empty string disables mutual TLS (client certificate verification)
+
+  # Vault Configuration
+  vault_folder = var.vault_folder
+
+  depends_on = [
+    module.consumer_tls_certificates,
+    module.provider_tls_certificates
+  ]
 }
 #
 ###############
@@ -54,5 +110,14 @@ module "authority" {
   account_secret_azurite                 = var.account_secret_azurite
   devbox-registry                        = var.devbox-registry
   devbox-registry-cred                   = var.devbox-registry-cred
+}
+
+#####################
+## KAFKA BROKER E2E ##
+#####################
+
+module "broker" {
+  source = "./modules/broker"
+  environment                            = var.environment
 }
 

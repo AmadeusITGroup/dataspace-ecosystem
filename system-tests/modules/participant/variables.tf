@@ -42,3 +42,72 @@ variable "devbox-registry-cred" {
   description = "The image pull secret name for devbox environment"
   type        = string
 }
+
+
+# Authentication Configuration
+variable "auth_enabled" {
+  description = "Enable downstream authentication for consumer proxies"
+  type        = bool
+  default     = true
+}
+
+variable "auth_mechanism" {
+  description = "Authentication mechanism: PLAIN (JWT-over-PLAIN) or OAUTHBEARER (proper OAuth2)"
+  type        = string
+  default     = "PLAIN"
+  validation {
+    condition     = contains(["PLAIN", "OAUTHBEARER"], var.auth_mechanism)
+    error_message = "Authentication mechanism must be either PLAIN or OAUTHBEARER."
+  }
+}
+
+variable "auth_tenant_id" {
+  description = "Microsoft Entra ID (Azure AD) tenant ID for authentication"
+  type        = string
+  default     = "<your-tenant-id>"
+}
+
+variable "auth_client_id" {
+  description = "Application client ID registered in Entra ID for authentication"
+  type        = string
+  default     = "<your-client-id>"
+}
+
+variable "auth_static_users" {
+  description = "Static users for fallback authentication (format: username1:password1,username2:password2)"
+  type        = string
+  default     = "admin:admin-secret"
+  sensitive   = true
+}
+
+# TLS Listener Configuration
+variable "tls_listener_enabled" {
+  description = "Enable TLS for proxy listener (clients connect to proxy via TLS)"
+  type        = bool
+  default     = false
+}
+
+variable "tls_listener_cert_secret" {
+  description = "Kubernetes secret name containing the proxy listener TLS certificate"
+  type        = string
+  default     = ""
+}
+
+variable "tls_listener_key_secret" {
+  description = "Kubernetes secret name containing the proxy listener TLS private key"
+  type        = string
+  default     = ""
+}
+
+variable "tls_listener_ca_secret" {
+  description = "Kubernetes secret name containing the proxy listener CA certificate for mutual TLS"
+  type        = string
+  default     = ""
+}
+
+# Vault Configuration
+variable "vault_folder" {
+  description = "Vault folder for secrets organization. Empty = secret/, 'consumer' = secret/consumer/"
+  type        = string
+  default     = ""
+}

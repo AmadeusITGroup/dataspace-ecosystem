@@ -97,6 +97,11 @@ resource "kubernetes_job" "vault-keygen-job" {
     }
   }
 
+  timeouts {
+    delete = "15m"
+    create = "20m"
+    update = "15m"
+  }
 
   spec {
     ttl_seconds_after_finished = 3600
