@@ -57,8 +57,29 @@ subprojects {
             val dockerFile = file("$dockerContextDir/Dockerfile")
             val imageName = "${project.name}:latest"
 
+            val copyOtel = tasks.register("copyOtel") {
+                val agentFile = rootDir.resolve("externalLibs").resolve(otelFileName)
+                // Only execute if the opentelemetry agent exists in the root dir but not in build directory
+                onlyIf {
+                    agentFile.exists() && !agentFileOnBuildDirectory.exists()
+                }
+                // Ensure the build directory exists before copying
+                doFirst {
+                    buildDir.mkdirs()
+                }
+                // Copy the jar file
+                doLast {
+                    copy {
+                        from(agentFile)
+                        into(buildDir)
+                    }
+                }
+            }
+
             val downloadOtel = tasks.create("downloadOtel") {
-                // only execute task if the opentelemetry agent does not exist. invoke the "clean" task to force
+                // Run after copyOtel to check if we still need to download
+                dependsOn(copyOtel)
+                // only execute task if the opentelemetry agent does not exist after copyOtel. invoke the "clean" task to force
                 onlyIf {
                     !agentFileOnBuildDirectory.exists()
                 }
@@ -76,25 +97,6 @@ subprojects {
                     }
                     logger.lifecycle("Downloading OpenTelemetry Agent")
                     download(openTelemetryAgentUrl, agentFileOnBuildDirectory)
-                }
-            }
-
-            val copyOtel = tasks.register("copyOtel") {
-                val agentFile = rootDir.resolve("externalLibs").resolve(otelFileName)
-                // Only execute if the opentelemetry agent exists in the root dir but not in build directory
-                onlyIf {
-                    agentFile.exists() && !agentFileOnBuildDirectory.exists()
-                }
-                // Ensure the build directory exists before copying
-                doFirst {
-                    buildDir.mkdirs()
-                }
-                // Copy the jar file
-                doLast {
-                    copy {
-                        from(agentFile)
-                        into(buildDir)
-                    }
                 }
             }
 
@@ -130,7 +132,7 @@ subprojects {
             }
             podmanTask.configure {
                 dependsOn(tasks.named(ShadowJavaPlugin.SHADOW_JAR_TASK_NAME))
-                dependsOn(copyOtel)
+                dependsOn(downloadOtel)
             }
 
             val loadToKindTask = tasks.register("loadToKind") {
