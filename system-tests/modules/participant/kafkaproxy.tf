@@ -2,11 +2,13 @@ locals {
   kafkaproxy_release_name = "${var.participant_name}-kafka-proxy-k8s-manager"
   kafka_proxy_image = (
     var.environment == "local" ? "localhost/kafka-proxy-k8s-manager" :
+    var.environment == "devbox" ? "${var.devbox-registry}/kafka-proxy-k8s-manager" :
     "kafka-proxy-k8s-manager"
   )
 
   kafka_plugin_image = (
     var.environment == "local" ? "localhost/kafka-proxy-entra-auth:latest" :
+    var.environment == "devbox" ? "${var.devbox-registry}/kafka-proxy-entra-auth:latest" :
     "kafka-proxy-entra-auth:latest"
   )
 }
@@ -17,17 +19,22 @@ resource "helm_release" "kafkaproxy" {
   dependency_update = true
   recreate_pods     = true
   repository        = "../charts"
-  chart             = "kafka-proxy"
+  chart             = "kafka-proxy-k8s-manager"
   # version           = "latest"
 
   values = [
     yamlencode({
+      "imagePullSecrets" : var.environment == "devbox" ? [
+        {
+          "name" : var.devbox-registry-cred
+        }
+      ] : []
       "kafkaProxy" : {
         "manager" : {
           "image" : {
             "registry" : ""
             "repository" : local.kafka_proxy_image
-            "pullPolicy" : "Never"
+            "pullPolicy" : var.environment == "local" ? "Never" : "IfNotPresent"
             "tag" : "latest"
           }
 

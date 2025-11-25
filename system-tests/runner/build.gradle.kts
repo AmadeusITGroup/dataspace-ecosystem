@@ -49,8 +49,8 @@ dependencies {
     testFixturesImplementation(libs.edc.identityhub.spi.core)
     testFixturesImplementation(libs.edc.spi.identity.did)
     testFixturesImplementation(libs.awaitility)
-    testImplementation("org.apache.kafka:kafka-clients:3.7.0")
-    testFixturesImplementation("org.apache.kafka:kafka-clients:3.7.0")
+    testImplementation(libs.kafka.clients)
+    testFixturesImplementation(libs.kafka.clients)
 
 }
 

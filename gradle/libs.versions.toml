@@ -16,6 +16,7 @@ restAssured = "5.5.0"
 httpMockServer = "5.15.0"
 jersey = "3.1.10"
 jupiter = "5.11.4"
+kafka = "3.7.0"
 postgres = "42.7.3"
 swagger = "2.2.27"
 micrometer = "1.14.2"
@@ -152,6 +153,7 @@ mockserver-client = { module = "org.mock-server:mockserver-client-java", version
 mockserver-netty = { module = "org.mock-server:mockserver-netty", version.ref = "httpMockServer" }
 junit-jupiter-api = { module = "org.junit.jupiter:junit-jupiter-api", version.ref = "jupiter" }
 junit-jupiter-engine = { module = "org.junit.jupiter:junit-jupiter-engine", version.ref = "jupiter" }
+kafka-clients = { module = "org.apache.kafka:kafka-clients", version.ref = "kafka" }
 postgres = { module = "org.postgresql:postgresql", version.ref = "postgres" }
 azure-messaging-eventhub = { group = "com.azure", name = "azure-messaging-eventhubs", version.ref = "azureMessagingEventHub" }
 jersey-multipart = { module = "org.glassfish.jersey.media:jersey-media-multipart", version.ref = "jersey" }
