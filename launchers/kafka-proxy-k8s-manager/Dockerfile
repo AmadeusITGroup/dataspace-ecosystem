@@ -1,5 +1,5 @@
 ARG REGISTRY_URL="docker.io"
-FROM ${REGISTRY_URL}/eclipse-temurin:17-jre-alpine
+FROM ${REGISTRY_URL}/eclipse-temurin:21.0.7_6-jre-alpine-3.21
 
 WORKDIR /app
 
