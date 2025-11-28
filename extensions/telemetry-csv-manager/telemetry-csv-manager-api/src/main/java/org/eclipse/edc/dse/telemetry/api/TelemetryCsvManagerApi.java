@@ -19,11 +19,16 @@ public interface TelemetryCsvManagerApi {
     @Operation(description = "Retrieves Reports",
             operationId = "getReport",
             responses = {
-                    @ApiResponse(responseCode = "200", description = "The telemetry event was processed successfully"),
-                    @ApiResponse(responseCode = "401", description = "Invalid JWT token"),
-                    @ApiResponse(responseCode = "403", description = "Missing or invalid participant in roles"),
+                    @ApiResponse(responseCode = "200", description = "The telemetry event was processed successfully", content = @Content(schema = @Schema(implementation = String.class), mediaType = "text/csv")),
+                    @ApiResponse(responseCode = "400", description = "Invalid date range provided", content = @Content(schema = @Schema(implementation = String.class), mediaType = "application/json")),
+                    @ApiResponse(responseCode = "401", description = "Invalid JWT token", content = @Content(schema = @Schema(implementation = String.class), mediaType = "application/json")),
+                    @ApiResponse(responseCode = "403", description = "Missing/invalid participant in roles, unexpected number of participant roles or participant does not exist",
+                            content = @Content(schema = @Schema(implementation = String.class), mediaType = "application/json")),
                     @ApiResponse(responseCode = "404", description = "Report not found",
+                            content = @Content(schema = @Schema(implementation = String.class), mediaType = "application/json")),
+                    @ApiResponse(responseCode = "500", description = "Internal server error",
                             content = @Content(schema = @Schema(implementation = String.class), mediaType = "application/json"))
+
             }
     )
     Response getReport(@Parameter(description = "Authorization header (JWT token)") @HeaderParam("Authorization") String authHeader, @Parameter(description = "Target month") @QueryParam("month") Integer month,

@@ -83,6 +83,7 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
     // TEST-ONLY SECRET: This hardcoded secret is used exclusively for JWT generation in tests.
     public static final String SECRET = "a-string-secret-at-least-256-bits-long";
     public static String dummyJwt;
+    public static String dummyJwtWithMultipleRoles;
     public static String dummyJwtNonExistentParticipant;
     private static final String EVENT_HUB_CONNECTION_STRING_ALIAS = "event-hub-connection-string";
     private static final String EVENT_HUB_CONNECTION_STRING_SECRET = "Endpoint=sb://eventhubs;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;";
@@ -139,6 +140,15 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
                 .add("typ", "JWT")
                 .and()
                 .claims(Map.of("roles", List.of("Participant.consumer")))
+                .signWith(key, SignatureAlgorithm.HS256)
+                .compact();
+
+        dummyJwtWithMultipleRoles = Jwts.builder()
+                .header()
+                .add("alg", "HS256")
+                .add("typ", "JWT")
+                .and()
+                .claims(Map.of("roles", List.of("Read.consumer", "Participant.consumer")))
                 .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
 
@@ -725,6 +735,24 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
                     "counterparty_total_number_of_events\n" +
                     ctId + "," + 200 + "," + CONSUMER.name() + "," + PROVIDER.name() + "," + 0.02 + "," + 0.02 + "," + 1 + "," + 1;
             assertEquals(expectedCsvReportBuilder, responseBody.getBody().asString().trim());
+
+            // Validates that if we have multiple roles in the JWT it still returns the correct report
+            Response responseBodyForMultipleRoles = given()
+                    .baseUri("%s".formatted(AUTHORITY.csvManagerUrl()))
+                    .params(getReportParams)
+                    .contentType(JSON)
+                    .header("Authorization", "Bearer " + dummyJwtWithMultipleRoles)
+                    .get()
+                    .then()
+                    .log().ifError()
+                    .statusCode(200).contentType(containsString("text/csv"))
+                    .extract().response();
+
+            String expectedCsvReportBuilderForMultipleRoles = "contract_id,data_transfer_response_status,participant_id,counterparty_id," +
+                    "participant_total_transfer_size_in_kB,counterparty_total_transfer_size_in_kB,participant_total_number_of_events," +
+                    "counterparty_total_number_of_events\n" +
+                    ctId + "," + 200 + "," + CONSUMER.name() + "," + PROVIDER.name() + "," + 0.02 + "," + 0.02 + "," + 1 + "," + 1;
+            assertEquals(expectedCsvReportBuilderForMultipleRoles, responseBodyForMultipleRoles.getBody().asString().trim());
         }
 
         @Test
@@ -820,6 +848,26 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
                     .then()
                     .log().ifError()
                     .statusCode(403);
+        }
+
+        @Test
+        void testRetrieveNonExistentReportFromExistentParticipantFails() {
+            int month = 2;
+            int year = 2024;
+
+            Map<String, Object> getReportParams = new HashMap<>();
+            getReportParams.put("month", month);
+            getReportParams.put("year", year);
+
+            given()
+                    .baseUri("%s".formatted(AUTHORITY.csvManagerUrl()))
+                    .params(getReportParams)
+                    .contentType(JSON)
+                    .header("Authorization", "Bearer " + dummyJwt)
+                    .get()
+                    .then()
+                    .log().ifError()
+                    .statusCode(404);
         }
     }
 }

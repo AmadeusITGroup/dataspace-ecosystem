@@ -68,13 +68,18 @@ public class TelemetryCsvManagerApiController implements TelemetryCsvManagerApi 
         try {
             List<String> roles = extractRolesFromJwt(jwtParts);
 
-            // Validate exactly one element -> participant
-            if (roles.size() != 1) {
-                this.monitor.warning("Invalid roles provided for JWT: " + roles);
-                return Response.status(Response.Status.UNAUTHORIZED).entity("Invalid JWT token").build();
+            if (roles.isEmpty()) {
+                this.monitor.warning("Roles array in JWT is empty");
+                return Response.status(Response.Status.UNAUTHORIZED).entity("No roles contained in the JWT token").build();
             }
 
-            String[] roleParts = roles.get(0).split("\\.");
+            List<String> participantRoles = roles.stream().filter(r -> r.startsWith("Participant.")).toList();
+            if (participantRoles.size() != 1) {
+                this.monitor.warning("Unexpected number of participant roles in JWT: " + participantRoles.size());
+                return Response.status(Response.Status.FORBIDDEN).entity("Unexpected number of participant roles in JWT: " + participantRoles.size()).build();
+            }
+
+            String[] roleParts = participantRoles.get(0).split("\\.");
             if (roleParts.length < 2 || roleParts[1] == null || roleParts[1].isEmpty()) {
                 this.monitor.warning("Unexpected number of roles in JWT: " + roles.size());
                 return Response.status(Response.Status.FORBIDDEN).entity("Missing or invalid participant in roles").build();
