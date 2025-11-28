@@ -93,8 +93,8 @@ public class TelemetryCsvManagerApiController implements TelemetryCsvManagerApi 
             }
 
             LocalDateTime dateTime = LocalDateTime.of(year, month, 1, 0, 0);
-            String reportFilename = ReportUtil.generateReportFileName(participantName, dateTime);
-            String objectPath = ReportUtil.getObjectPath(false, dateTime, reportFilename);
+            String reportFilename = ReportUtil.generateReportFileName(participantName, dateTime, false);
+            String objectPath = ReportUtil.getObjectPath(dateTime, reportFilename, false);
             byte[] csvData = getReportFromRemoteStorage(objectPath);
             if (csvData == null) {
                 this.monitor.warning("No report found at path: " + objectPath + " for participant " + participantName + " month " + month + " year " + year);
@@ -140,11 +140,17 @@ public class TelemetryCsvManagerApiController implements TelemetryCsvManagerApi 
         String participantName = reportGenerationRequest.participantName();
         Integer year = reportGenerationRequest.year();
         Integer month = reportGenerationRequest.month();
+        Boolean generateCounterpartyReport = reportGenerationRequest.generateCounterpartyReport();
 
         this.monitor.info("Generating report for participant " + participantName + " month " + month + " year " + year);
         if (participantName == null || participantName.isEmpty()) {
             this.monitor.warning("Invalid participant name provided: " + participantName);
             return Response.status(Response.Status.BAD_REQUEST).entity("Participant name not provided").build();
+        }
+
+        if (generateCounterpartyReport == null) {
+            this.monitor.warning("Counterparty report generation not requested or invalid");
+            return Response.status(Response.Status.BAD_REQUEST).entity("Counterparty report generation not requested or invalid").build();
         }
 
         if (checksInvalidPeriod(month)) {
@@ -153,7 +159,7 @@ public class TelemetryCsvManagerApiController implements TelemetryCsvManagerApi 
         }
 
         try {
-            scheduler.triggerGenerationForParticipant(participantName, LocalDateTime.of(year, month, 1, 0, 0));
+            scheduler.triggerGenerationForParticipant(participantName, LocalDateTime.of(year, month, 1, 0, 0), generateCounterpartyReport);
             return Response.status(Response.Status.CREATED).build();
         } catch (BlobStorageException e) {
             if (e.getErrorCode() == BlobErrorCode.BLOB_ALREADY_EXISTS) {

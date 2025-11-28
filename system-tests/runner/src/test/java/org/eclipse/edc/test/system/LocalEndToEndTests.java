@@ -91,6 +91,8 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
     private static final String VAULT_TOKEN = "root";
     private static final String EVENT_HUB_NAMESPACE = "local-eventhub-eventhubs";
     private static final String EVENT_HUB_NAME = "eh1";
+    public static final String REPORT_HEADER_WITHOUT_COUNTERPARTY_INFO = "contract_id,data_transfer_response_status," +
+            "total_transfer_size_in_kB,total_number_of_events";
 
     private static final LocalAuthority AUTHORITY = new LocalAuthority();
     private static final LocalProvider PROVIDER = new LocalProvider();
@@ -730,10 +732,8 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
                     .statusCode(200).contentType(containsString("text/csv"))
                     .extract().response();
 
-            String expectedCsvReportBuilder = "contract_id,data_transfer_response_status,participant_id,counterparty_id," +
-                    "participant_total_transfer_size_in_kB,counterparty_total_transfer_size_in_kB,participant_total_number_of_events," +
-                    "counterparty_total_number_of_events\n" +
-                    ctId + "," + 200 + "," + CONSUMER.name() + "," + PROVIDER.name() + "," + 0.02 + "," + 0.02 + "," + 1 + "," + 1;
+            String expectedCsvReportBuilder = REPORT_HEADER_WITHOUT_COUNTERPARTY_INFO + "\n" +
+                    ctId + "," + 200 + "," + 0.02 + "," + 1;
             assertEquals(expectedCsvReportBuilder, responseBody.getBody().asString().trim());
 
             // Validates that if we have multiple roles in the JWT it still returns the correct report
@@ -799,10 +799,8 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
                     .statusCode(200).contentType(containsString("text/csv"))
                     .extract().response();
 
-            String expectedCsvReportBuilder = "contract_id,data_transfer_response_status,participant_id,counterparty_id," +
-                    "participant_total_transfer_size_in_kB,counterparty_total_transfer_size_in_kB,participant_total_number_of_events," +
-                    "counterparty_total_number_of_events\n" +
-                    ctId + "," + 400 + "," + CONSUMER.name() + ",N/A," + 0.02 + "," + 0 + "," + 1 + "," + 0;
+            String expectedCsvReportBuilder = REPORT_HEADER_WITHOUT_COUNTERPARTY_INFO + "\n" +
+                    ctId + "," + 400 + "," + 0.02 + "," + 1;
             assertEquals(expectedCsvReportBuilder, responseBody.getBody().asString().trim());
         }
 

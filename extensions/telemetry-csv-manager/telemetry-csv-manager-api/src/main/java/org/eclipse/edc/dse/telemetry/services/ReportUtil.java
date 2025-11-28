@@ -9,18 +9,24 @@ import java.util.List;
 
 public class ReportUtil {
 
-    public static final String REPORT_HEADER = "contract_id,data_transfer_response_status,participant_id,counterparty_id," +
+    public static final String REPORT_HEADER_WITH_COUNTERPARTY_INFO = "contract_id,data_transfer_response_status,participant_id,counterparty_id," +
             "participant_total_transfer_size_in_kB,counterparty_total_transfer_size_in_kB,participant_total_number_of_events," +
             "counterparty_total_number_of_events";
 
-    public static String generateReportFileName(String participantName, LocalDateTime targetDateTime) {
+    public static final String REPORT_HEADER_WITHOUT_COUNTERPARTY_INFO = "contract_id,data_transfer_response_status," +
+            "total_transfer_size_in_kB,total_number_of_events";
+
+    public static final String NONE_WITH_COUNTERPARTY_INFO = "N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A";
+    public static final String NONE_WITHOUT_COUNTERPARTY_INFO = "N/A,N/A,N/A,N/A";
+
+    public static String generateReportFileName(String participantName, LocalDateTime targetDateTime, boolean isCounterpartyReport) {
         int year = targetDateTime.getYear();
         int month = targetDateTime.getMonthValue();
-        return "report-" + participantName + "-" + year + "-" + month + ".csv";
+        return (isCounterpartyReport ? "extended-" : "") + "report-" + participantName + "-" + year + "-" + month + ".csv";
     }
 
-    public static String getObjectPath(boolean isErrorReport, LocalDateTime dateTime, String fileName) {
-        return "reports/" + dateTime.getYear() + "/" + dateTime.getMonthValue() + "/" + (isErrorReport ? "errors/" + fileName : fileName);
+    public static String getObjectPath(LocalDateTime dateTime, String fileName, boolean isCounterpartyReport) {
+        return (isCounterpartyReport ? "extended-" : "") + "reports/" + dateTime.getYear() + "/" + dateTime.getMonthValue() + "/" + fileName;
     }
 
     //    public static String generateCsvErrorReportContent(List<ReportGenerationError> errors) {
@@ -37,12 +43,12 @@ public class ReportUtil {
     //        return baos.toString(StandardCharsets.UTF_8);
     //    }
 
-    public static String generateCsvReportContent(List<String> csvLines) {
+    public static String generateCsvReportContent(List<String> csvLines, boolean includeCounterpartyInfo) {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         PrintWriter writer = new PrintWriter(new OutputStreamWriter(baos, StandardCharsets.UTF_8));
-        writer.println(REPORT_HEADER);
+        writer.println(includeCounterpartyInfo ? REPORT_HEADER_WITH_COUNTERPARTY_INFO : REPORT_HEADER_WITHOUT_COUNTERPARTY_INFO);
         if (csvLines.isEmpty()) {
-            writer.println("N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A");
+            writer.println(includeCounterpartyInfo ? NONE_WITH_COUNTERPARTY_INFO : NONE_WITHOUT_COUNTERPARTY_INFO);
         } else {
             csvLines.forEach(writer::println);
         }

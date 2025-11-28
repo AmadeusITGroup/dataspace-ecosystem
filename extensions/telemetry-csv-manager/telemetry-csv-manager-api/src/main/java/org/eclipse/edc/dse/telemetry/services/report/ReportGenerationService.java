@@ -81,18 +81,23 @@ public class ReportGenerationService {
         List<ParticipantId> participants = participantRepository.findAll();
         LocalDateTime oneMonthBeforeDate = LocalDateTime.now().minusMonths(1);
         for (ParticipantId participant : participants) {
-            generateReport(participant, oneMonthBeforeDate);
+            // By default the cron task should generate the simplified report and the extended report with counterparty info
+            generateReport(participant, oneMonthBeforeDate, false);
+            generateReport(participant, oneMonthBeforeDate, true);
         }
     }
 
-    public void generateReport(String participantName, LocalDateTime targetDateTime) {
+    public void generateParticipantReport(String participantName, LocalDateTime targetDateTime, boolean generateCounterpartyReport) {
         ParticipantId participant = findParticipant(participantName);
         if (participant == null) {
             this.monitor.severe("Participant not found: " + participantName);
             throw new RuntimeException("Participant not found: " + participantName);
         }
 
-        generateReport(participant, targetDateTime);
+        generateReport(participant, targetDateTime, false);
+        if (generateCounterpartyReport) {
+            generateReport(participant, targetDateTime, true);
+        }
     }
 
     public ParticipantId findParticipant(String participantName) {
@@ -105,10 +110,10 @@ public class ReportGenerationService {
      * the report generation is happening, we might need to start a transaction before doing all the reads and commit it only after saving all the reports,
      * to ensure that no new events are added in the meantime. As this is not the case for now, I only wrapped the report saving inside a transaction.
      * */
-    public void generateReport(ParticipantId participant, LocalDateTime targetDateTime) {
+    public void generateReport(ParticipantId participant, LocalDateTime targetDateTime, boolean includeCounterpartyInfo) {
         try {
-            this.monitor.debug("Generating report for participant " + participant.getName() + " for " + targetDateTime);
-            generateCsv(participant, targetDateTime);
+            this.monitor.debug("Generating report for participant " + participant.getName());
+            generateCsv(participant, targetDateTime, includeCounterpartyInfo);
             this.monitor.debug("Report generated");
         } catch (Exception e) {
             monitor.severe("Error generating report for participant " + participant.getName() + ": " + e.getMessage(), e);
@@ -116,19 +121,21 @@ public class ReportGenerationService {
         }
     }
 
-    void generateCsv(ParticipantId participant, LocalDateTime targetDateTime) {
-        monitor.info("Generating report for participant " + participant.getName());
+    void generateCsv(ParticipantId participant, LocalDateTime targetDateTime, boolean includeCounterpartyInfo) {
+        monitor.info("Generating csv for participant " + participant.getName());
         int month = targetDateTime.getMonthValue();
         int year = targetDateTime.getYear();
 
         List<ContractStats> contractStats = telemetryEventRepository.findStatsGroupedByContractIdAndStatusCode(participant.getId(), month, year);
-        List<String> csvLines = collectCsvEntryInfo(participant, contractStats, month, year);
+        List<String> csvLines = collectCsvEntryInfo(participant, contractStats, month, year, includeCounterpartyInfo);
 
         List<TelemetryEvent> events = telemetryEventRepository.findByParticipantIdForMonth(participant.getId(), targetDateTime.getMonthValue(), targetDateTime.getYear());
-        String csvContent = ReportUtil.generateCsvReportContent(csvLines);
-        String fileName = ReportUtil.generateReportFileName(participant.getName(), targetDateTime);
-        String path = getObjectPath(false, targetDateTime, fileName);
+        String csvContent = ReportUtil.generateCsvReportContent(csvLines, includeCounterpartyInfo);
+        String fileName = ReportUtil.generateReportFileName(participant.getName(), targetDateTime, includeCounterpartyInfo);
+        String path = getObjectPath(targetDateTime, fileName, includeCounterpartyInfo);
+        monitor.debug("Uploading report to path " + path);
         String objectUrl = azureStorageService.upload(path, csvContent.getBytes(StandardCharsets.UTF_8));
+        monitor.debug("Report uploaded to " + objectUrl);
         // We should implement a retry mechanism here FDPT-84156
         if (objectUrl != null) {
             // I save the report only at the end to avoid rollback if the upload failed
@@ -138,7 +145,19 @@ public class ReportGenerationService {
         }
     }
 
-    private List<String> collectCsvEntryInfo(ParticipantId participant, List<ContractStats> contractStats, int month, int year) {
+    private List<String> collectCsvEntryInfo(ParticipantId participant, List<ContractStats> contractStats, int month, int year, boolean includeCounterpartyInfo) {
+        List<String> csvLines;
+        if (!includeCounterpartyInfo) {
+            this.monitor.debug("Building report for participant " + participant.getName() + " without counterparty info");
+            csvLines = buildCsvWithoutCounterpartyInfo(contractStats);
+        } else {
+            this.monitor.debug("Building report for participant " + participant.getName() + " with counterparty info");
+            csvLines = buildCsvWithCounterpartyInfo(participant, contractStats, month, year);
+        }
+        return csvLines;
+    }
+
+    private List<String> buildCsvWithCounterpartyInfo(ParticipantId participant, List<ContractStats> contractStats, int month, int year) {
         List<String> csvLines = new ArrayList<>();
         ContractStats counterPartyContractStats;
         for (ContractStats contractStat : contractStats) {
@@ -160,12 +179,20 @@ public class ReportGenerationService {
                 counterPartyContractStats = new ContractStats(contractId, 0, null, null);
             }
 
-            csvLines.add(buildCsvEntryRow(contractStat, participant.getName(), counterpartyName, counterPartyContractStats));
+            csvLines.add(buildCsvEntryRowWithCounterpartyInfo(contractStat, participant.getName(), counterpartyName, counterPartyContractStats));
         }
         return csvLines;
     }
 
-    private static String buildCsvEntryRow(ContractStats contractStat, String participantName, String counterpartyName, ContractStats counterPartyContractStats) {
+    private static List<String> buildCsvWithoutCounterpartyInfo(List<ContractStats> contractStats) {
+        List<String> csvLines = new ArrayList<>();
+        for (ContractStats contractStat : contractStats) {
+            csvLines.add(buildCsvEntryRowWithoutCounterpartyInfo(contractStat));
+        }
+        return csvLines;
+    }
+
+    private static String buildCsvEntryRowWithCounterpartyInfo(ContractStats contractStat, String participantName, String counterpartyName, ContractStats counterPartyContractStats) {
         StringBuilder builder = new StringBuilder();
         builder.append(getValue(contractStat.contractId())).append(",");
         builder.append(getValue(contractStat.responseStatus())).append(",");
@@ -175,6 +202,15 @@ public class ReportGenerationService {
         builder.append(getMsgSizeValue(counterPartyContractStats)).append(",");
         builder.append(contractStat.eventCount() == null ? 0 : contractStat.eventCount()).append(",");
         builder.append(counterPartyContractStats.eventCount() == null ? 0 : counterPartyContractStats.eventCount());
+        return builder.toString();
+    }
+
+    private static String buildCsvEntryRowWithoutCounterpartyInfo(ContractStats contractStat) {
+        StringBuilder builder = new StringBuilder();
+        builder.append(getValue(contractStat.contractId())).append(",");
+        builder.append(getValue(contractStat.responseStatus())).append(",");
+        builder.append(getMsgSizeValue(contractStat)).append(",");
+        builder.append(contractStat.eventCount() == null ? 0 : contractStat.eventCount());
         return builder.toString();
     }
 

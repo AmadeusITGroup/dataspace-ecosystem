@@ -88,7 +88,7 @@ public class ReportGeneratorScheduler {
             }
         }
     }
-    
+
     public boolean checkParticipantExists(String participantName) {
         this.monitor.debug("Checking participant " + participantName + " exists");
         EntityManager em = JpaUtil.createEntityManager();
@@ -105,12 +105,12 @@ public class ReportGeneratorScheduler {
         }
     }
 
-    public void triggerGenerationForParticipant(String participantName, LocalDateTime reportDateTime) {
+    public void triggerGenerationForParticipant(String participantName, LocalDateTime reportDateTime, Boolean generateCounterpartyReport) {
         this.monitor.info("Triggering report generation job at " + ZonedDateTime.now(this.clock));
         EntityManager em = JpaUtil.createEntityManager();
         ReportGenerationService service = buildGenerationService(em);
         try {
-            service.generateReport(participantName, reportDateTime);
+            service.generateParticipantReport(participantName, reportDateTime, generateCounterpartyReport);
         } catch (Exception e) {
             this.monitor.severe("Error running report scheduler", e);
             throw e;

@@ -35,12 +35,13 @@ import static org.eclipse.edc.dse.telemetry.TestUtils.PARTICIPANT_NAME_2;
 import static org.eclipse.edc.dse.telemetry.TestUtils.TEST_PERSISTENCE_UNIT;
 import static org.eclipse.edc.dse.telemetry.TestUtils.USER_EMAIL;
 import static org.eclipse.edc.dse.telemetry.TestUtils.USER_EMAIL_2;
-import static org.eclipse.edc.dse.telemetry.services.ReportUtil.REPORT_HEADER;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.eclipse.edc.dse.telemetry.services.ReportUtil.REPORT_HEADER_WITHOUT_COUNTERPARTY_INFO;
+import static org.eclipse.edc.dse.telemetry.services.ReportUtil.REPORT_HEADER_WITH_COUNTERPARTY_INFO;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertLinesMatch;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
@@ -102,8 +103,8 @@ class ReportGenerationServiceTest {
     }
 
     @Test
-    @DisplayName("Should succeed when report generation is performed")
-    void shouldSucceed_WhenReportGeneration() {
+    @DisplayName("Should succeed when report generation is performed with counterparty info")
+    void shouldSucceed_WhenReportGenerationWithCounterpartyInfo() {
         em.getTransaction().begin();
         ParticipantId participant1 = new ParticipantId(P1_DID, USER_EMAIL, PARTICIPANT_NAME);
         ParticipantId participant2 = new ParticipantId(P2_DID, USER_EMAIL_2, PARTICIPANT_NAME_2);
@@ -124,30 +125,74 @@ class ReportGenerationServiceTest {
         ReportGenerationService reportGenerationService = new ReportGenerationService(mockedMonitor, participantRepo, reportRepository, telemetryEventRepo, mockedAzureStorageService);
         try (MockedStatic<ReportUtil> mockedStatic = Mockito.mockStatic(ReportUtil.class)) {
             AtomicReference<String> capturedContent = new AtomicReference<>();
-            mockedStatic.when(() -> ReportUtil.generateCsvReportContent(any()))
+            mockedStatic.when(() -> ReportUtil.generateCsvReportContent(any(), eq(true)))
                     .thenAnswer(invocation -> {
                         String result = (String) invocation.callRealMethod();
                         capturedContent.set(result);
                         return result;
                     });
-            mockedStatic.when(() -> ReportUtil.generateReportFileName(any(), any())).then(InvocationOnMock::callRealMethod);
+            mockedStatic.when(() -> ReportUtil.generateReportFileName(any(), any(), eq(true))).then(InvocationOnMock::callRealMethod);
             mockedStatic.when(() -> ReportUtil.getValue(any(Integer.class))).then(InvocationOnMock::callRealMethod);
             mockedStatic.when(() -> ReportUtil.getValue(any(Long.class))).then(InvocationOnMock::callRealMethod);
             mockedStatic.when(() -> ReportUtil.getValue(any(String.class))).then(InvocationOnMock::callRealMethod);
 
-            reportGenerationService.generateReport(participant1, LocalDateTime.of(2025, Month.AUGUST, 23, 12, 0));
+            reportGenerationService.generateReport(participant1, LocalDateTime.of(2025, Month.AUGUST, 23, 12, 0), true);
 
             assertEquals(1, reportRepository.findAll().size());
             Report report = reportRepository.findAll().get(0);
             validateReport(report, participant1, 1);
-            List<String> expectedCsv = List.of(REPORT_HEADER, "contract1,200,participantName,participantName2,0.16,0.16,1,1");
+            List<String> expectedCsv = List.of(REPORT_HEADER_WITH_COUNTERPARTY_INFO, "contract1,200,participantName,participantName2,0.16,0.16,1,1");
             assertLinesMatch(expectedCsv, capturedContent.get().lines().toList());
         }
     }
 
     @Test
-    @DisplayName("Should succeed when report generation with multiple contracts is performed")
-    void shouldSucceed_WhenReportGenerationWithMultipleContracts() {
+    @DisplayName("Should succeed when report generation is performed without counterparty info")
+    void shouldSucceed_WhenReportGenerationWithoutCounterpartyInfo() {
+        em.getTransaction().begin();
+        ParticipantId participant1 = new ParticipantId(P1_DID, USER_EMAIL, PARTICIPANT_NAME);
+        ParticipantId participant2 = new ParticipantId(P2_DID, USER_EMAIL_2, PARTICIPANT_NAME_2);
+        participantRepo.save(participant1);
+        participantRepo.save(participant2);
+
+        telemetryEventRepo.save(createTelemetryEvent(CONTRACT_1, participant1, LocalDateTime.of(2025, Month.AUGUST, 23, 12, 0), 159, 200));
+        telemetryEventRepo.save(createTelemetryEvent(CONTRACT_1, participant2, LocalDateTime.of(2025, Month.AUGUST, 23, 12, 2), 159, 200));
+        em.getTransaction().commit();
+
+        Monitor mockedMonitor = mock(Monitor.class);
+        doNothing().when(mockedMonitor).severe(any(String.class));
+        doNothing().when(mockedMonitor).info(any(String.class));
+
+        AzureStorageService mockedAzureStorageService = mock(AzureStorageService.class);
+        doAnswer(c -> "objectUrl").when(mockedAzureStorageService).upload(any(), any());
+
+        ReportGenerationService reportGenerationService = new ReportGenerationService(mockedMonitor, participantRepo, reportRepository, telemetryEventRepo, mockedAzureStorageService);
+        try (MockedStatic<ReportUtil> mockedStatic = Mockito.mockStatic(ReportUtil.class)) {
+            AtomicReference<String> capturedContent = new AtomicReference<>();
+            mockedStatic.when(() -> ReportUtil.generateCsvReportContent(any(), eq(false)))
+                    .thenAnswer(invocation -> {
+                        String result = (String) invocation.callRealMethod();
+                        capturedContent.set(result);
+                        return result;
+                    });
+            mockedStatic.when(() -> ReportUtil.generateReportFileName(any(), any(), eq(false))).then(InvocationOnMock::callRealMethod);
+            mockedStatic.when(() -> ReportUtil.getValue(any(Integer.class))).then(InvocationOnMock::callRealMethod);
+            mockedStatic.when(() -> ReportUtil.getValue(any(Long.class))).then(InvocationOnMock::callRealMethod);
+            mockedStatic.when(() -> ReportUtil.getValue(any(String.class))).then(InvocationOnMock::callRealMethod);
+
+            reportGenerationService.generateReport(participant1, LocalDateTime.of(2025, Month.AUGUST, 23, 12, 0), false);
+
+            assertEquals(1, reportRepository.findAll().size());
+            Report report = reportRepository.findAll().get(0);
+            validateReport(report, participant1, 1);
+            List<String> expectedCsv = List.of(REPORT_HEADER_WITHOUT_COUNTERPARTY_INFO, "contract1,200,0.16,1");
+            assertLinesMatch(expectedCsv, capturedContent.get().lines().toList());
+        }
+    }
+
+    @Test
+    @DisplayName("Should succeed when report generation with multiple contracts is performed with counterparty info")
+    void shouldSucceed_WhenReportGenerationWithMultipleContractsAndWithCounterpartyInfo() {
         em.getTransaction().begin();
         ParticipantId participant1 = new ParticipantId(P1_DID, USER_EMAIL, PARTICIPANT_NAME);
         ParticipantId participant2 = new ParticipantId(P2_DID, USER_EMAIL_2, PARTICIPANT_NAME_2);
@@ -174,23 +219,23 @@ class ReportGenerationServiceTest {
         ReportGenerationService reportGenerationService = new ReportGenerationService(mockedMonitor, participantRepo, reportRepository, telemetryEventRepo, mockedAzureStorageService);
         try (MockedStatic<ReportUtil> mockedStatic = Mockito.mockStatic(ReportUtil.class)) {
             AtomicReference<String> capturedContent = new AtomicReference<>();
-            mockedStatic.when(() -> ReportUtil.generateCsvReportContent(any()))
+            mockedStatic.when(() -> ReportUtil.generateCsvReportContent(any(), eq(true)))
                     .thenAnswer(invocation -> {
                         String result = (String) invocation.callRealMethod();
                         capturedContent.set(result);
                         return result;
                     });
-            mockedStatic.when(() -> ReportUtil.generateReportFileName(any(), any())).then(InvocationOnMock::callRealMethod);
+            mockedStatic.when(() -> ReportUtil.generateReportFileName(any(), any(), eq(true))).then(InvocationOnMock::callRealMethod);
             mockedStatic.when(() -> ReportUtil.getValue(any(Integer.class))).then(InvocationOnMock::callRealMethod);
             mockedStatic.when(() -> ReportUtil.getValue(any(Long.class))).then(InvocationOnMock::callRealMethod);
             mockedStatic.when(() -> ReportUtil.getValue(any(String.class))).then(InvocationOnMock::callRealMethod);
 
-            reportGenerationService.generateReport(participant1, LocalDateTime.of(2025, Month.AUGUST, 23, 12, 0));
+            reportGenerationService.generateReport(participant1, LocalDateTime.of(2025, Month.AUGUST, 23, 12, 0), true);
 
             assertEquals(1, reportRepository.findAll().size());
             Report report = reportRepository.findAll().get(0);
             validateReport(report, participant1, 4);
-            List<String> expectedCsv = List.of(REPORT_HEADER,
+            List<String> expectedCsv = List.of(REPORT_HEADER_WITH_COUNTERPARTY_INFO,
                     "contract1,200,participantName,participantName2,0.19,0.19,2,2",
                     "contract2,200,participantName,participantName2,0.16,0.16,1,1",
                     "contract3,200,participantName,participantName2,0.49,0.49,1,1");
@@ -199,8 +244,61 @@ class ReportGenerationServiceTest {
     }
 
     @Test
-    @DisplayName("Should succeed when report generation with multiple contracts and multiple response status codes is performed")
-    void shouldSucceed_WhenReportGenerationWithMultipleContractsAndMultipleStatusCodes() {
+    @DisplayName("Should succeed when report generation with multiple contracts is performed without counterparty info")
+    void shouldSucceed_WhenReportGenerationWithMultipleContractsAndWithoutCounterpartyInfo() {
+        em.getTransaction().begin();
+        ParticipantId participant1 = new ParticipantId(P1_DID, USER_EMAIL, PARTICIPANT_NAME);
+        ParticipantId participant2 = new ParticipantId(P2_DID, USER_EMAIL_2, PARTICIPANT_NAME_2);
+        participantRepo.save(participant1);
+        participantRepo.save(participant2);
+
+        telemetryEventRepo.save(createTelemetryEvent(CONTRACT_1, participant1, LocalDateTime.of(2025, Month.AUGUST, 23, 12, 0), 159, 200));
+        telemetryEventRepo.save(createTelemetryEvent(CONTRACT_1, participant2, LocalDateTime.of(2025, Month.AUGUST, 23, 12, 2), 159, 200));
+        telemetryEventRepo.save(createTelemetryEvent(CONTRACT_1, participant1, LocalDateTime.of(2025, Month.AUGUST, 23, 21, 2), 40, 200));
+        telemetryEventRepo.save(createTelemetryEvent(CONTRACT_1, participant2, LocalDateTime.of(2025, Month.AUGUST, 23, 21, 6), 40, 200));
+        telemetryEventRepo.save(createTelemetryEvent(CONTRACT_2, participant1, LocalDateTime.of(2025, Month.AUGUST, 15, 13, 2), 159, 200));
+        telemetryEventRepo.save(createTelemetryEvent(CONTRACT_2, participant2, LocalDateTime.of(2025, Month.AUGUST, 14, 13, 2), 159, 200));
+        telemetryEventRepo.save(createTelemetryEvent(CONTRACT_3, participant1, LocalDateTime.of(2025, Month.AUGUST, 2, 18, 7), 500, 200));
+        telemetryEventRepo.save(createTelemetryEvent(CONTRACT_3, participant2, LocalDateTime.of(2025, Month.AUGUST, 2, 18, 2), 500, 200));
+        em.getTransaction().commit();
+
+        Monitor mockedMonitor = mock(Monitor.class);
+        doNothing().when(mockedMonitor).severe(any(String.class));
+        doNothing().when(mockedMonitor).info(any(String.class));
+
+        AzureStorageService mockedAzureStorageService = mock(AzureStorageService.class);
+        doAnswer(c -> "objectUrl").when(mockedAzureStorageService).upload(any(), any());
+
+        ReportGenerationService reportGenerationService = new ReportGenerationService(mockedMonitor, participantRepo, reportRepository, telemetryEventRepo, mockedAzureStorageService);
+        try (MockedStatic<ReportUtil> mockedStatic = Mockito.mockStatic(ReportUtil.class)) {
+            AtomicReference<String> capturedContent = new AtomicReference<>();
+            mockedStatic.when(() -> ReportUtil.generateCsvReportContent(any(), eq(false)))
+                    .thenAnswer(invocation -> {
+                        String result = (String) invocation.callRealMethod();
+                        capturedContent.set(result);
+                        return result;
+                    });
+            mockedStatic.when(() -> ReportUtil.generateReportFileName(any(), any(), eq(false))).then(InvocationOnMock::callRealMethod);
+            mockedStatic.when(() -> ReportUtil.getValue(any(Integer.class))).then(InvocationOnMock::callRealMethod);
+            mockedStatic.when(() -> ReportUtil.getValue(any(Long.class))).then(InvocationOnMock::callRealMethod);
+            mockedStatic.when(() -> ReportUtil.getValue(any(String.class))).then(InvocationOnMock::callRealMethod);
+
+            reportGenerationService.generateReport(participant1, LocalDateTime.of(2025, Month.AUGUST, 23, 12, 0), false);
+
+            assertEquals(1, reportRepository.findAll().size());
+            Report report = reportRepository.findAll().get(0);
+            validateReport(report, participant1, 4);
+            List<String> expectedCsv = List.of(REPORT_HEADER_WITHOUT_COUNTERPARTY_INFO,
+                    "contract1,200,0.19,2",
+                    "contract2,200,0.16,1",
+                    "contract3,200,0.49,1");
+            assertLinesMatch(expectedCsv, capturedContent.get().lines().toList());
+        }
+    }
+
+    @Test
+    @DisplayName("Should succeed when report generation with multiple contracts, multiple response status codes is performed and with counterparty info")
+    void shouldSucceed_WhenReportGenerationWithMultipleContractsAndMultipleStatusCodesAndWithCounterpartyInfo() {
         em.getTransaction().begin();
         ParticipantId participant1 = new ParticipantId(P1_DID, USER_EMAIL, PARTICIPANT_NAME);
         ParticipantId participant2 = new ParticipantId(P2_DID, USER_EMAIL_2, PARTICIPANT_NAME_2);
@@ -232,23 +330,23 @@ class ReportGenerationServiceTest {
         ReportGenerationService reportGenerationService = new ReportGenerationService(mockedMonitor, participantRepo, reportRepository, telemetryEventRepo, mockedAzureStorageService);
         try (MockedStatic<ReportUtil> mockedStatic = Mockito.mockStatic(ReportUtil.class)) {
             AtomicReference<String> capturedContent = new AtomicReference<>();
-            mockedStatic.when(() -> ReportUtil.generateCsvReportContent(any()))
+            mockedStatic.when(() -> ReportUtil.generateCsvReportContent(any(), eq(true)))
                     .thenAnswer(invocation -> {
                         String result = (String) invocation.callRealMethod();
                         capturedContent.set(result);
                         return result;
                     });
-            mockedStatic.when(() -> ReportUtil.generateReportFileName(any(), any())).then(InvocationOnMock::callRealMethod);
+            mockedStatic.when(() -> ReportUtil.generateReportFileName(any(), any(), eq(true))).then(InvocationOnMock::callRealMethod);
             mockedStatic.when(() -> ReportUtil.getValue(any(Integer.class))).then(InvocationOnMock::callRealMethod);
             mockedStatic.when(() -> ReportUtil.getValue(any(Long.class))).then(InvocationOnMock::callRealMethod);
             mockedStatic.when(() -> ReportUtil.getValue(any(String.class))).then(InvocationOnMock::callRealMethod);
 
-            reportGenerationService.generateReport(participant1, LocalDateTime.of(2025, Month.AUGUST, 23, 12, 0));
+            reportGenerationService.generateReport(participant1, LocalDateTime.of(2025, Month.AUGUST, 23, 12, 0), true);
 
             assertEquals(1, reportRepository.findAll().size());
             Report report = reportRepository.findAll().get(0);
             validateReport(report, participant1, 8);
-            List<String> expectedCsv = List.of(REPORT_HEADER,
+            List<String> expectedCsv = List.of(REPORT_HEADER_WITH_COUNTERPARTY_INFO,
                     "contract1,200,participantName,participantName2,0.04,0.04,1,1",
                     "contract2,200,participantName,participantName2,0.16,0.16,1,1",
                     "contract2,400,participantName,participantName2,0.16,0,1,0",
@@ -259,8 +357,68 @@ class ReportGenerationServiceTest {
     }
 
     @Test
-    @DisplayName("Should succeed when report generation is performed but there is a discrepancy in message size")
-    void shouldSucceed_WhenReportGenerationButDiscrepancyInMsgSize() {
+    @DisplayName("Should succeed when report generation with multiple contracts, multiple response status codes is performed and without counterparty info")
+    void shouldSucceed_WhenReportGenerationWithMultipleContractsAndMultipleStatusCodesAndWithoutCounterpartyInfo() {
+        em.getTransaction().begin();
+        ParticipantId participant1 = new ParticipantId(P1_DID, USER_EMAIL, PARTICIPANT_NAME);
+        ParticipantId participant2 = new ParticipantId(P2_DID, USER_EMAIL_2, PARTICIPANT_NAME_2);
+        participantRepo.save(participant1);
+        participantRepo.save(participant2);
+
+        telemetryEventRepo.save(createTelemetryEvent(CONTRACT_1, participant2, LocalDateTime.of(2025, Month.AUGUST, 23, 12, 2), 159, 500));
+        telemetryEventRepo.save(createTelemetryEvent(CONTRACT_1, participant2, LocalDateTime.of(2025, Month.AUGUST, 23, 17, 2), 159, 400));
+        telemetryEventRepo.save(createTelemetryEvent(CONTRACT_1, participant1, LocalDateTime.of(2025, Month.AUGUST, 23, 21, 2), 40, 200));
+        telemetryEventRepo.save(createTelemetryEvent(CONTRACT_1, participant2, LocalDateTime.of(2025, Month.AUGUST, 23, 21, 6), 40, 200));
+        telemetryEventRepo.save(createTelemetryEvent(CONTRACT_2, participant1, LocalDateTime.of(2025, Month.AUGUST, 15, 13, 2), 159, 200));
+        telemetryEventRepo.save(createTelemetryEvent(CONTRACT_2, participant1, LocalDateTime.of(2025, Month.AUGUST, 15, 22, 2), 159, 400));
+        telemetryEventRepo.save(createTelemetryEvent(CONTRACT_2, participant2, LocalDateTime.of(2025, Month.AUGUST, 14, 13, 2), 159, 200));
+        telemetryEventRepo.save(createTelemetryEvent(CONTRACT_3, participant1, LocalDateTime.of(2025, Month.AUGUST, 2, 18, 7), 500, 200));
+        telemetryEventRepo.save(createTelemetryEvent(CONTRACT_3, participant1, LocalDateTime.of(2025, Month.AUGUST, 2, 8, 7), 500, 500));
+        telemetryEventRepo.save(createTelemetryEvent(CONTRACT_3, participant1, LocalDateTime.of(2025, Month.AUGUST, 2, 8, 8), 500, 500));
+        telemetryEventRepo.save(createTelemetryEvent(CONTRACT_3, participant1, LocalDateTime.of(2025, Month.AUGUST, 2, 8, 10), 500, 500));
+        telemetryEventRepo.save(createTelemetryEvent(CONTRACT_3, participant1, LocalDateTime.of(2025, Month.AUGUST, 2, 18, 2), 500, 200));
+        telemetryEventRepo.save(createTelemetryEvent(CONTRACT_3, participant2, LocalDateTime.of(2025, Month.AUGUST, 2, 18, 2), 500, 200));
+        em.getTransaction().commit();
+
+        Monitor mockedMonitor = mock(Monitor.class);
+        doNothing().when(mockedMonitor).severe(any(String.class));
+        doNothing().when(mockedMonitor).info(any(String.class));
+
+        AzureStorageService mockedAzureStorageService = mock(AzureStorageService.class);
+        doAnswer(c -> "objectUrl").when(mockedAzureStorageService).upload(any(), any());
+
+        ReportGenerationService reportGenerationService = new ReportGenerationService(mockedMonitor, participantRepo, reportRepository, telemetryEventRepo, mockedAzureStorageService);
+        try (MockedStatic<ReportUtil> mockedStatic = Mockito.mockStatic(ReportUtil.class)) {
+            AtomicReference<String> capturedContent = new AtomicReference<>();
+            mockedStatic.when(() -> ReportUtil.generateCsvReportContent(any(), eq(false)))
+                    .thenAnswer(invocation -> {
+                        String result = (String) invocation.callRealMethod();
+                        capturedContent.set(result);
+                        return result;
+                    });
+            mockedStatic.when(() -> ReportUtil.generateReportFileName(any(), any(), eq(false))).then(InvocationOnMock::callRealMethod);
+            mockedStatic.when(() -> ReportUtil.getValue(any(Integer.class))).then(InvocationOnMock::callRealMethod);
+            mockedStatic.when(() -> ReportUtil.getValue(any(Long.class))).then(InvocationOnMock::callRealMethod);
+            mockedStatic.when(() -> ReportUtil.getValue(any(String.class))).then(InvocationOnMock::callRealMethod);
+
+            reportGenerationService.generateReport(participant1, LocalDateTime.of(2025, Month.AUGUST, 23, 12, 0), false);
+
+            assertEquals(1, reportRepository.findAll().size());
+            Report report = reportRepository.findAll().get(0);
+            validateReport(report, participant1, 8);
+            List<String> expectedCsv = List.of(REPORT_HEADER_WITHOUT_COUNTERPARTY_INFO,
+                    "contract1,200,0.04,1",
+                    "contract2,200,0.16,1",
+                    "contract2,400,0.16,1",
+                    "contract3,200,0.98,2",
+                    "contract3,500,1.46,3");
+            assertLinesMatch(expectedCsv, capturedContent.get().lines().toList());
+        }
+    }
+
+    @Test
+    @DisplayName("Should succeed when report generation is performed but there is a discrepancy in message size and with counterparty info")
+    void shouldSucceed_WhenReportGenerationButDiscrepancyInMsgSizeWithCounterpartyInfo() {
         em.getTransaction().begin();
         ParticipantId participant1 = new ParticipantId(P1_DID, USER_EMAIL, PARTICIPANT_NAME);
         ParticipantId participant2 = new ParticipantId(P2_DID, USER_EMAIL_2, PARTICIPANT_NAME_2);
@@ -277,16 +435,76 @@ class ReportGenerationServiceTest {
         Monitor mockedMonitor = mock(Monitor.class);
         ReportGenerationService reportGenerationService = new ReportGenerationService(mockedMonitor, participantRepo, reportRepository, telemetryEventRepo, mockedAzureStorageService);
 
-        assertDoesNotThrow(() -> reportGenerationService.generateReport(participant1, LocalDateTime.of(2025, Month.AUGUST, 23, 12, 0)));
+        try (MockedStatic<ReportUtil> mockedStatic = Mockito.mockStatic(ReportUtil.class)) {
+            AtomicReference<String> capturedContent = new AtomicReference<>();
+            mockedStatic.when(() -> ReportUtil.generateCsvReportContent(any(), eq(true)))
+                    .thenAnswer(invocation -> {
+                        String result = (String) invocation.callRealMethod();
+                        capturedContent.set(result);
+                        return result;
+                    });
+            mockedStatic.when(() -> ReportUtil.generateReportFileName(any(), any(), eq(true))).then(InvocationOnMock::callRealMethod);
+            mockedStatic.when(() -> ReportUtil.getValue(any(Integer.class))).then(InvocationOnMock::callRealMethod);
+            mockedStatic.when(() -> ReportUtil.getValue(any(Long.class))).then(InvocationOnMock::callRealMethod);
+            mockedStatic.when(() -> ReportUtil.getValue(any(String.class))).then(InvocationOnMock::callRealMethod);
 
-        assertEquals(1, reportRepository.findAll().size());
-        Report report = reportRepository.findAll().get(0);
-        validateReport(report, participant1, 1);
+            reportGenerationService.generateReport(participant1, LocalDateTime.of(2025, Month.AUGUST, 23, 12, 0), true);
+
+            assertEquals(1, reportRepository.findAll().size());
+            Report report = reportRepository.findAll().get(0);
+            validateReport(report, participant1, 1);
+            List<String> expectedCsv = List.of(REPORT_HEADER_WITH_COUNTERPARTY_INFO,
+                    "contract1,200,participantName,participantName2,0.16,0.16,1,1");
+            assertLinesMatch(expectedCsv, capturedContent.get().lines().toList());
+        }
     }
 
     @Test
-    @DisplayName("Should succeed when report generation is performed but there is a discrepancy in event count")
-    void shouldSucceed_WhenReportGenerationButDiscrepancyInEventCount() {
+    @DisplayName("Should succeed when report generation is performed but there is a discrepancy in message size and without counterparty info")
+    void shouldSucceed_WhenReportGenerationButDiscrepancyInMsgSizeWithoutCounterpartyInfo() {
+        em.getTransaction().begin();
+        ParticipantId participant1 = new ParticipantId(P1_DID, USER_EMAIL, PARTICIPANT_NAME);
+        ParticipantId participant2 = new ParticipantId(P2_DID, USER_EMAIL_2, PARTICIPANT_NAME_2);
+        participantRepo.save(participant1);
+        participantRepo.save(participant2);
+
+        telemetryEventRepo.save(createTelemetryEvent(CONTRACT_1, participant1, LocalDateTime.of(2025, Month.AUGUST, 23, 12, 0), 160, 200));
+        telemetryEventRepo.save(createTelemetryEvent(CONTRACT_1, participant2, LocalDateTime.of(2025, Month.AUGUST, 23, 12, 2), 159, 200));
+        em.getTransaction().commit();
+
+        AzureStorageService mockedAzureStorageService = mock(AzureStorageService.class);
+        doAnswer(c -> "objectUrl").when(mockedAzureStorageService).upload(any(), any());
+
+        Monitor mockedMonitor = mock(Monitor.class);
+        ReportGenerationService reportGenerationService = new ReportGenerationService(mockedMonitor, participantRepo, reportRepository, telemetryEventRepo, mockedAzureStorageService);
+
+        try (MockedStatic<ReportUtil> mockedStatic = Mockito.mockStatic(ReportUtil.class)) {
+            AtomicReference<String> capturedContent = new AtomicReference<>();
+            mockedStatic.when(() -> ReportUtil.generateCsvReportContent(any(), eq(false)))
+                    .thenAnswer(invocation -> {
+                        String result = (String) invocation.callRealMethod();
+                        capturedContent.set(result);
+                        return result;
+                    });
+            mockedStatic.when(() -> ReportUtil.generateReportFileName(any(), any(), eq(false))).then(InvocationOnMock::callRealMethod);
+            mockedStatic.when(() -> ReportUtil.getValue(any(Integer.class))).then(InvocationOnMock::callRealMethod);
+            mockedStatic.when(() -> ReportUtil.getValue(any(Long.class))).then(InvocationOnMock::callRealMethod);
+            mockedStatic.when(() -> ReportUtil.getValue(any(String.class))).then(InvocationOnMock::callRealMethod);
+
+            reportGenerationService.generateReport(participant1, LocalDateTime.of(2025, Month.AUGUST, 23, 12, 0), false);
+
+            assertEquals(1, reportRepository.findAll().size());
+            Report report = reportRepository.findAll().get(0);
+            validateReport(report, participant1, 1);
+            List<String> expectedCsv = List.of(REPORT_HEADER_WITHOUT_COUNTERPARTY_INFO,
+                    "contract1,200,0.16,1");
+            assertLinesMatch(expectedCsv, capturedContent.get().lines().toList());
+        }
+    }
+
+    @Test
+    @DisplayName("Should succeed when report generation is performed but there is a discrepancy in event count with counterparty info")
+    void shouldSucceed_WhenReportGenerationButDiscrepancyInEventCountAndWithCounterpartyInfo() {
         em.getTransaction().begin();
         ParticipantId participant1 = new ParticipantId(P1_DID, USER_EMAIL, PARTICIPANT_NAME);
         ParticipantId participant2 = new ParticipantId(P2_DID, USER_EMAIL_2, PARTICIPANT_NAME_2);
@@ -305,24 +523,67 @@ class ReportGenerationServiceTest {
         ReportGenerationService reportGenerationService = new ReportGenerationService(mockedMonitor, participantRepo, reportRepository, telemetryEventRepo, mockedAzureStorageService);
         try (MockedStatic<ReportUtil> mockedStatic = Mockito.mockStatic(ReportUtil.class)) {
             AtomicReference<String> capturedContent = new AtomicReference<>();
-            mockedStatic.when(() -> ReportUtil.generateCsvReportContent(any()))
+            mockedStatic.when(() -> ReportUtil.generateCsvReportContent(any(), eq(true)))
                     .thenAnswer(invocation -> {
                         String result = (String) invocation.callRealMethod();
                         capturedContent.set(result);
                         return result;
                     });
-            mockedStatic.when(() -> ReportUtil.generateReportFileName(any(), any())).then(InvocationOnMock::callRealMethod);
+            mockedStatic.when(() -> ReportUtil.generateReportFileName(any(), any(), eq(true))).then(InvocationOnMock::callRealMethod);
             mockedStatic.when(() -> ReportUtil.getValue(any(Integer.class))).then(InvocationOnMock::callRealMethod);
             mockedStatic.when(() -> ReportUtil.getValue(any(Long.class))).then(InvocationOnMock::callRealMethod);
             mockedStatic.when(() -> ReportUtil.getValue(any(String.class))).then(InvocationOnMock::callRealMethod);
 
-            reportGenerationService.generateReport(participant1, LocalDateTime.of(2025, Month.AUGUST, 23, 12, 0));
+            reportGenerationService.generateReport(participant1, LocalDateTime.of(2025, Month.AUGUST, 23, 12, 0), true);
 
             assertEquals(1, reportRepository.findAll().size());
             Report report = reportRepository.findAll().get(0);
             validateReport(report, participant1, 2);
-            List<String> expectedCsv = List.of(REPORT_HEADER,
+            List<String> expectedCsv = List.of(REPORT_HEADER_WITH_COUNTERPARTY_INFO,
                     "contract1,200,participantName,participantName2,0.21,0.16,2,1");
+            assertLinesMatch(expectedCsv, capturedContent.get().lines().toList());
+        }
+    }
+
+    @Test
+    @DisplayName("Should succeed when report generation is performed but there is a discrepancy in event count without counterparty info")
+    void shouldSucceed_WhenReportGenerationButDiscrepancyInEventCountAndWithoutCounterpartyInfo() {
+        em.getTransaction().begin();
+        ParticipantId participant1 = new ParticipantId(P1_DID, USER_EMAIL, PARTICIPANT_NAME);
+        ParticipantId participant2 = new ParticipantId(P2_DID, USER_EMAIL_2, PARTICIPANT_NAME_2);
+        participantRepo.save(participant1);
+        participantRepo.save(participant2);
+
+        telemetryEventRepo.save(createTelemetryEvent(CONTRACT_1, participant1, LocalDateTime.of(2025, Month.AUGUST, 23, 12, 0), 160, 200));
+        telemetryEventRepo.save(createTelemetryEvent(CONTRACT_1, participant1, LocalDateTime.of(2025, Month.AUGUST, 23, 16, 0), 50, 200));
+        telemetryEventRepo.save(createTelemetryEvent(CONTRACT_1, participant2, LocalDateTime.of(2025, Month.AUGUST, 23, 12, 2), 159, 200));
+        em.getTransaction().commit();
+
+        AzureStorageService mockedAzureStorageService = mock(AzureStorageService.class);
+        doAnswer(c -> "objectUrl").when(mockedAzureStorageService).upload(any(), any());
+
+        Monitor mockedMonitor = mock(Monitor.class);
+        ReportGenerationService reportGenerationService = new ReportGenerationService(mockedMonitor, participantRepo, reportRepository, telemetryEventRepo, mockedAzureStorageService);
+        try (MockedStatic<ReportUtil> mockedStatic = Mockito.mockStatic(ReportUtil.class)) {
+            AtomicReference<String> capturedContent = new AtomicReference<>();
+            mockedStatic.when(() -> ReportUtil.generateCsvReportContent(any(), eq(false)))
+                    .thenAnswer(invocation -> {
+                        String result = (String) invocation.callRealMethod();
+                        capturedContent.set(result);
+                        return result;
+                    });
+            mockedStatic.when(() -> ReportUtil.generateReportFileName(any(), any(), eq(false))).then(InvocationOnMock::callRealMethod);
+            mockedStatic.when(() -> ReportUtil.getValue(any(Integer.class))).then(InvocationOnMock::callRealMethod);
+            mockedStatic.when(() -> ReportUtil.getValue(any(Long.class))).then(InvocationOnMock::callRealMethod);
+            mockedStatic.when(() -> ReportUtil.getValue(any(String.class))).then(InvocationOnMock::callRealMethod);
+
+            reportGenerationService.generateReport(participant1, LocalDateTime.of(2025, Month.AUGUST, 23, 12, 0), false);
+
+            assertEquals(1, reportRepository.findAll().size());
+            Report report = reportRepository.findAll().get(0);
+            validateReport(report, participant1, 2);
+            List<String> expectedCsv = List.of(REPORT_HEADER_WITHOUT_COUNTERPARTY_INFO,
+                    "contract1,200,0.21,2");
             assertLinesMatch(expectedCsv, capturedContent.get().lines().toList());
         }
     }
