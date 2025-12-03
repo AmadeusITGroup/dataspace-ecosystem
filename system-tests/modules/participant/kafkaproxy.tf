@@ -24,15 +24,16 @@ resource "helm_release" "kafkaproxy" {
 
   values = [
     yamlencode({
-      "imagePullSecrets" : var.environment == "devbox" ? [
-        {
-          "name" : var.devbox-registry-cred
-        }
-      ] : []
+      "global" : {
+        "imagePullSecrets" : var.environment == "devbox" ? [
+          {
+            "name" : var.devbox-registry-cred
+          }
+        ] : []
+      }
       "kafkaProxy" : {
         "manager" : {
           "image" : {
-            "registry" : ""
             "repository" : local.kafka_proxy_image
             "pullPolicy" : var.environment == "local" ? "Never" : "IfNotPresent"
             "tag" : "latest"

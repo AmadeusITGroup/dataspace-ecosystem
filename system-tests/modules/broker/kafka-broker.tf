@@ -6,9 +6,10 @@ locals {
     "app.kubernetes.io/part-of" = "dataspace-ecosystem"
   }
 
-  kafka_proxy_image = (
-    var.environment == "local" ? "localhost/kafka-proxy-entra-auth" :
-    "kafka-proxy-entra-auth"
+   kafka_proxy_image = (
+    var.environment == "local" ? "localhost/kafka-proxy-entra-auth:latest" :
+    var.environment == "devbox" ? "${var.devbox-registry}/kafka-proxy-entra-auth:latest" :
+    "kafka-proxy-entra-auth:latest"
   )
 }
 
@@ -331,10 +332,17 @@ resource "kubernetes_deployment" "proxy_provider" {
       }
 
       spec {
+        dynamic "image_pull_secrets" {
+          for_each = var.environment == "devbox" && var.devbox-registry-cred != "" ? [1] : []
+          content {
+            name = var.devbox-registry-cred
+          }
+        }
+
         container {
           name  = "kafka-proxy-provider"
           image = local.kafka_proxy_image
-          image_pull_policy = "IfNotPresent"
+          image_pull_policy = var.environment == "local" ? "Never" : "IfNotPresent"
 
           port {
             container_port = 30001
@@ -564,10 +572,17 @@ resource "kubernetes_deployment" "proxy_provider_oauth2" {
       }
 
       spec {
+        dynamic "image_pull_secrets" {
+          for_each = var.environment == "devbox" && var.devbox-registry-cred != "" ? [1] : []
+          content {
+            name = var.devbox-registry-cred
+          }
+        }
+
         container {
           name              = "kafka-proxy-provider-oauth2"
           image             = local.kafka_proxy_image
-          image_pull_policy = "IfNotPresent"
+          image_pull_policy = var.environment == "local" ? "Never" : "IfNotPresent"
 
           port {
             container_port = 30003

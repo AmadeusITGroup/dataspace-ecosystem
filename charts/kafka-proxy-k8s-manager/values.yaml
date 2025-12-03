@@ -139,10 +139,7 @@ deployment:
 # Pod configuration
 pod:
   # Security context
-  securityContext:
-    runAsNonRoot: true
-    runAsUser: 1002200000
-    fsGroup: 1002200000
+  securityContext: {}
   
   # Annotations
   annotations: {}

@@ -5,9 +5,9 @@ plugins {
 
 // Configure test task to pass system properties
 tasks.test {
-    // Pass all system properties that start with "cluster." to the test JVM
+    // Pass all system properties that start with "cluster." or "kubectl." to the test JVM
     System.getProperties().forEach { key, value ->
-        if (key.toString().startsWith("cluster.")) {
+        if (key.toString().startsWith("cluster.") || key.toString().startsWith("kubectl.")) {
             systemProperty(key.toString(), value.toString())
         }
     }

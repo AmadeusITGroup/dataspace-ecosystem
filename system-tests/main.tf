@@ -117,7 +117,9 @@ module "authority" {
 #####################
 
 module "broker" {
-  source = "./modules/broker"
-  environment                            = var.environment
+  source                 = "./modules/broker"
+  environment            = var.environment
+  devbox-registry        = var.devbox-registry
+  devbox-registry-cred   = var.devbox-registry-cred
 }
 

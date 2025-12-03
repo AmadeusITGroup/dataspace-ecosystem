@@ -430,7 +430,7 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
             while (System.currentTimeMillis() - start < 30 * 1000L) {
                 Process process = new ProcessBuilder(
                         "kubectl",
-                        "--context", "kind-dse-cluster",
+                        "--context", ParticipantConstants.KUBECTL_CONTEXT,
                         "get", "pods",
                         "-n", "default",
                         "-o", "jsonpath={.items[*].metadata.name}"
@@ -748,11 +748,7 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
                     .statusCode(200).contentType(containsString("text/csv"))
                     .extract().response();
 
-            String expectedCsvReportBuilderForMultipleRoles = "contract_id,data_transfer_response_status,participant_id,counterparty_id," +
-                    "participant_total_transfer_size_in_kB,counterparty_total_transfer_size_in_kB,participant_total_number_of_events," +
-                    "counterparty_total_number_of_events\n" +
-                    ctId + "," + 200 + "," + CONSUMER.name() + "," + PROVIDER.name() + "," + 0.02 + "," + 0.02 + "," + 1 + "," + 1;
-            assertEquals(expectedCsvReportBuilderForMultipleRoles, responseBodyForMultipleRoles.getBody().asString().trim());
+            assertEquals(expectedCsvReportBuilder, responseBodyForMultipleRoles.getBody().asString().trim());
         }
 
         @Test
