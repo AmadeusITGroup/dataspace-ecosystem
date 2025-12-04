@@ -1,0 +1,168 @@
+name: CI
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+
+  Unit-Tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      - name: 'Run unit tests'
+        shell: bash
+        run: ./gradlew test
+
+      - name: 'Run API and Component tests'
+        shell: bash
+        run: ./gradlew test -DincludeTags="ApiTest,ComponentTest"
+
+  End-To-End-Tests:
+    env:
+      VERSION: postgresql-hashicorpvault
+      CLUSTER_NAME: dse-cluster
+    permissions:
+      checks: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      - name: 'Build JARs and download OpenTelemetry'
+        shell: bash
+        run: ./gradlew shadowJar downloadOtel
+
+      - name: 'Build Docker images'
+        shell: bash
+        run: ./gradlew dockerize
+
+      - name: 'Create Kubernetes cluster'
+        uses: helm/kind-action@v1.10.0
+        with:
+          cluster_name: ${{ env.CLUSTER_NAME }}
+          config: system-tests/kind.config.yaml
+
+      - name: 'Load Docker images into the Cluster'
+        shell: bash
+        run: |
+          kind load docker-image \
+            control-plane-${{ env.VERSION }}:latest \
+            data-plane-${{ env.VERSION }}:latest \
+            identity-hub-${{ env.VERSION }}:latest \
+            federated-catalog-${{ env.VERSION }}:latest \
+            issuer-service-${{ env.VERSION }}:latest \
+            telemetry-service-${{ env.VERSION }}:latest \
+            telemetry-storage-${{ env.VERSION }}:latest \
+            telemetry-agent-${{ env.VERSION }}:latest \
+            telemetry-csv-manager-${{ env.VERSION }}:latest \
+            backend-service-provider:latest \
+            kafka-proxy-entra-auth:latest \
+            kafka-proxy-k8s-manager:latest \
+            --name ${{ env.CLUSTER_NAME }}
+
+      - name: 'Create Ingress Controller'
+        shell: bash
+        run: |
+          kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
+          kubectl wait \
+            --namespace ingress-nginx \
+            --for=condition=ready pod \
+            --selector=app.kubernetes.io/component=controller \
+            --timeout=90s
+
+      - name: 'Setup Terraform'
+        uses: hashicorp/setup-terraform@v3.1.1
+        with:
+          terraform_version: 1.6.0
+          terraform_wrapper: false
+
+      - name: 'Install dataspace'
+        shell: bash
+        working-directory: system-tests
+        run: |
+          terraform init
+          terraform apply -auto-approve
+
+      - name: 'Forward eventhub port'
+        shell: bash
+        working-directory: system-tests
+        run: |
+          kubectl port-forward eventhubs-0 52717:5672 &
+          kubectl port-forward postgresql-0 57521:5432 &
+
+
+      - name: 'Run end-to-end tests'
+        shell: bash
+        run: ./gradlew test -DincludeTags="EndToEndTest"
+
+  Upload-Test-Report:
+    needs:
+      - Unit-Tests
+      - End-To-End-Tests
+
+    permissions:
+      contents: read
+      issues: read
+      checks: write
+      pull-requests: write
+
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4.1.7
+        with:
+          path: artifacts
+      - name: Publish Test Results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        if: always()
+        with:
+          junit_files: "**/test-results/**/*.xml"
+
+  Upload-Coverage-Report-To-Codecov:
+    permissions:
+      issues: read
+      checks: write
+      pull-requests: write
+    needs:
+      - Unit-Tests
+      - End-To-End-Tests
+
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      # Sources are needed for Codecov report
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4.1.7
+        with:
+          path: artifacts
+      - name: CodeCov
+        uses: codecov/codecov-action@v5
