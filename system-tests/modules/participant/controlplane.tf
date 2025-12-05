@@ -53,6 +53,11 @@ resource "helm_release" "controlplane" {
             "useHttps" : false
           }
         },
+        "trustedIssuers" : {
+          "authority" : {
+            "did" : local.authority_did
+          }
+        }
 
         "logging" : <<EOT
         .level=DEBUG

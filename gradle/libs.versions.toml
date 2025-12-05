@@ -27,6 +27,7 @@ edc-spi-core = { module = "org.eclipse.edc:core-spi", version.ref = "edc" }
 edc-spi-web = { module = "org.eclipse.edc:web-spi", version.ref = "edc" }
 edc-spi-http = { module = "org.eclipse.edc:http-spi", version.ref = "edc" }
 edc-spi-policy-engine = { module = "org.eclipse.edc:policy-engine-spi", version.ref = "edc" }
+edc-spi-policy-engine-lib = { module = "org.eclipse.edc:policy-engine-lib", version.ref = "edc" }
 edc-spi-dpf = { module = "org.eclipse.edc:data-plane-spi", version.ref = "edc" }
 edc-spi-participant = { module = "org.eclipse.edc:participant-spi", version.ref = "edc" }
 edc-spi-dpf-http = { module = "org.eclipse.edc:data-plane-http-spi", version.ref = "edc" }
@@ -160,6 +161,7 @@ jersey-multipart = { module = "org.glassfish.jersey.media:jersey-media-multipart
 jjwt-api = { module = "io.jsonwebtoken:jjwt-api", version.ref = "jjwt" }
 jjwt-impl = { module = "io.jsonwebtoken:jjwt-impl", version.ref = "jjwt" }
 jjwt-jackson = { module = "io.jsonwebtoken:jjwt-jackson", version.ref = "jjwt" }
+jackson-annotations = { module = "com.fasterxml.jackson.core:jackson-annotations", version.ref = "jackson" }
 
 [bundles]
 connector = ["edc-core-boot", "edc-core-connector", "edc-observability-api", "edc-jdklogger",

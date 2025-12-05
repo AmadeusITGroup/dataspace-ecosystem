@@ -31,13 +31,13 @@ public class AbstractEndToEndTests {
     private static final Duration TEST_POLL_INTERVAL = Duration.ofMillis(500);
     public static final String HTTP_DATA_PULL = "HttpData-PULL";
 
-    protected List<JsonObject> queryParticipantDatasets(AbstractAuthority authority, String participantDid) {
+    protected List<JsonObject> queryParticipantDatasets(AbstractAuthority authority, String participantDid, String catalogUrl) {
         AtomicReference<List<JsonObject>> datasets = new AtomicReference<>();
 
         await().atMost(TEST_TIMEOUT)
                 .pollInterval(TEST_POLL_INTERVAL)
                 .untilAsserted(() -> {
-                    var catalog = authority.queryCatalog(MAPPER, JSON_LD).stream()
+                    var catalog = authority.queryCatalog(MAPPER, JSON_LD, catalogUrl).stream()
                             .filter(isCatalogOf(participantDid))
                             .findFirst()
                             .orElseThrow(() -> new AssertionError("Failed to find Catalog for participant %s".formatted(participantDid)));

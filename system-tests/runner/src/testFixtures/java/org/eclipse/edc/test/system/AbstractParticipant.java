@@ -59,6 +59,10 @@ abstract class AbstractParticipant extends AbstractEntity {
         return "http://%s/%s/dp/data".formatted(CLUSTER_HOSTNAME, name());
     }
 
+    protected String controlPlaneCatalogFilterUrl() {
+        return "http://%s/%s/cp/management/catalog/participantCatalog".formatted(CLUSTER_HOSTNAME, name());
+    }
+
     protected void createEntry(String assetId, String name, String description, Map<String, Object> dataAddressProps, JsonObject... additionalConstraints) {
         var client = participantClient();
         Map<String, Object> assetProps = Map.of(

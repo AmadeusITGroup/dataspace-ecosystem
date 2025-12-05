@@ -8,6 +8,7 @@ locals {
     var.environment == "devbox" ? "${var.devbox-registry}/federated-catalog-postgresql-hashicorpvault" :
     "federated-catalog-postgresql-hashicorpvault"
   )
+  catalog_url = "http://${local.catalog_release_name}:8383/api/catalog/v1alpha/catalog/query"
 }
 
 resource "helm_release" "federated-catalog" {

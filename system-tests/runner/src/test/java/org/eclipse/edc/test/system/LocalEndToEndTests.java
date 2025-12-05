@@ -52,12 +52,14 @@ import static org.awaitility.Awaitility.await;
 import static org.eclipse.dse.iam.policy.PolicyConstants.DOMAIN_CREDENTIAL_TYPE;
 import static org.eclipse.dse.iam.policy.PolicyConstants.GENERIC_CLAIM_CONSTRAINT;
 import static org.eclipse.dse.iam.policy.PolicyConstants.MEMBERSHIP_CREDENTIAL_TYPE;
+import static org.eclipse.dse.iam.policy.PolicyConstants.RESTRICTED_CATALOG_DISCOVERY_CONSTRAINT;
 import static org.eclipse.edc.connector.controlplane.test.system.utils.PolicyFixtures.atomicConstraint;
 import static org.eclipse.edc.connector.controlplane.transfer.spi.types.TransferProcessStates.TERMINATED;
 import static org.eclipse.edc.jsonld.spi.JsonLdKeywords.ID;
 import static org.eclipse.edc.spi.constants.CoreConstants.EDC_NAMESPACE;
 import static org.eclipse.edc.spi.core.CoreConstants.DSE_POLICY_PREFIX;
 import static org.eclipse.edc.test.system.AbstractAuthority.DOMAIN_ROUTE;
+import static org.eclipse.edc.test.system.AbstractAuthority.DOMAIN_TRAVEL;
 import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_FAILURE_REST_API;
 import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_KAFKA_STREAM;
 import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_REST_20_SEC_API;
@@ -65,6 +67,8 @@ import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_REST_API;
 import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_REST_API_DOMAIN;
 import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_REST_API_EMBEDDED_QUERY_PARAMS;
 import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_REST_API_OAUTH2;
+import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_REST_API_ROUTE_DOMAIN_RESTRICTED;
+import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_REST_API_TRAVEL_DOMAIN_RESTRICTED;
 import static org.eclipse.edc.test.system.LocalProvider.EMBEDDED_QUERY_PARAM;
 import static org.eclipse.edc.test.system.LocalProvider.OAUTH2_CLIENT_SECRET;
 import static org.eclipse.edc.test.system.LocalProvider.OAUTH2_CLIENT_SECRET_KEY;
@@ -305,10 +309,25 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
                 "properties", jsonObject2
         ), genericClaimConstraint(MEMBERSHIP_CREDENTIAL_TYPE, "name", "odrl:eq", "consumer"));
 
+        PROVIDER.createEntry(ASSET_ID_REST_API_ROUTE_DOMAIN_RESTRICTED, "Test Asset REST", "a basic REST API", Map.of(
+                "type", "HttpData",
+                "baseUrl", "http://provider-backend:8080/api/provider/data",
+                "proxyQueryParams", Boolean.TRUE.toString()
+        ), restrictedDiscoveryClaimConstraint(DOMAIN_CREDENTIAL_TYPE, "domain", "odrl:eq", DOMAIN_ROUTE));
+
+        PROVIDER.createEntry(ASSET_ID_REST_API_TRAVEL_DOMAIN_RESTRICTED, "Test Asset REST", "a basic REST API", Map.of(
+                "type", "HttpData",
+                "baseUrl", "http://provider-backend:8080/api/provider/data",
+                "proxyQueryParams", Boolean.TRUE.toString()
+        ), restrictedDiscoveryClaimConstraint(DOMAIN_CREDENTIAL_TYPE, "domain", "odrl:eq", DOMAIN_TRAVEL));
     }
 
     private static JsonObject genericClaimConstraint(String credentialType, String path, String operator, String rightOperand) {
         return atomicConstraint("%s:%s.$.%s.%s".formatted(DSE_POLICY_PREFIX, GENERIC_CLAIM_CONSTRAINT, credentialType, path), operator, rightOperand);
+    }
+
+    private static JsonObject restrictedDiscoveryClaimConstraint(String credentialType, String path, String operator, String rightOperand) {
+        return atomicConstraint("%s:%s.$.%s.%s".formatted(DSE_POLICY_PREFIX, RESTRICTED_CATALOG_DISCOVERY_CONSTRAINT, credentialType, path), operator, rightOperand);
     }
 
     private static void createKey(AbstractEntity entity, String key, String value) {
@@ -343,21 +362,29 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
                     ASSET_ID_REST_20_SEC_API,
                     ASSET_ID_FAILURE_REST_API,
                     ASSET_ID_KAFKA_STREAM,
-                    ASSET_ID_KAFKA_STREAM + "-tst-2"
+                    ASSET_ID_KAFKA_STREAM + "-tst-2",
+                    ASSET_ID_REST_API_ROUTE_DOMAIN_RESTRICTED,
+                    ASSET_ID_REST_API_TRAVEL_DOMAIN_RESTRICTED
             );
 
-            assertThat(queryParticipantDatasets(AUTHORITY, PROVIDER.did()))
+            assertThat(queryParticipantDatasets(AUTHORITY, PROVIDER.did(), PROVIDER.controlPlaneCatalogFilterUrl()))
                     .allSatisfy(dataset -> assertThat(assets).contains(dataset.getString(ID)))
                     .allSatisfy(dataset -> assertThat(dataset.get(EDC_NAMESPACE + "createdAt")).isNotNull());
         }
 
         @Test
         void catalog_consumer() {
-            assertThat(queryParticipantDatasets(AUTHORITY, CONSUMER.did())).isEmpty();
+            assertThat(queryParticipantDatasets(AUTHORITY, CONSUMER.did(), CONSUMER.controlPlaneCatalogFilterUrl())).isEmpty();
         }
 
+        @Test
+        void catalog_consumer_restricted() {
+            assertThat(queryParticipantDatasets(AUTHORITY, PROVIDER.did(), CONSUMER.controlPlaneCatalogFilterUrl()))
+                    .anyMatch(dataset -> ASSET_ID_REST_API_ROUTE_DOMAIN_RESTRICTED.equals(dataset.getString(ID)))
+                    .noneMatch(dataset -> ASSET_ID_REST_API_TRAVEL_DOMAIN_RESTRICTED.equals(dataset.getString(ID)));
+        }
     }
-
+    
     @Nested
     class TransferTest {
 
@@ -496,6 +523,30 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
             });
 
             await().atMost(TEST_TIMEOUT).untilAsserted(() -> CONSUMER.queryData(contractId, Map.of(), 403, TransferErrorResponse.class));
+        }
+
+        @Test
+        void transfer_forRestrictedDiscoveryAssets() {
+            var message = UUID.randomUUID().toString();
+            var expectedMsg = Map.of("message", message);
+            Map<String, String> queryParams = Map.of("message", message);
+            var negoId = CONSUMER.participantClient().initContractNegotiation(PROVIDER.participantClient(), ASSET_ID_REST_API_ROUTE_DOMAIN_RESTRICTED);
+            var transferProcessId = negotiationContractAndStartTransfer(CONSUMER, PROVIDER, ASSET_ID_REST_API_ROUTE_DOMAIN_RESTRICTED);
+            var contractId = getContractIdFromTransferProcess(CONSUMER, transferProcessId);
+            USED_CONTRACT_ID.add(contractId);
+            await().atMost(TEST_TIMEOUT).untilAsserted(() -> {
+                var data = CONSUMER.queryData(contractId, queryParams, 200, Object.class);
+                assertThat(data).isEqualTo(expectedMsg);
+            });
+        }
+
+        @Test
+        void transfer_forRestrictedDiscoveryAssets_NotAvailable() {
+            var negoId = CONSUMER.participantClient().initContractNegotiation(PROVIDER.participantClient(), ASSET_ID_REST_API_TRAVEL_DOMAIN_RESTRICTED);
+            await().atMost(TEST_TIMEOUT).untilAsserted(() -> {
+                var state = CONSUMER.participantClient().getContractNegotiationState(negoId);
+                assertThat(state).isEqualTo(ContractNegotiationStates.TERMINATED.name());
+            });
         }
 
         @Test

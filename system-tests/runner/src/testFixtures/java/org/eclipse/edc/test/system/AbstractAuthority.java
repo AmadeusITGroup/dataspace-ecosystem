@@ -78,12 +78,12 @@ abstract class AbstractAuthority extends AbstractEntity {
         createUnAuthorizedParticipantDomainAttestation(did);
     }
 
-    public List<JsonObject> queryCatalog(ObjectMapper mapper, JsonLd jsonLd) throws JsonProcessingException {
+    public List<JsonObject> queryCatalog(ObjectMapper mapper, JsonLd jsonLd, String catalogUrl) throws JsonProcessingException {
         var catalogs = given()
-                .baseUri(catalogUrl())
+                .baseUri(catalogUrl)
                 .contentType(JSON)
                 .when()
-                .post("/v1alpha/catalog/query")
+                .get()
                 .then()
                 .statusCode(200)
                 .extract().body().asString();

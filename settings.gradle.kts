@@ -27,6 +27,7 @@ include(":extensions:data-plane:data-plane-data-consumption-metrics")
 
 include(":extensions:control-plane:asset-custom-property-subscriber")
 include(":extensions:control-plane:transfer-data-plane-signal-kafka")
+include(":extensions:control-plane:control-plane-federated-catalog-filter")
 
 include(":extensions:issuer-service:membership-attestation-api")
 include(":extensions:issuer-service:membership-attestation-store-sql")
@@ -35,6 +36,7 @@ include(":extensions:issuer-service:domain-attestation-api")
 include(":extensions:issuer-service:domain-attestation-store-sql")
 
 include(":extensions:federated-catalog:participant-registry-node-directory")
+include(":extensions:federated-catalog:filter")
 
 include(":extensions:telemetry-agent")
 include(":extensions:telemetry-agent:event-hub-telemetry-record-publisher")
@@ -56,6 +58,7 @@ include(":spi:telemetry-agent-spi")
 include(":spi:issuer-service-spi")
 include(":spi:telemetry-service-spi")
 include(":spi:telemetry-storage-spi")
+include(":spi:federated-catalog-filter-spi")
 
 include(":launchers")
 
@@ -78,6 +81,10 @@ include(":launchers:federated-catalog")
 include(":launchers:federated-catalog:federated-catalog-base")
 include(":launchers:federated-catalog:federated-catalog-postgresql-hashicorpvault")
 include(":launchers:federated-catalog:federated-catalog-postgresql-azurevault")
+include(":launchers:federated-catalog-filter")
+include(":launchers:federated-catalog-filter:federated-catalog-filter-base")
+include(":launchers:federated-catalog-filter:federated-catalog-filter-postgresql-hashicorpvault")
+include(":launchers:federated-catalog-filter:federated-catalog-filter-postgresql-azurevault")
 
 include(":launchers:issuer-service")
 include(":launchers:issuer-service:issuer-service-base")
@@ -131,3 +138,8 @@ dependencyResolutionManagement {
         }
     }
 }
+include("launchers:federated-catalog-filter")
+include("launchers:federated-catalog-filter:federated-catalog-filter-base")
+findProject(":launchers:federated-catalog-filter:federated-catalog-filter-base")?.name = "federated-catalog-filter-base"
+include("launchers:federated-catalog-filter:federated-catalog-filter-postgress-hashicorp")
+findProject(":launchers:federated-catalog-filter:federated-catalog-filter-postgress-hashicorp")?.name = "federated-catalog-filter-postgress-hashicorp"

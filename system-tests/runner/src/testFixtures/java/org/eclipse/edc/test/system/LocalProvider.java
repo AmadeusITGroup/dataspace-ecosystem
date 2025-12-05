@@ -14,6 +14,8 @@ public class LocalProvider extends AbstractParticipant {
     public static final String ASSET_ID_KAFKA_PROXY_TEST = "kafka-proxy-test";
     public static final String OAUTH2_CLIENT_SECRET_KEY = "oauth-secret";
     public static final String OAUTH2_CLIENT_SECRET = "supersecret";
+    public static final String ASSET_ID_REST_API_ROUTE_DOMAIN_RESTRICTED = "rest-api-route-domain-restricted";
+    public static final String ASSET_ID_REST_API_TRAVEL_DOMAIN_RESTRICTED = "rest-api-travel-domain-restricted";
 
     @Override
     protected String name() {

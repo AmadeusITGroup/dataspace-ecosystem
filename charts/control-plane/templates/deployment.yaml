@@ -165,7 +165,8 @@ spec:
             value: {{.Values.controlplane.did.web.url | required ".Values.controlplane.did.web.url" | quote}}
           - name: "EDC_IAM_DID_WEB_USE_HTTPS"
             value: {{.Values.controlplane.did.web.useHttps | required ".Values.controlplane.did.web.useHttps is required" | quote}}
-
+          - name: "DSE_AUTHORITY_DID"
+            value: {{.Values.controlplane.trustedIssuers.authority.did | required ".Values.controlplane.trustedIssuers.authority.did is required" | quote}}
           #####################
           # STS REMOTE CONFIG #
           #####################

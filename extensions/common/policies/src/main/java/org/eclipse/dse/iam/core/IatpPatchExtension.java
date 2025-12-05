@@ -27,6 +27,7 @@ public class IatpPatchExtension implements ServiceExtension {
         policyEngine.registerPostValidator(RequestCatalogPolicyContext.class, new DefaultScopeExtractor<>(Set.of(READ_MEMBERSHIP_CREDENTIAL_SCOPE, READ_DOMAIN_CREDENTIAL_SCOPE)));
         policyEngine.registerPostValidator(RequestContractNegotiationPolicyContext.class, new DefaultScopeExtractor<>(Set.of(READ_MEMBERSHIP_CREDENTIAL_SCOPE, READ_DOMAIN_CREDENTIAL_SCOPE)));
         policyEngine.registerPostValidator(RequestTransferProcessPolicyContext.class, new DefaultScopeExtractor<>(Set.of(READ_MEMBERSHIP_CREDENTIAL_SCOPE, READ_DOMAIN_CREDENTIAL_SCOPE)));
+        policyEngine.registerPostValidator(RequestCatalogDiscoveryContext.class, new DefaultScopeExtractor<>(Set.of(READ_MEMBERSHIP_CREDENTIAL_SCOPE, READ_DOMAIN_CREDENTIAL_SCOPE)));
     }
 }
 

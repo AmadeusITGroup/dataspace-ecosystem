@@ -14,6 +14,6 @@ dependencies {
     implementation(libs.edc.spi.policy.engine)
     implementation(libs.edc.spi.identitytrust)
     implementation(libs.edc.lib.util)
-
+    api(project(":spi:federated-catalog-filter-spi"))
     testImplementation(libs.edc.core.junit)
 }

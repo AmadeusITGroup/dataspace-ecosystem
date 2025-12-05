@@ -14,8 +14,10 @@ import org.eclipse.edc.spi.system.ServiceExtensionContext;
 
 import java.util.Set;
 
+import static org.eclipse.dse.iam.policy.CatalogDiscoveryPolicyContext.CATALOG_DISCOVERY_SCOPE;
 import static org.eclipse.dse.iam.policy.PolicyConstants.DSE_GENERIC_CLAIM_CONSTRAINT;
 import static org.eclipse.dse.iam.policy.PolicyConstants.DSE_MEMBERSHIP_CONSTRAINT;
+import static org.eclipse.dse.iam.policy.PolicyConstants.DSE_RESTRICTED_CATALOG_DISCOVERY_CONSTRAINT;
 import static org.eclipse.edc.connector.controlplane.catalog.spi.policy.CatalogPolicyContext.CATALOG_SCOPE;
 import static org.eclipse.edc.connector.controlplane.contract.spi.policy.ContractNegotiationPolicyContext.NEGOTIATION_SCOPE;
 import static org.eclipse.edc.connector.controlplane.contract.spi.policy.TransferProcessPolicyContext.TRANSFER_SCOPE;
@@ -28,7 +30,8 @@ public class PolicyEvaluationExtension implements ServiceExtension {
     private static final Set<String> RULE_SCOPES = Set.of(
             TRANSFER_SCOPE,
             CATALOG_SCOPE,
-            NEGOTIATION_SCOPE
+            NEGOTIATION_SCOPE,
+            CATALOG_DISCOVERY_SCOPE
     );
 
     @Inject
@@ -59,15 +62,22 @@ public class PolicyEvaluationExtension implements ServiceExtension {
         policyEngine.registerFunction(CatalogPolicyContext.class, Permission.class, new MembershipConstraintFunction<>());
         policyEngine.registerFunction(ContractNegotiationPolicyContext.class, Permission.class, new MembershipConstraintFunction<>());
         policyEngine.registerFunction(TransferProcessPolicyContext.class, Permission.class, new MembershipConstraintFunction<>());
+        policyEngine.registerFunction(CatalogDiscoveryPolicyContext.class, Permission.class, new MembershipConstraintFunction<>());
 
         policyEngine.registerFunction(CatalogPolicyContext.class, Permission.class, new JsonPathCredentialConstraintFunction<>());
         policyEngine.registerFunction(ContractNegotiationPolicyContext.class, Permission.class, new JsonPathCredentialConstraintFunction<>());
         policyEngine.registerFunction(TransferProcessPolicyContext.class, Permission.class, new JsonPathCredentialConstraintFunction<>());
+        policyEngine.registerFunction(CatalogDiscoveryPolicyContext.class, Permission.class, new JsonPathCredentialConstraintFunction<>());
+
+        policyEngine.registerFunction(ContractNegotiationPolicyContext.class, Permission.class, new CatalogDiscoveryConstraintFunction<>());
+        policyEngine.registerFunction(TransferProcessPolicyContext.class, Permission.class, new CatalogDiscoveryConstraintFunction<>());
+        policyEngine.registerFunction(CatalogDiscoveryPolicyContext.class, Permission.class, new CatalogDiscoveryConstraintFunction<>());
     }
 
     private void registerBindings() {
         ruleBindingRegistry.dynamicBind(s -> s.startsWith(DSE_GENERIC_CLAIM_CONSTRAINT) ? Set.of(NEGOTIATION_SCOPE, TRANSFER_SCOPE) : Set.of());
         ruleBindingRegistry.dynamicBind(s -> s.startsWith(DSE_MEMBERSHIP_CONSTRAINT) ? RULE_SCOPES : Set.of());
+        ruleBindingRegistry.dynamicBind(s -> s.startsWith(DSE_RESTRICTED_CATALOG_DISCOVERY_CONSTRAINT) ? Set.of(CATALOG_DISCOVERY_SCOPE, NEGOTIATION_SCOPE, TRANSFER_SCOPE) : Set.of());
         RULE_SCOPES.forEach(scope -> ruleBindingRegistry.bind(ODRL_USE_ACTION_ATTRIBUTE, scope));
     }
 

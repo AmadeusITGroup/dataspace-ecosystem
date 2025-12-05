@@ -67,6 +67,16 @@ resource "helm_release" "identity-hub" {
                 id : "telemetry-service-url",
                 type : "TelemetryServiceCredential",
                 serviceEndpoint : local.credential_url
+              },
+              {
+                id : "catalog-filter-url",
+                type : "FederatedCatalogFilterService",
+                serviceEndpoint : local.filter_url
+              },
+              {
+                id : "federated-catalog",
+                type : "FederatedCatalogService",
+                serviceEndpoint : local.catalog_url
               }
             ])
           }
