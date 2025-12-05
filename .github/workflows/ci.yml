@@ -120,7 +120,6 @@ jobs:
         run: |
           kubectl port-forward eventhubs-0 52717:5672 &
           kubectl port-forward postgresql-0 57521:5432 &
-
       - name: Run E2E tests
         shell: bash
         run: ./gradlew test -DincludeTags="EndToEndTest"
