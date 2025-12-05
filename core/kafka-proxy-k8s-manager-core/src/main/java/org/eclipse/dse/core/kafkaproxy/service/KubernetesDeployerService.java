@@ -14,7 +14,9 @@
 package org.eclipse.dse.core.kafkaproxy.service;
 
 import io.fabric8.kubernetes.api.model.ContainerPortBuilder;
+import io.fabric8.kubernetes.api.model.EnvVarBuilder;
 import io.fabric8.kubernetes.api.model.IntOrString;
+import io.fabric8.kubernetes.api.model.SecretBuilder;
 import io.fabric8.kubernetes.api.model.Service;
 import io.fabric8.kubernetes.api.model.ServiceBuilder;
 import io.fabric8.kubernetes.api.model.ServicePortBuilder;
@@ -157,17 +159,28 @@ public class KubernetesDeployerService {
                 LOGGER.info("Old deployments deleted successfully");
             }
             
+            // Create secret for sensitive credentials before creating deployment
+            createProxySecret(edrKey, properties);
+            
             // Create new deployment
             Deployment deployment = createDeployment(edrKey, proxyName, properties);
-            kubernetesClient.apps().deployments()
-                    .inNamespace(proxyNamespace)
-                    .createOrReplace(deployment);
+            kubernetesClient.resource(deployment).inNamespace(proxyNamespace).create();
             
             // Create or update standardized service (service name stays the same)
             Service service = createService(edrKey, proxyName, serviceName);
-            kubernetesClient.services()
-                    .inNamespace(proxyNamespace)
-                    .createOrReplace(service);
+            try {
+                var existingService = kubernetesClient.services()
+                        .inNamespace(proxyNamespace)
+                        .withName(serviceName)
+                        .get();
+                if (existingService != null) {
+                    kubernetesClient.resource(service).inNamespace(proxyNamespace).update();
+                } else {
+                    kubernetesClient.resource(service).inNamespace(proxyNamespace).create();
+                }
+            } catch (Exception e) {
+                kubernetesClient.resource(service).inNamespace(proxyNamespace).create();
+            }
             
             LOGGER.info(format("Successfully deployed Kafka proxy: %s with service: %s for EDR: %s", 
                     proxyName, serviceName, edrKey));
@@ -261,6 +274,20 @@ public class KubernetesDeployerService {
                 }
             }
             
+            // Delete associated secret
+            String secretName = generateSecretName(edrKey);
+            try {
+                var secretDeleted = kubernetesClient.secrets()
+                        .inNamespace(proxyNamespace)
+                        .withName(secretName)
+                        .delete();
+                if (secretDeleted != null && !secretDeleted.isEmpty()) {
+                    LOGGER.info(format("Successfully deleted secret: %s", secretName));
+                }
+            } catch (Exception e) {
+                LOGGER.warning(format("Failed to delete secret %s: %s", secretName, e.getMessage()));
+            }
+            
             if (anyDeleted) {
                 return new DeploymentStatus(edrKey, DeploymentStatus.Status.DELETED, 
                         format("Proxy deleted successfully for EDR: %s", edrKey));
@@ -351,6 +378,7 @@ public class KubernetesDeployerService {
                                         .withName("proxy-port")
                                         .build())
                                 .withArgs(args)
+                                .withEnv(createEnvironmentVariables(edrKey, properties))
                                 .withVolumeMounts(createVolumeMounts(properties))
                             .endContainer()
                             .withVolumes(createVolumes(properties))
@@ -358,6 +386,60 @@ public class KubernetesDeployerService {
                     .endTemplate()
                 .endSpec()
                 .build();
+    }
+    
+    private java.util.List<io.fabric8.kubernetes.api.model.EnvVar> createEnvironmentVariables(String edrKey, EdrProperties properties) {
+        var envVars = new java.util.ArrayList<io.fabric8.kubernetes.api.model.EnvVar>();
+        String secretName = generateSecretName(edrKey);
+        
+        // Add environment variables from secret for sensitive data
+        if ("PLAIN".equals(properties.getSaslMechanism())) {
+            // SASL PLAIN credentials
+            envVars.add(new EnvVarBuilder()
+                    .withName("SASL_USERNAME")
+                    .withNewValueFrom()
+                        .withNewSecretKeyRef()
+                            .withName(secretName)
+                            .withKey("sasl-username")
+                        .endSecretKeyRef()
+                    .endValueFrom()
+                    .build());
+            envVars.add(new EnvVarBuilder()
+                    .withName("SASL_PASSWORD")
+                    .withNewValueFrom()
+                        .withNewSecretKeyRef()
+                            .withName(secretName)
+                            .withKey("sasl-password")
+                        .endSecretKeyRef()
+                    .endValueFrom()
+                    .build());
+        } else if ("OAUTHBEARER".equals(properties.getSaslMechanism()) && properties.hasOauth2Credentials()) {
+            // OAuth2 client secret
+            envVars.add(new EnvVarBuilder()
+                    .withName("OAUTH2_CLIENT_SECRET")
+                    .withNewValueFrom()
+                        .withNewSecretKeyRef()
+                            .withName(secretName)
+                            .withKey("oauth2-client-secret")
+                        .endSecretKeyRef()
+                    .endValueFrom()
+                    .build());
+        }
+        
+        // Add auth static users if configured
+        if (authEnabled && authStaticUsers != null && !authStaticUsers.isEmpty()) {
+            envVars.add(new EnvVarBuilder()
+                    .withName("AUTH_STATIC_USERS")
+                    .withNewValueFrom()
+                        .withNewSecretKeyRef()
+                            .withName(secretName)
+                            .withKey("auth-static-users")
+                        .endSecretKeyRef()
+                    .endValueFrom()
+                    .build());
+        }
+        
+        return envVars;
     }
     
     private java.util.List<io.fabric8.kubernetes.api.model.VolumeMount> createVolumeMounts(EdrProperties properties) {
@@ -510,20 +592,17 @@ public class KubernetesDeployerService {
         args.add(format("--bootstrap-server-mapping=%s,0.0.0.0:%d,%s:%d", 
                 cleanBootstrapServers, port, serviceName, port));
         args.add(format("--dynamic-advertised-listener=%s:%d", serviceName, port));
-        args.add("--log-level=debug");
         
         // Add SASL configuration based on mechanism
         if ("PLAIN".equals(properties.getSaslMechanism())) {
             // SASL PLAIN authentication
             args.add("--sasl-enable");
             
-            String username = properties.getUsername() != null ? properties.getUsername() : "admin";
-            String password = properties.getPassword() != null ? properties.getPassword() : "admin-secret";
+            // Use environment variables for sensitive credentials
+            args.add("--sasl-username=$(SASL_USERNAME)");
+            args.add("--sasl-password=$(SASL_PASSWORD)");
             
-            args.add(format("--sasl-username=%s", username));
-            args.add(format("--sasl-password=%s", password));
-            
-            LOGGER.info(format("Adding SASL PLAIN authentication with username: %s", username));
+            LOGGER.info("Adding SASL PLAIN authentication with credentials from secret");
         } else if ("OAUTHBEARER".equals(properties.getSaslMechanism()) && properties.hasOauth2Credentials()) {
             // OAuth2/OIDC authentication using SASL plugin with entra-token-provider
             // This uses standard Kafka SASL OAUTHBEARER protocol (not gateway auth)
@@ -534,15 +613,15 @@ public class KubernetesDeployerService {
             args.add("--sasl-plugin-timeout=30s");
             args.add(format("--sasl-plugin-param=--tenant-id=%s", properties.getOauth2TenantId()));
             args.add(format("--sasl-plugin-param=--client-id=%s", properties.getOauth2ClientId()));
-            args.add(format("--sasl-plugin-param=--client-secret=%s", properties.getOauth2ClientSecret()));
+            // Pass environment variable NAME (not value) to avoid credential exposure in logs
+            // Plugin detects OAUTH2_CLIENT_SECRET pattern and reads from environment at runtime
+            args.add("--sasl-plugin-param=--client-secret=OAUTH2_CLIENT_SECRET");
             
             // Add scope if specified
             if (properties.getOauth2Scope() != null && !properties.getOauth2Scope().isEmpty()) {
                 args.add(format("--sasl-plugin-param=--scope=%s", properties.getOauth2Scope()));
             }
             
-            // Add debug flag for troubleshooting
-            args.add("--sasl-plugin-param=--debug");
             
             LOGGER.info(format("Adding OAuth2 SASL plugin authentication with mechanism=OAUTHBEARER, tenant-id: %s, client-id: %s", 
                     properties.getOauth2TenantId(), properties.getOauth2ClientId()));
@@ -586,9 +665,11 @@ public class KubernetesDeployerService {
                 args.add(format("--auth-local-param=--client-id=%s", authClientId));
                 
                 if (authStaticUsers != null && !authStaticUsers.isEmpty()) {
-                    args.add(format("--auth-local-param=--static-user=%s", authStaticUsers));
-                    LOGGER.info(format("Adding PLAIN authentication (JWT-over-PLAIN) with tenant-id: %s, client-id: %s, static-users: %s", 
-                            authTenantId, authClientId, authStaticUsers));
+                    // Pass environment variable NAME (not value) to avoid credential exposure in logs
+                    // Plugin detects ENV_VAR_NAME pattern and reads credentials from environment at runtime
+                    args.add("--auth-local-param=--static-user=AUTH_STATIC_USERS");
+                    LOGGER.info(format("Adding PLAIN authentication (JWT-over-PLAIN) with tenant-id: %s, client-id: %s, static-users: [from secret]", 
+                            authTenantId, authClientId));
                 } else {
                     LOGGER.info(format("Adding PLAIN authentication (JWT-over-PLAIN) with tenant-id: %s, client-id: %s", 
                             authTenantId, authClientId));
@@ -741,5 +822,93 @@ public class KubernetesDeployerService {
         // Use fixed port for standardized service
         // Since we have one proxy at a time, we can use the same port
         return baseProxyPort;
+    }
+    
+    /**
+     * Generates a secret name for storing sensitive proxy credentials
+     */
+    private String generateSecretName(String edrKey) {
+        String safeParticipantId = generateSafeParticipantId(participantId);
+        String shortEdrKey = edrKey;
+        if (edrKey.startsWith("edr--")) {
+            shortEdrKey = edrKey.substring(5);
+        }
+        String secretName = format("kp-%s-%s-secret", safeParticipantId, shortEdrKey);
+        if (secretName.length() > 63) {
+            int maxEdrLength = 63 - safeParticipantId.length() - 11; // 11 for "kp-" + "-secret"
+            if (maxEdrLength > 8) {
+                shortEdrKey = shortEdrKey.substring(0, Math.min(shortEdrKey.length(), maxEdrLength));
+                secretName = format("kp-%s-%s-secret", safeParticipantId, shortEdrKey);
+            }
+        }
+        return secretName.toLowerCase().replace("_", "-");
+    }
+    
+    /**
+     * Creates a Kubernetes Secret containing sensitive credentials for the proxy
+     */
+    private void createProxySecret(String edrKey, EdrProperties properties) {
+        String secretName = generateSecretName(edrKey);
+        Map<String, String> secretData = new HashMap<>();
+        
+        // Add SASL credentials if using PLAIN mechanism
+        if ("PLAIN".equals(properties.getSaslMechanism())) {
+            String username = properties.getUsername() != null ? properties.getUsername() : "admin";
+            String password = properties.getPassword() != null ? properties.getPassword() : "admin-secret";
+            secretData.put("sasl-username", username);
+            secretData.put("sasl-password", password);
+            LOGGER.info(format("Adding SASL PLAIN credentials to secret %s", secretName));
+        }
+        
+        // Add OAuth2 client secret if using OAUTHBEARER mechanism
+        if ("OAUTHBEARER".equals(properties.getSaslMechanism()) && properties.hasOauth2Credentials()) {
+            secretData.put("oauth2-client-secret", properties.getOauth2ClientSecret());
+            LOGGER.info(format("Adding OAuth2 client secret to secret %s", secretName));
+        }
+        
+        // Add auth static users if configured
+        if (authEnabled && authStaticUsers != null && !authStaticUsers.isEmpty()) {
+            secretData.put("auth-static-users", authStaticUsers);
+            LOGGER.info(format("Adding auth static users to secret %s", secretName));
+        }
+        
+        // Only create secret if there's data to store
+        if (!secretData.isEmpty()) {
+            Map<String, String> labels = new HashMap<>();
+            labels.put("app.kubernetes.io/name", "kafka-proxy");
+            labels.put("app.kubernetes.io/component", "credentials");
+            labels.put("app.kubernetes.io/managed-by", "kafka-proxy-k8s-manager");
+            labels.put("edr-id", edrKey);
+            labels.put("owner-participant", generateSafeParticipantId(participantId));
+            
+            var secret = new SecretBuilder()
+                    .withNewMetadata()
+                        .withName(secretName)
+                        .withNamespace(proxyNamespace)
+                        .withLabels(labels)
+                    .endMetadata()
+                    .withType("Opaque")
+                    .withStringData(secretData)
+                    .build();
+            
+            try {
+                // Create or update the secret
+                var existing = kubernetesClient.secrets()
+                        .inNamespace(proxyNamespace)
+                        .withName(secretName)
+                        .get();
+                
+                if (existing != null) {
+                    kubernetesClient.resource(secret).inNamespace(proxyNamespace).update();
+                    LOGGER.info(format("Updated secret %s in namespace %s", secretName, proxyNamespace));
+                } else {
+                    kubernetesClient.resource(secret).inNamespace(proxyNamespace).create();
+                    LOGGER.info(format("Created secret %s in namespace %s", secretName, proxyNamespace));
+                }
+            } catch (Exception e) {
+                LOGGER.severe(format("Failed to create/update secret %s: %s", secretName, e.getMessage()));
+                throw e;
+            }
+        }
     }
 }

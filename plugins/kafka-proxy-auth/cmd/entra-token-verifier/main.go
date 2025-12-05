@@ -46,8 +46,8 @@ func (v *EntraTokenVerifier) Authenticate(username, password string) (bool, int3
 		defer logFile.Close()
 		fmt.Fprintf(logFile, "\n=== Authenticate called ===\n")
 		fmt.Fprintf(logFile, "Username: %s\n", username)
-		fmt.Fprintf(logFile, "Password length: %d\n", len(password))
-		fmt.Fprintf(logFile, "Password first 100 chars: %s\n", truncate(password, 100))
+		fmt.Fprintf(logFile, "Credential length: %d\n", len(password))
+		// NOTE: Never log actual password/token content for security reasons
 	}
 	
 	// Check if password looks like a JWT token (starts with eyJ and has 2 dots)
@@ -91,7 +91,6 @@ func (v *EntraTokenVerifier) Authenticate(username, password string) (bool, int3
 		}
 
 		if logFile != nil {
-			fmt.Fprintf(logFile, "Token length: %d\n", len(password))
 			fmt.Fprintf(logFile, "About to verify JWT token...\n")
 		}
 
@@ -200,7 +199,7 @@ func main() {
 	pflag.StringSliceVar(&requiredScopes, "required-scope", []string{}, "Required scopes in token")
 	pflag.IntVar(&cacheExpiration, "cache-expiration", 3600, "JWKS cache expiration in seconds")
 	pflag.BoolVar(&debug, "debug", false, "Enable debug logging")
-	pflag.StringSliceVar(&staticUserArgs, "static-user", []string{}, "Static users in format 'username:password'")
+	pflag.StringSliceVar(&staticUserArgs, "static-user", []string{}, "Static users in format 'username:password' or environment variable name")
 	pflag.Parse()
 
 	// Auto-construct JWKS URL if not provided
@@ -220,12 +219,42 @@ func main() {
 
 	// Parse static users from format "username:password"
 	staticUsers := make(map[string]string)
+	
 	for _, userArg := range staticUserArgs {
-		parts := strings.SplitN(userArg, ":", 2)
-		if len(parts) == 2 {
-			staticUsers[parts[0]] = parts[1]
+		// Check if this looks like an environment variable name (no colon, all caps/underscores)
+		if !strings.Contains(userArg, ":") && strings.ToUpper(userArg) == userArg {
+			// This is likely an environment variable name - read from it
+			envValue := os.Getenv(userArg)
+			if envValue != "" {
+				// Parse comma-separated users from environment variable
+				userPairs := strings.Split(envValue, ",")
+				for _, userPair := range userPairs {
+					userPair = strings.TrimSpace(userPair)
+					if userPair == "" {
+						continue
+					}
+					parts := strings.SplitN(userPair, ":", 2)
+					if len(parts) == 2 {
+						staticUsers[parts[0]] = parts[1]
+					} else {
+						fmt.Fprintf(os.Stderr, "[WARN] entra-token-verifier: Invalid user format in environment variable, skipping entry\n")
+					}
+				}
+				if debug {
+					fmt.Fprintf(os.Stderr, "[DEBUG] entra-token-verifier: Loaded %d static users from environment variable %s\n", len(staticUsers), userArg)
+				}
+			} else {
+				fmt.Fprintf(os.Stderr, "[WARN] entra-token-verifier: Environment variable %s is empty or not set\n", userArg)
+			}
 		} else {
-			fmt.Fprintf(os.Stderr, "[WARN] entra-token-verifier: Invalid static-user format (expected username:password): %s\n", userArg)
+			// Direct username:password format
+			parts := strings.SplitN(userArg, ":", 2)
+			if len(parts) == 2 {
+				staticUsers[parts[0]] = parts[1]
+			} else {
+				// Don't log the actual userArg as it might contain sensitive data
+				fmt.Fprintf(os.Stderr, "[WARN] entra-token-verifier: Invalid static-user format (expected username:password or ENV_VAR_NAME), skipping entry\n")
+			}
 		}
 	}
 

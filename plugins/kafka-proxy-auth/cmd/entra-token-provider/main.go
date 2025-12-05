@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/grepplabs/kafka-proxy/pkg/apis"
 	"github.com/grepplabs/kafka-proxy/plugin/token-provider/shared"
@@ -69,12 +70,26 @@ func main() {
 	var debug bool
 
 	pflag.StringVar(&clientID, "client-id", "", "Azure AD application client ID")
-	pflag.StringVar(&clientSecret, "client-secret", "", "Azure AD application client secret")
+	pflag.StringVar(&clientSecret, "client-secret", "", "Azure AD application client secret or environment variable name")
 	pflag.StringVar(&tenantID, "tenant-id", "", "Azure AD tenant ID")
 	pflag.StringVar(&scope, "scope", "", "OAuth2 scope (e.g., https://kafka.example.com/.default)")
 	pflag.StringVar(&tokenURL, "token-url", "", "OAuth2 token endpoint URL (optional, auto-constructed if not provided)")
 	pflag.BoolVar(&debug, "debug", false, "Enable debug logging")
 	pflag.Parse()
+
+	// Check if client-secret is an environment variable name (all uppercase, no special chars)
+	if clientSecret != "" && !strings.Contains(clientSecret, " ") && strings.ToUpper(clientSecret) == clientSecret && len(clientSecret) < 100 {
+		// This looks like an environment variable name - try to read from it
+		envValue := os.Getenv(clientSecret)
+		if envValue != "" {
+			if debug {
+				fmt.Fprintf(os.Stderr, "[DEBUG] entra-token-provider: Reading client secret from environment variable %s\n", clientSecret)
+			}
+			clientSecret = envValue
+		} else if debug {
+			fmt.Fprintf(os.Stderr, "[WARN] entra-token-provider: Environment variable %s is empty or not set, treating as literal value\n", clientSecret)
+		}
+	}
 
 	// Validate required parameters
 	if clientID == "" || clientSecret == "" || tenantID == "" || scope == "" {

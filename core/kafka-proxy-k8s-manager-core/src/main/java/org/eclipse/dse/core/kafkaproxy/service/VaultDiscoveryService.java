@@ -521,7 +521,8 @@ public class VaultDiscoveryService {
             
             if (properties != null) {
                 String edrType = properties.path("https://w3id.org/edc/v0.0.1/ns/type").asText("");
-                boolean isKafka = KAFKA_TYPE.equals(edrType);
+                // Case-insensitive comparison to accept both "Kafka" and "kafka"
+                boolean isKafka = KAFKA_TYPE.equalsIgnoreCase(edrType);
                 LOGGER.info(format("EDR %s type: %s (is_kafka: %s)", edrKey, edrType, isKafka));
                 return isKafka;
             }
