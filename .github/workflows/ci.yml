@@ -36,6 +36,7 @@ jobs:
   End-To-End-Tests:
     env:
       VERSION: postgresql-hashicorpvault
+      VERSION_NOT_USED: postgresql-azurevault
       CLUSTER_NAME: dse-cluster
     permissions:
       checks: write
@@ -82,6 +83,17 @@ jobs:
             kafka-proxy-entra-auth:latest \
             kafka-proxy-k8s-manager:latest \
             --name ${{ env.CLUSTER_NAME }}
+
+      - name: Clean up Docker images after loading to Kind (github runner limitation)
+        shell: bash
+        run: |
+          echo "Disk space before cleanup:"
+          df -h /
+          # Remove all Docker images - they're already loaded in Kind
+          docker rmi $(docker images -q) --force || true
+          docker system prune -af --volumes
+          echo "Disk space after cleanup:"
+          df -h /
 
       - name: Create Ingress Controller
         shell: bash
