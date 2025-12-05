@@ -1,5 +1,4 @@
 name: "[CI] Run system tests"
-
 on:
   workflow_dispatch:
   push:
