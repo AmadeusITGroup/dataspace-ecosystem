@@ -128,7 +128,6 @@ jobs:
     needs:
       - Unit-Tests
       - End-To-End-Tests
-
     permissions:
       contents: read
       issues: read
