@@ -8,13 +8,13 @@ locals {
   )
   filter_url = "http://${local.catalog_filter_release_name}:8080/api/catalogfilter/filter"
 }
-resource "helm_release" "catalog-filter" {
+resource "helm_release" "federated-catalog-filter" {
   name              = local.catalog_filter_release_name
   cleanup_on_fail   = true
   dependency_update = true
   recreate_pods     = true
   repository        = "../charts"
-  chart             = "catalog-filter"
+  chart             = "federated-catalog-filter"
 # version           = "latest"
   values = [
     yamlencode({
