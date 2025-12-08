@@ -78,6 +78,7 @@ jobs:
             backend-service-provider:latest \
             kafka-proxy-entra-auth:latest \
             kafka-proxy-k8s-manager:latest \
+            federated-catalog-filter-${{ env.VERSION }}:latest \
             --name ${{ env.CLUSTER_NAME }}
 
       - name: Clean up Docker images after loading to Kind (github runner limitation)
