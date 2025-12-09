@@ -44,8 +44,17 @@ allprojects {
 
 subprojects {
     afterEvaluate {
+        val vaultType: String = project.findProperty("vaultType") as? String ?: "hashicorp"
+        
+        // Skip building Docker images for non-selected vault variants
+        val shouldSkipVaultVariant = when {
+            vaultType == "both" -> false  // Build all variants when vaultType=both
+            project.name.contains("-postgresql-azurevault") && vaultType != "azure" -> true
+            project.name.contains("-postgresql-hashicorpvault") && vaultType != "hashicorp" -> true
+            else -> false
+        }
 
-        if (project.plugins.hasPlugin("com.github.johnrengelman.shadow") && file("${project.projectDir}/Dockerfile").exists()) {
+        if (project.plugins.hasPlugin("com.github.johnrengelman.shadow") && file("${project.projectDir}/Dockerfile").exists() && !shouldSkipVaultVariant) {
             val buildDir = project.layout.buildDirectory.get().asFile
             val otelFileName = "opentelemetry-javaagent.jar"
             val agentFileOnBuildDirectory = buildDir.resolve(otelFileName)

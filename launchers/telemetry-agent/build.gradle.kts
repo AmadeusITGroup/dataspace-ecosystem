@@ -2,7 +2,4 @@ plugins {
     `java-library`
 }
 
-dependencies {
-    implementation(project(":launchers:telemetry-agent:telemetry-agent-base"))
-    implementation(project(":launchers:telemetry-agent:telemetry-agent-postgresql-hashicorpvault"))
-}
+apply(from = "$rootDir/gradle/launcher-vault-dependencies.gradle.kts")
