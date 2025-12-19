@@ -95,7 +95,7 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
     private static final String VAULT_TOKEN = "root";
     private static final String EVENT_HUB_NAMESPACE = "local-eventhub-eventhubs";
     private static final String EVENT_HUB_NAME = "eh1";
-    public static final String REPORT_HEADER_WITHOUT_COUNTERPARTY_INFO = "contract_id,data_transfer_response_status," +
+    public static final String REPORT_HEADER_WITHOUT_COUNTERPARTY_INFO = "contract_id,counterparty_name,data_transfer_response_status," +
             "total_transfer_size_in_kB,total_number_of_events";
 
     private static final LocalAuthority AUTHORITY = new LocalAuthority();
@@ -384,7 +384,7 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
                     .noneMatch(dataset -> ASSET_ID_REST_API_TRAVEL_DOMAIN_RESTRICTED.equals(dataset.getString(ID)));
         }
     }
-    
+
     @Nested
     class TransferTest {
 
@@ -784,7 +784,7 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
                     .extract().response();
 
             String expectedCsvReportBuilder = REPORT_HEADER_WITHOUT_COUNTERPARTY_INFO + "\n" +
-                    ctId + "," + 200 + "," + 0.02 + "," + 1;
+                    ctId + "," + PROVIDER.name() + "," + 200 + "," + 0.02 + "," + 1;
             assertEquals(expectedCsvReportBuilder, responseBody.getBody().asString().trim());
 
             // Validates that if we have multiple roles in the JWT it still returns the correct report
@@ -846,8 +846,10 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
                     .statusCode(200).contentType(containsString("text/csv"))
                     .extract().response();
 
+            // If there are no events received from the counterparty side, it will not be possible to pinpoint the name
+            // of the counterparty so it will be marked as N/A
             String expectedCsvReportBuilder = REPORT_HEADER_WITHOUT_COUNTERPARTY_INFO + "\n" +
-                    ctId + "," + 400 + "," + 0.02 + "," + 1;
+                    ctId + ",N/A," + 400 + "," + 0.02 + "," + 1;
             assertEquals(expectedCsvReportBuilder, responseBody.getBody().asString().trim());
         }
 
