@@ -127,6 +127,9 @@ telemetryagent:
     # -- Key pair used by the Secure Token Service
     sts:
       publicKeyVaultAlias: ""
+      tokenUrl: ""
+      clientId: ""
+      clientSecretAlias: ""
   # -- Postgresql database configuration
 
   service:

@@ -35,7 +35,6 @@ import static org.eclipse.edc.connector.controlplane.contract.spi.policy.Contrac
 import static org.eclipse.edc.connector.controlplane.contract.spi.policy.TransferProcessPolicyContext.TRANSFER_SCOPE;
 import static org.eclipse.edc.jsonld.spi.PropertyAndTypeNames.ODRL_USE_ACTION_ATTRIBUTE;
 import static org.eclipse.edc.util.IdentityServiceValidator.MEMBERSHIP_SCOPE;
-import static org.eclipse.edc.util.IdentityServiceValidator.READ_DOMAIN_CREDENTIAL_SCOPE;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -55,7 +54,7 @@ public class FederatedCatalogFilterServiceTest {
     @BeforeAll
     static void init() {
         policyEngine = new PolicyEngineImpl(new ScopeFilter(registry), new RuleValidator(registry));
-        policyEngine.registerPostValidator(RequestCatalogDiscoveryContext.class, new DefaultScopeExtractor<>(Set.of(MEMBERSHIP_SCOPE, READ_DOMAIN_CREDENTIAL_SCOPE)));
+        policyEngine.registerPostValidator(RequestCatalogDiscoveryContext.class, new DefaultScopeExtractor<>(Set.of(MEMBERSHIP_SCOPE)));
         registry.bind(ODRL_USE_ACTION_ATTRIBUTE,  CATALOG_DISCOVERY_SCOPE);
         policyEngine.registerFunction(CatalogDiscoveryPolicyContext.class, Permission.class, new CatalogDiscoveryConstraintFunction<>());
         registry.dynamicBind(s -> s.startsWith(DSE_RESTRICTED_CATALOG_DISCOVERY_CONSTRAINT) ? Set.of(CATALOG_DISCOVERY_SCOPE, NEGOTIATION_SCOPE, TRANSFER_SCOPE) : Set.of());

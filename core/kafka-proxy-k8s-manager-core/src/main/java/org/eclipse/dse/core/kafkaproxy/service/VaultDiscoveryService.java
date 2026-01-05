@@ -175,9 +175,9 @@ public class VaultDiscoveryService {
      * Get the vault HTTP API path for metadata (with folder support)
      */
     private String getMetadataApiPath(String edrKey) {
-        return vaultFolder.isEmpty() 
-            ? "/v1/secret/metadata/" + edrKey 
-            : "/v1/secret/metadata/" + vaultFolder + "/" + edrKey;
+        return vaultFolder.isEmpty()
+                ? "/v1/secret/metadata/" + edrKey
+                : "/v1/secret/metadata/" + vaultFolder + "/" + edrKey;
     }
     
     /**
@@ -699,7 +699,7 @@ public class VaultDiscoveryService {
         
         public boolean hasRequiredProperties() {
             return bootstrapServers != null && !bootstrapServers.isEmpty() &&
-                   topic != null && !topic.isEmpty();
+                    topic != null && !topic.isEmpty();
         }
         
         // Getters

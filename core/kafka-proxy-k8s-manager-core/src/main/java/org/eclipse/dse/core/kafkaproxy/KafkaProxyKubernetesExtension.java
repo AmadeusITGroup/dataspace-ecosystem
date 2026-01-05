@@ -133,12 +133,12 @@ public class KafkaProxyKubernetesExtension implements ServiceExtension {
         automaticQueueService.initializeEdrTracking();
         
         orchestrator = new KafkaProxyOrchestrator(
-            vaultService, 
-            deployerService, 
-            checkerService, 
-            automaticQueueService,
-            monitor,
-            true // always enabled
+                vaultService,
+                deployerService,
+                checkerService,
+                automaticQueueService,
+                monitor,
+                true // always enabled
         );
         
         // Start scheduled processing

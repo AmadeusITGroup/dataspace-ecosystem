@@ -53,6 +53,12 @@ resource "helm_release" "telemetryagent" {
           "did" : local.authority_did
         }
 
+        "sts" : {
+          "tokenUrl" : local.sts_url
+          "clientId" : local.did_url,
+          "clientSecretAlias" : local.sts_client_secret_alias
+        }
+
         "logging" : <<EOT
         .level=INFO
         org.eclipse.edc.level=ALL
@@ -111,4 +117,3 @@ edc.vault.hashicorp.token.scheduled-renew-enabled=false
   ]
   depends_on = [module.vault, module.db]
 }
-

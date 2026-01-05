@@ -5,6 +5,7 @@ plugins {
     `java-library`
     id("com.bmuschko.docker-remote-api") version "9.3.4"
     id("com.github.johnrengelman.shadow") version "8.1.1"
+    alias(libs.plugins.edc.build)
 }
 
 val annotationProcessorVersion: String by project
@@ -17,6 +18,7 @@ val loadToKind = project.hasProperty("loadToKind")
 allprojects {
 
     apply(plugin = "${group}.edc-build")
+    apply(plugin = "org.eclipse.edc.autodoc")
 
     // configure which version of the annotation processor to use. defaults to the same version as the plugin
     configure<org.eclipse.edc.plugins.autodoc.AutodocExtension> {
@@ -176,6 +178,8 @@ subprojects {
 buildscript {
     dependencies {
         val edcGradlePluginsVersion: String by project
+        val version: String by project
         classpath("org.eclipse.edc.edc-build:org.eclipse.edc.edc-build.gradle.plugin:${edcGradlePluginsVersion}")
+        classpath("org.eclipse.edc.autodoc:org.eclipse.edc.autodoc.gradle.plugin:$version")
     }
 }

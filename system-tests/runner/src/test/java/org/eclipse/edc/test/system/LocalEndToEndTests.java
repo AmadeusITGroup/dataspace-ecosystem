@@ -79,7 +79,6 @@ import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-
 @EndToEndTest
 public class LocalEndToEndTests extends AbstractEndToEndTests {
 
@@ -110,8 +109,8 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
 
     public static void initializeParticipant(AbstractEntity participant) {
         AUTHORITY.createParticipant(participant.name(), participant.did());
-        participant.requestCredential(AUTHORITY.did(), MEMBERSHIP_CREDENTIAL_TYPE);
-        participant.requestCredential(AUTHORITY.did(), DOMAIN_CREDENTIAL_TYPE);
+        participant.requestCredential(AUTHORITY.did(), MEMBERSHIP_CREDENTIAL_TYPE, "membership-credential-def-1");
+        participant.requestCredential(AUTHORITY.did(), DOMAIN_CREDENTIAL_TYPE, "domain-credential-def-1");
     }
 
     @BeforeAll
