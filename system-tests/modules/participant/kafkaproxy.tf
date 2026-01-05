@@ -38,7 +38,7 @@ resource "helm_release" "kafkaproxy" {
             "pullPolicy" : var.environment == "local" ? "Never" : "IfNotPresent"
             "tag" : "latest"
           }
-
+          "initContainers" : []
           # Vault configuration
           "vaultAddr" : module.vault.vault_url
           "vaultTokenSecret" : {

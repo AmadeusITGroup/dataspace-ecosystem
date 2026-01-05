@@ -15,9 +15,26 @@ kafkaProxy:
     image:
       registry: ""
       repository: ""
-      tag: "latest"
+      tag: ""
       pullPolicy: IfNotPresent
-    
+
+    initContainers:
+      - name: cert-installer
+        command:
+          - /bin/sh
+        volumeMounts:
+          - name: cert-volume
+            mountPath: /certs
+          - name: cacerts-volume
+            mountPath: /certificates
+        image: 'eclipse-temurin:21.0.7_6-jre-alpine-3.21'
+        args:
+          - '-c'
+          - |
+            cp $JAVA_HOME/lib/security/cacerts /certificates/cacerts
+            keytool -import -trustcacerts -keystore /certificates/cacerts \
+              -storepass changeit -noprompt -alias vaultCa -file /certs/tls.crt
+
     # Resource limits and requests
     resources:
       limits:
@@ -50,6 +67,7 @@ kafkaProxy:
     namespace: "default"
     proxyImage: "grepplabs/kafka-proxy:0.4.2"
     sharedDir: "/shared"
+    certDir: "/certificates"
     checkInterval: 15
     enableLock: true
     lockFilePath: "/tmp/kubectl-deployer.lock"
