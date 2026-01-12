@@ -3,6 +3,7 @@ package org.eclipse.edc.dse.telemetry.api;
 import io.swagger.v3.oas.annotations.OpenAPIDefinition;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.enums.SecuritySchemeIn;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.info.Info;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -15,16 +16,26 @@ import jakarta.ws.rs.HeaderParam;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.Response;
 
-@OpenAPIDefinition(info = @Info(description = "This API is used to generate billing reports", title = "Telemetry CSV Manager API", version = "1"))
+@OpenAPIDefinition(info = @Info(description = "This API is used to generate billing reports",
+        title = "Telemetry CSV Manager API", version = "1"),
+        security = {@SecurityRequirement(name = "bearerAuth"), @SecurityRequirement(name = "apiKeyAuth")})
 @Tag(name = "Telemetry CSV Manager API")
-@SecurityScheme(name = "bearerAuth", type = SecuritySchemeType.HTTP, scheme = "bearer", bearerFormat = "JWT")
+@SecurityScheme(
+        name = "bearerAuth",
+        type = SecuritySchemeType.HTTP,
+        scheme = "bearer",
+        bearerFormat = "JWT"
+)
+@SecurityScheme(
+        name = "apiKeyAuth",
+        type = SecuritySchemeType.APIKEY,
+        in = SecuritySchemeIn.HEADER,
+        paramName = "x-api-key"
+)
 public interface TelemetryCsvManagerApi {
 
     @Operation(description = "Retrieves Reports",
             operationId = "getReport",
-            security = {
-                    @SecurityRequirement(name = "bearerAuth")
-            },
             responses = {
                     @ApiResponse(responseCode = "200", description = "The telemetry event was processed successfully", content = @Content(schema = @Schema(implementation = String.class), mediaType = "text/csv")),
                     @ApiResponse(responseCode = "400", description = "Invalid date range provided", content = @Content(schema = @Schema(implementation = String.class), mediaType = "application/json")),
