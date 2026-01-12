@@ -1,7 +1,7 @@
 ARG REGISTRY_URL="docker.io"
 # Please make sure to keep this image consistent with the one used
 # for the cert-installer init container
-FROM ${REGISTRY_URL}/eclipse-temurin:21.0.7_6-jre-alpine-3.21
+FROM ${REGISTRY_URL}/eclipse-temurin:21.0.9_10-jre-alpine-3.23
 
 
 # Optional JVM arguments, such as memory settings

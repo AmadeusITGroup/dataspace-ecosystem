@@ -27,7 +27,7 @@ kafkaProxy:
             mountPath: /certs
           - name: cacerts-volume
             mountPath: /certificates
-        image: 'eclipse-temurin:21.0.7_6-jre-alpine-3.21'
+        image: 'eclipse-temurin:21.0.9_10-jre-alpine-3.23'
         args:
           - '-c'
           - |

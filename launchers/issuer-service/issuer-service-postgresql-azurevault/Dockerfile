@@ -1,5 +1,5 @@
 ARG REGISTRY_URL="docker.io"
-FROM ${REGISTRY_URL}/eclipse-temurin:21.0.7_6-jre-alpine-3.21
+FROM ${REGISTRY_URL}/eclipse-temurin:21.0.9_10-jre-alpine-3.23
 
 # Optional JVM arguments, such as memory settings
 ARG JVM_ARGS=""
