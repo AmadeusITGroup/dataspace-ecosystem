@@ -27,6 +27,9 @@ HEALTHCHECK NONE
 ENV WEB_HTTP_PORT="8080"
 ENV WEB_HTTP_PATH="/api"
 
+ENV WEB_HTTP_CATALOG_PORT="8383"
+ENV WEB_HTTP_CATALOG_PATH="/api/catalogfilter"
+
 # ARG can not be used in ENTRYPOINT so storing value in an ENV variable
 ENV ENV_JVM_ARGS=$JVM_ARGS
 

@@ -29,6 +29,7 @@ edc-spi-web = { module = "org.eclipse.edc:web-spi", version.ref = "edc" }
 edc-spi-http = { module = "org.eclipse.edc:http-spi", version.ref = "edc" }
 edc-spi-policy-engine = { module = "org.eclipse.edc:policy-engine-spi", version.ref = "edc" }
 edc-spi-policy-engine-lib = { module = "org.eclipse.edc:policy-engine-lib", version.ref = "edc" }
+edc-spi-control-plane-transform = { module = "org.eclipse.edc:control-plane-transform", version.ref = "edc" }
 edc-spi-dpf = { module = "org.eclipse.edc:data-plane-spi", version.ref = "edc" }
 edc-spi-participant = { module = "org.eclipse.edc:participant-spi", version.ref = "edc" }
 edc-spi-dpf-http = { module = "org.eclipse.edc:data-plane-http-spi", version.ref = "edc" }
@@ -74,6 +75,7 @@ edc-lib-token = { module = "org.eclipse.edc:token-lib", version.ref = "edc" }
 edc-lib-jsonld = { module = "org.eclipse.edc:json-ld-lib", version.ref = "edc" }
 edc-lib-sql = { module = "org.eclipse.edc:sql-lib", version.ref = "edc" }
 edc-lib-transform = { module = "org.eclipse.edc:transform-lib", version.ref = "edc" }
+edc-spi-transform = { module = "org.eclipse.edc:transform-spi", version.ref = "edc" }
 edc-lib-crypto-common = { module = "org.eclipse.edc:crypto-common-lib", version.ref = "edc" }
 edc-core-policy-monitor = { module = "org.eclipse.edc:policy-monitor-core", version.ref = "edc" }
 edc-junit = { module = "org.eclipse.edc:junit", version.ref = "edc" }
@@ -144,7 +146,9 @@ edc-issuerservice-api-admin-config = { module = "org.eclipse.edc:issuer-admin-ap
 # Federated Catalotg dependencies
 edc-federatedcatalog-spi-core = { module = "org.eclipse.edc:federated-catalog-spi", version.ref = "edc" }
 edc-federatedcatalog-bom = { module = "org.eclipse.edc:federatedcatalog-dcp-bom", version.ref = "edc" }
-
+edc-protocol-dsp-catalog = { module = "org.eclipse.edc:dsp-catalog-transform-lib", version.ref = "edc" }
+edc-lib-jerseyproviders = { module = "org.eclipse.edc:jersey-providers-lib", version.ref = "edc" }
+edc-federated-catalog-core = { module = "org.eclipse.edc:federated-catalog-core-2025", version.ref = "edc" }
 # Other dependencies
 micrometer = { module = "io.micrometer:micrometer-core", version.ref = "micrometer" }
 assertj = { module = "org.assertj:assertj-core", version.ref = "assertj" }

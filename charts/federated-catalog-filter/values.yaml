@@ -66,6 +66,11 @@ federatedcatalogfilter:
       port: 8080
       # -- default api path
       path: /api
+    catalog:
+      # -- port for incoming api calls
+      port: 8383
+      # -- path for incoming api calls
+      path: /api/catalogfilter
 
   # -- api configuration
   api:
