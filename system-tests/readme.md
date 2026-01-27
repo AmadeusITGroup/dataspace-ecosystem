@@ -3,6 +3,7 @@
 ## Prerequisite
 
 - Terraform
+- Podman or Docker
 - Kind
 - cURL or Postman
 
