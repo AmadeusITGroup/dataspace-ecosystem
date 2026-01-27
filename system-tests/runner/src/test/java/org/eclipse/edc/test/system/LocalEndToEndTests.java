@@ -557,6 +557,42 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
             });
         }
 
+        @Test
+        void contractNegotiation_delete_shouldRemoveNegotiation() {
+            // Initiate a contract negotiation that will be terminated (policy not matched)
+            var negoId = CONSUMER.participantClient().initContractNegotiation(PROVIDER.participantClient(), POLICY_RESTRICTED_API);
+            
+            // Wait for negotiation to reach TERMINATED state
+            await().atMost(TEST_TIMEOUT).untilAsserted(() -> {
+                var state = CONSUMER.participantClient().getContractNegotiationState(negoId);
+                assertThat(state).isEqualTo(ContractNegotiationStates.TERMINATED.name());
+            });
+
+            // Verify negotiation exists before deletion
+            CONSUMER.participantClient().baseManagementRequest()
+                    .when()
+                    .get("/v3/contractnegotiations/" + negoId)
+                    .then()
+                    .log().ifError()
+                    .statusCode(200);
+
+            // Delete the contract negotiation
+            CONSUMER.participantClient().baseManagementRequest()
+                    .when()
+                    .delete("/v3/contractnegotiations/" + negoId)
+                    .then()
+                    .log().ifError()
+                    .statusCode(204);
+
+            // Verify negotiation no longer exists
+            CONSUMER.participantClient().baseManagementRequest()
+                    .when()
+                    .get("/v3/contractnegotiations/" + negoId)
+                    .then()
+                    .log().ifError()
+                    .statusCode(404);
+        }
+
         public static String getContractIdFromTransferProcess(AbstractParticipant consumer, String transferProcessId) {
             return consumer.participantClient().baseManagementRequest()
                     .when()
