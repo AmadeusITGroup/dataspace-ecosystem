@@ -15,6 +15,7 @@ include(":extensions:agreements:retirement-evaluation-store-sql")
 
 include(":extensions:common:vc-revocation-patch")
 include(":extensions:common:policies")
+include(":extensions:common:odrl-policy-did-validation")
 include(":extensions:common:metrics:custom-micrometer")
 include(":extensions:common:store:sql:telemetry-store-sql")
 
