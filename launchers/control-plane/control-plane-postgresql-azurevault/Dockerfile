@@ -3,6 +3,9 @@ ARG REGISTRY_URL="docker.io"
 # for the cert-installer init container
 FROM ${REGISTRY_URL}/eclipse-temurin:21.0.9_10-jre-alpine-3.23
 
+# Update Alpine packages to remove vulnerabilities
+RUN apk update && apk --no-cache upgrade --available
+
 # Optional JVM arguments, such as memory settings
 ARG JVM_ARGS=""
 ARG JAR

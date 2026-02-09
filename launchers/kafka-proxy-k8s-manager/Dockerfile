@@ -1,6 +1,9 @@
 ARG REGISTRY_URL="docker.io"
 FROM ${REGISTRY_URL}/eclipse-temurin:21.0.9_10-jre-alpine-3.23
 
+# Update Alpine packages to remove vulnerabilities
+RUN apk update && apk --no-cache upgrade --available
+
 WORKDIR /app
 
 # Create non-root user
