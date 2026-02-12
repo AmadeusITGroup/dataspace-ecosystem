@@ -42,6 +42,13 @@ allprojects {
         configFile = rootProject.file("resources/checkstyle-config.xml")
         configDirectory.set(rootProject.file("resources"))
     }
+
+    // Force secure Netty version to fix vulnerable component: netty-codec-http2
+    configurations.all {
+        resolutionStrategy {
+            force("io.netty:netty-codec-http2:4.2.4.Final")
+        }
+    }
 }
 
 subprojects {

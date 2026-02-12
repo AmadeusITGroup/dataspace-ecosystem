@@ -22,6 +22,7 @@ postgres = "42.7.3"
 swagger = "2.2.27"
 micrometer = "1.14.2"
 jjwt = "0.13.0"
+netty = "4.2.4.Final"
 
 [libraries]
 edc-spi-core = { module = "org.eclipse.edc:core-spi", version.ref = "edc" }
@@ -175,6 +176,9 @@ jjwt-api = { module = "io.jsonwebtoken:jjwt-api", version.ref = "jjwt" }
 jjwt-impl = { module = "io.jsonwebtoken:jjwt-impl", version.ref = "jjwt" }
 jjwt-jackson = { module = "io.jsonwebtoken:jjwt-jackson", version.ref = "jjwt" }
 jackson-annotations = { module = "com.fasterxml.jackson.core:jackson-annotations", version.ref = "jackson" }
+
+# Security fix for PSMP-984
+netty-codec-http2 = { module = "io.netty:netty-codec-http2", version.ref = "netty" }
 
 [bundles]
 connector = ["edc-core-boot", "edc-core-connector", "edc-observability-api", "edc-jdklogger",
