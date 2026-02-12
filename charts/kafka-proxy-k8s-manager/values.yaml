@@ -88,6 +88,13 @@ kafkaProxy:
     # Default: 30001
     baseProxyPort: 30001
     
+    # Maximum number of broker ports to expose
+    # For multi-broker Kafka clusters, the proxy needs to expose sequential ports
+    # starting from baseProxyPort+1 up to baseProxyPort+maxBrokerPorts
+    # This should be set to at least the number of brokers in your largest Kafka cluster
+    # Default: 20 (supports clusters with up to 20 brokers)
+    maxBrokerPorts: 20
+    
     # Downstream Authentication Configuration
     # Configures how clients authenticate to the proxy's listener
     auth:
