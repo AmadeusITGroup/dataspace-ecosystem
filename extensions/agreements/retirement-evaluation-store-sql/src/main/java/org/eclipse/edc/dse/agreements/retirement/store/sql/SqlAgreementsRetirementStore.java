@@ -21,6 +21,7 @@ package org.eclipse.edc.dse.agreements.retirement.store.sql;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.eclipse.edc.dse.agreements.retirement.spi.store.AgreementsRetirementStore;
+import org.eclipse.edc.dse.agreements.retirement.spi.types.AgreementConstants;
 import org.eclipse.edc.dse.agreements.retirement.spi.types.AgreementsRetirementEntry;
 import org.eclipse.edc.spi.persistence.EdcPersistenceException;
 import org.eclipse.edc.spi.query.QuerySpec;
@@ -39,12 +40,15 @@ import java.util.stream.Stream;
 public class SqlAgreementsRetirementStore extends AbstractSqlStore implements AgreementsRetirementStore {
 
     private final SqlAgreementsRetirementStatements agreementsRetirementStatements;
+    private final AgreementConstants agreementConstants;
 
     public SqlAgreementsRetirementStore(DataSourceRegistry dataSourceRegistry, String dataSourceName,
                                         TransactionContext transactionContext, ObjectMapper objectMapper,
-                                        QueryExecutor queryExecutor, SqlAgreementsRetirementStatements agreementsRetirementStatements) {
+                                        QueryExecutor queryExecutor, SqlAgreementsRetirementStatements agreementsRetirementStatements,
+                                        AgreementConstants agreementConstants) {
         super(dataSourceRegistry, dataSourceName, transactionContext, objectMapper, queryExecutor);
         this.agreementsRetirementStatements = agreementsRetirementStatements;
+        this.agreementConstants = agreementConstants;
     }
 
     @Override
@@ -115,7 +119,7 @@ public class SqlAgreementsRetirementStore extends AbstractSqlStore implements Ag
     }
 
     private AgreementsRetirementEntry mapAgreementsRetirement(ResultSet resultSet) throws SQLException {
-        return AgreementsRetirementEntry.Builder.newInstance()
+        return AgreementsRetirementEntry.Builder.newInstance(agreementConstants)
                 .withAgreementId(resultSet.getString(agreementsRetirementStatements.getIdColumn()))
                 .withReason(resultSet.getString(agreementsRetirementStatements.getReasonColumn()))
                 .withAgreementRetirementDate(resultSet.getLong(agreementsRetirementStatements.getRetirementDateColumn()))

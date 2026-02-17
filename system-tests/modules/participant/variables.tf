@@ -118,6 +118,19 @@ variable "vault_folder" {
   default     = ""
 }
 
+# Policy Configuration
+variable "dse_namespace_prefix" {
+  description = "DSE namespace prefix"
+  type        = string
+  default     = "dse"
+}
+
+variable "dse_policy_prefix" {
+  description = "DSE policy prefix"
+  type        = string
+  default     = "dse-policy"
+}
+
 # Charts Path Configuration
 variable "charts_path" {
   description = "Path to the charts directory. Use '../../../charts' when running from participant module, '../charts' when running from system-tests"

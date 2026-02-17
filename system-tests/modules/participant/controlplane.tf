@@ -75,6 +75,8 @@ edc.vault.hashicorp.token.scheduled-renew-enabled=false
 edc.negotiation.state-machine.iteration-wait-millis=${var.negotiation_state_machine_wait_millis}
 edc.transfer.state-machine.iteration-wait-millis=${var.transfer_state_machine_wait_millis}
 edc.policy.monitor.state-machine.iteration-wait-millis=${var.policy_monitor_state_machine_wait_millis}
+dse.namespace.prefix=${var.dse_namespace_prefix}
+dse.policy.prefix=${var.dse_policy_prefix}
         EOT
 
         "ingress" : {

@@ -24,7 +24,9 @@ import io.restassured.specification.RequestSpecification;
 import jakarta.json.Json;
 import jakarta.json.JsonObject;
 import org.eclipse.edc.dse.agreements.retirement.spi.service.AgreementsRetirementService;
+import org.eclipse.edc.dse.agreements.retirement.spi.types.AgreementConstants;
 import org.eclipse.edc.dse.agreements.retirement.spi.types.AgreementsRetirementEntry;
+import org.eclipse.edc.dse.common.DseNamespaceConfig;
 import org.eclipse.edc.spi.monitor.Monitor;
 import org.eclipse.edc.spi.query.Criterion;
 import org.eclipse.edc.spi.query.QuerySpec;
@@ -43,8 +45,6 @@ import static io.restassured.RestAssured.given;
 import static org.eclipse.edc.dse.agreements.retirement.spi.store.AgreementsRetirementStore.ALREADY_EXISTS_TEMPLATE;
 import static org.eclipse.edc.dse.agreements.retirement.spi.store.AgreementsRetirementStore.NOT_FOUND_IN_RETIREMENT_TEMPLATE;
 import static org.eclipse.edc.dse.agreements.retirement.spi.types.AgreementsRetirementEntry.AR_ENTRY_AGREEMENT_ID;
-import static org.eclipse.edc.dse.agreements.retirement.spi.types.AgreementsRetirementEntry.AR_ENTRY_REASON;
-import static org.eclipse.edc.dse.agreements.retirement.spi.types.AgreementsRetirementEntry.AR_ENTRY_RETIREMENT_DATE;
 import static org.eclipse.edc.dse.agreements.retirement.spi.types.AgreementsRetirementEntry.AR_ENTRY_TYPE;
 import static org.eclipse.edc.jsonld.spi.JsonLdKeywords.TYPE;
 import static org.eclipse.edc.spi.query.Criterion.CRITERION_OPERAND_LEFT;
@@ -66,6 +66,12 @@ class AgreementsRetirementApiV3ControllerTest extends RestControllerTestBase {
     private final TypeTransformerRegistry transformer = mock();
     private final JsonObjectValidatorRegistry validator = mock();
     private final Monitor monitor = mock();
+    private final DseNamespaceConfig testConfig = new DseNamespaceConfig(
+            "https://w3id.org/dse/v0.0.1/ns/",
+            "dse-policy",
+            "https://w3id.org/dse/policy/"
+    );
+    private final AgreementConstants agreementConstants = new AgreementConstants(testConfig);
 
     @Test
     void should_getAllWithoutQuerySpec() {
@@ -206,7 +212,7 @@ class AgreementsRetirementApiV3ControllerTest extends RestControllerTestBase {
     }
 
     private AgreementsRetirementEntry createRetirementEntry(String agreementId) {
-        return AgreementsRetirementEntry.Builder.newInstance()
+        return AgreementsRetirementEntry.Builder.newInstance(agreementConstants)
                 .withAgreementId(agreementId)
                 .withReason("long-reason")
                 .build();
@@ -216,8 +222,8 @@ class AgreementsRetirementApiV3ControllerTest extends RestControllerTestBase {
         return Json.createObjectBuilder()
                 .add(TYPE, AR_ENTRY_TYPE)
                 .add(AR_ENTRY_AGREEMENT_ID, agreementId)
-                .add(AR_ENTRY_REASON, "long-reason")
-                .add(AR_ENTRY_RETIREMENT_DATE, Instant.now().toString())
+                .add(agreementConstants.getArEntryReason(), "long-reason")
+                .add(agreementConstants.getArEntryRetirementDate(), Instant.now().toString())
                 .build();
     }
 

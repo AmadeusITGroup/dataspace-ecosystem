@@ -15,7 +15,6 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static org.eclipse.dse.iam.policy.PolicyConstants.DSE_RESTRICTED_CATALOG_DISCOVERY_CONSTRAINT;
 import static org.eclipse.edc.policy.model.Operator.EQ;
 import static org.eclipse.edc.policy.model.Operator.IN;
 import static org.eclipse.edc.policy.model.Operator.NEQ;
@@ -25,6 +24,12 @@ public class CatalogDiscoveryConstraintFunction<C extends ParticipantAgentPolicy
 
     private static final List<Operator> SUPPORTED_OPERATORS = List.of(EQ, NEQ, IN);
     private static final Pattern STRING_VALUE_PATTERN = Pattern.compile("string=([^,}\\]]+)");
+    
+    private final PolicyConstants policyConstants;
+
+    public CatalogDiscoveryConstraintFunction(PolicyConstants policyConstants) {
+        this.policyConstants = policyConstants;
+    }
 
     @Override
     public boolean evaluate(Object leftOperand, Operator operator, Object rightOperand, Permission rule, C policyContext) {
@@ -83,7 +88,7 @@ public class CatalogDiscoveryConstraintFunction<C extends ParticipantAgentPolicy
 
     @Override
     public boolean canHandle(Object leftOperand) {
-        return (leftOperand instanceof String) && ((String) leftOperand).startsWith("%s.$".formatted(DSE_RESTRICTED_CATALOG_DISCOVERY_CONSTRAINT));
+        return (leftOperand instanceof String) && ((String) leftOperand).startsWith("%s.$".formatted(policyConstants.getDseRestrictedCatalogDiscoveryConstraint()));
     }
 
     private boolean evaluateClaims(String path, Map<String, Object> claims, Operator operator, Object right, PolicyContext policyContext) {
@@ -106,7 +111,7 @@ public class CatalogDiscoveryConstraintFunction<C extends ParticipantAgentPolicy
     }
 
     private String sanitizeLeftOperand(String leftOperand) {
-        return leftOperand.replace("%s.$.".formatted(DSE_RESTRICTED_CATALOG_DISCOVERY_CONSTRAINT), "");
+        return leftOperand.replace("%s.$.".formatted(policyConstants.getDseRestrictedCatalogDiscoveryConstraint()), "");
     }
 
     private Map<String, Object> sanitizeClaims(Map<String, Object> claims) {

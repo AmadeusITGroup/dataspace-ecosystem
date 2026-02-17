@@ -20,16 +20,29 @@
 package org.eclipse.edc.dse.agreements.retirement.defaults;
 
 import org.eclipse.edc.dse.agreements.retirement.spi.store.AgreementsRetirementStore;
+import org.eclipse.edc.dse.agreements.retirement.spi.types.AgreementConstants;
 import org.eclipse.edc.dse.agreements.retirement.store.AgreementsRetirementStoreTestBase;
+import org.eclipse.edc.dse.common.DseNamespaceConfig;
 import org.eclipse.edc.query.CriterionOperatorRegistryImpl;
 
 
 public class InMemoryAgreementsRetirementStoreTest extends AgreementsRetirementStoreTestBase {
 
     private final InMemoryAgreementsRetirementStore store = new InMemoryAgreementsRetirementStore(CriterionOperatorRegistryImpl.ofDefaults());
+    private final DseNamespaceConfig testConfig = new DseNamespaceConfig(
+            "https://w3id.org/dse/v0.0.1/ns/",
+            "dse-policy",
+            "https://w3id.org/dse/policy/"
+    );
+    private final AgreementConstants agreementConstants = new AgreementConstants(testConfig);
 
     @Override
     protected AgreementsRetirementStore getStore() {
         return store;
+    }
+
+    @Override
+    protected AgreementConstants getAgreementConstants() {
+        return agreementConstants;
     }
 }

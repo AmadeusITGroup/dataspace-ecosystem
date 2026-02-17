@@ -4,12 +4,17 @@ import org.eclipse.edc.participant.spi.ParticipantAgentPolicyContext;
 import org.eclipse.edc.policy.model.Operator;
 import org.eclipse.edc.policy.model.Permission;
 
-import static org.eclipse.dse.iam.policy.PolicyConstants.DSE_MEMBERSHIP_CONSTRAINT;
 import static org.eclipse.dse.iam.policy.PolicyConstants.MEMBERSHIP_CREDENTIAL_TYPE;
 
 public class MembershipConstraintFunction<C extends ParticipantAgentPolicyContext> extends AbstractDynamicCredentialConstraintFunction<C> {
 
     public static final String ACTIVE = "active";
+    
+    private final PolicyConstants policyConstants;
+
+    public MembershipConstraintFunction(PolicyConstants policyConstants) {
+        this.policyConstants = policyConstants;
+    }
 
     @Override
     public boolean evaluate(Object leftOperand, Operator operator, Object rightOperand, Permission rule, C context) {
@@ -33,6 +38,6 @@ public class MembershipConstraintFunction<C extends ParticipantAgentPolicyContex
 
     @Override
     public boolean canHandle(Object leftOperand) {
-        return leftOperand instanceof String && DSE_MEMBERSHIP_CONSTRAINT.equalsIgnoreCase(leftOperand.toString());
+        return leftOperand instanceof String && policyConstants.getDseMembershipConstraint().equalsIgnoreCase(leftOperand.toString());
     }
 }

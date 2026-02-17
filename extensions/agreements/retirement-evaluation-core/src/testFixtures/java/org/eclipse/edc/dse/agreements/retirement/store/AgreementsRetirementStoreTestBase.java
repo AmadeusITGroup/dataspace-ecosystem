@@ -20,6 +20,7 @@
 package org.eclipse.edc.dse.agreements.retirement.store;
 
 import org.eclipse.edc.dse.agreements.retirement.spi.store.AgreementsRetirementStore;
+import org.eclipse.edc.dse.agreements.retirement.spi.types.AgreementConstants;
 import org.eclipse.edc.dse.agreements.retirement.spi.types.AgreementsRetirementEntry;
 import org.eclipse.edc.spi.query.Criterion;
 import org.eclipse.edc.spi.query.QuerySpec;
@@ -89,7 +90,7 @@ public abstract class AgreementsRetirementStoreTestBase {
     }
 
     private AgreementsRetirementEntry createRetiredAgreementEntry(String agreementId, String reason) {
-        return AgreementsRetirementEntry.Builder.newInstance()
+        return AgreementsRetirementEntry.Builder.newInstance(getAgreementConstants())
                 .withAgreementId(agreementId)
                 .withReason(reason)
                 .build();
@@ -107,5 +108,7 @@ public abstract class AgreementsRetirementStoreTestBase {
     }
 
     protected abstract AgreementsRetirementStore getStore();
+
+    protected abstract AgreementConstants getAgreementConstants();
 
 }

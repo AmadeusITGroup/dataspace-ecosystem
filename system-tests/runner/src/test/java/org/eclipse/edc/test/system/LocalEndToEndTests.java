@@ -643,11 +643,11 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
         private void retireAgreement(AbstractParticipant participant, String contractId, String reason) {
             var body = Map.of(
                     "@context", Map.of(
-                            "eonax", "https://w3id.org/eonax/v0.0.1/ns/",
+                            "dse", "https://w3id.org/dse/v0.0.1/ns/",
                             "edc", "https://w3id.org/edc/v0.0.1/ns/"
                     ),
                     "edc:agreementId", contractId,
-                    "eonax:reason", reason
+                    "dse:reason", reason
             );
 
             participant.participantClient().baseManagementRequest()

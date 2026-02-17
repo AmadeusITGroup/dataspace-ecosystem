@@ -23,7 +23,9 @@ import org.eclipse.edc.connector.controlplane.contract.spi.types.agreement.Contr
 import org.eclipse.edc.connector.controlplane.services.spi.contractagreement.ContractAgreementService;
 import org.eclipse.edc.dse.agreements.retirement.spi.service.AgreementsRetirementService;
 import org.eclipse.edc.dse.agreements.retirement.spi.store.AgreementsRetirementStore;
+import org.eclipse.edc.dse.agreements.retirement.spi.types.AgreementConstants;
 import org.eclipse.edc.dse.agreements.retirement.spi.types.AgreementsRetirementEntry;
+import org.eclipse.edc.dse.common.DseNamespaceConfig;
 import org.eclipse.edc.spi.query.Criterion;
 import org.eclipse.edc.spi.query.QuerySpec;
 import org.eclipse.edc.spi.result.StoreResult;
@@ -52,6 +54,12 @@ class AgreementsRetirementServiceImplTest {
     private final AgreementsRetirementStore store = mock();
     private final TransactionContext transactionContext = new NoopTransactionContext();
     private final ContractAgreementService contractAgreementService = mock();
+    private final DseNamespaceConfig testConfig = new DseNamespaceConfig(
+            "https://w3id.org/dse/v0.0.1/ns/",
+            "dse-policy",
+            "https://w3id.org/dse/policy/"
+    );
+    private final AgreementConstants agreementConstants = new AgreementConstants(testConfig);
 
     @BeforeEach
     void setUp() {
@@ -64,7 +72,7 @@ class AgreementsRetirementServiceImplTest {
 
         var agreementId = "test-agreement-id";
 
-        var entry = AgreementsRetirementEntry.Builder.newInstance()
+        var entry = AgreementsRetirementEntry.Builder.newInstance(agreementConstants)
                 .withAgreementId(agreementId)
                 .withReason("mock-reason")
                 .build();
@@ -124,8 +132,8 @@ class AgreementsRetirementServiceImplTest {
         assertThat(result.reason()).isEqualTo(CONFLICT);
     }
 
-    private static AgreementsRetirementEntry createAgreementsRetirementEntry() {
-        return AgreementsRetirementEntry.Builder.newInstance()
+    private AgreementsRetirementEntry createAgreementsRetirementEntry() {
+        return AgreementsRetirementEntry.Builder.newInstance(agreementConstants)
                 .withAgreementId(UUID.randomUUID().toString())
                 .withReason("some-reason")
                 .withAgreementRetirementDate(Instant.now().toEpochMilli())

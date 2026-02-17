@@ -21,6 +21,7 @@ package org.eclipse.edc.dse.agreements.retirement.api.transform;
 
 import jakarta.json.JsonBuilderFactory;
 import jakarta.json.JsonObject;
+import org.eclipse.edc.dse.agreements.retirement.spi.types.AgreementConstants;
 import org.eclipse.edc.dse.agreements.retirement.spi.types.AgreementsRetirementEntry;
 import org.eclipse.edc.jsonld.spi.transformer.AbstractJsonLdTransformer;
 import org.eclipse.edc.transform.spi.TransformerContext;
@@ -28,16 +29,16 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static org.eclipse.edc.dse.agreements.retirement.spi.types.AgreementsRetirementEntry.AR_ENTRY_AGREEMENT_ID;
-import static org.eclipse.edc.dse.agreements.retirement.spi.types.AgreementsRetirementEntry.AR_ENTRY_REASON;
-import static org.eclipse.edc.dse.agreements.retirement.spi.types.AgreementsRetirementEntry.AR_ENTRY_RETIREMENT_DATE;
 
 public class JsonObjectFromAgreementRetirementTransformer extends AbstractJsonLdTransformer<AgreementsRetirementEntry, JsonObject> {
 
     private final JsonBuilderFactory jsonFactory;
+    private final AgreementConstants agreementConstants;
 
-    public JsonObjectFromAgreementRetirementTransformer(JsonBuilderFactory jsonFactory) {
+    public JsonObjectFromAgreementRetirementTransformer(JsonBuilderFactory jsonFactory, AgreementConstants agreementConstants) {
         super(AgreementsRetirementEntry.class, JsonObject.class);
         this.jsonFactory = jsonFactory;
+        this.agreementConstants = agreementConstants;
     }
 
 
@@ -45,8 +46,8 @@ public class JsonObjectFromAgreementRetirementTransformer extends AbstractJsonLd
     public @Nullable JsonObject transform(@NotNull AgreementsRetirementEntry entry, @NotNull TransformerContext transformerContext) {
         return jsonFactory.createObjectBuilder()
                 .add(AR_ENTRY_AGREEMENT_ID, entry.getAgreementId())
-                .add(AR_ENTRY_REASON, entry.getReason())
-                .add(AR_ENTRY_RETIREMENT_DATE, entry.getAgreementRetirementDate())
+                .add(agreementConstants.getArEntryReason(), entry.getReason())
+                .add(agreementConstants.getArEntryRetirementDate(), entry.getAgreementRetirementDate())
                 .build();
 
     }

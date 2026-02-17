@@ -1,6 +1,7 @@
 package org.eclipse.dse.iam.policy;
 
 import org.assertj.core.api.ThrowingConsumer;
+import org.eclipse.edc.dse.common.DseNamespaceConfig;
 import org.eclipse.edc.iam.verifiablecredentials.spi.model.CredentialSubject;
 import org.eclipse.edc.iam.verifiablecredentials.spi.model.Issuer;
 import org.eclipse.edc.iam.verifiablecredentials.spi.model.VerifiableCredential;
@@ -16,6 +17,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.time.Instant;
@@ -26,20 +28,29 @@ import java.util.stream.Stream;
 import static java.util.Collections.emptyMap;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.eclipse.dse.iam.policy.AbstractDynamicCredentialConstraintFunction.VC_CLAIM;
-import static org.eclipse.dse.iam.policy.PolicyConstants.DSE_GENERIC_CLAIM_CONSTRAINT;
 import static org.eclipse.dse.iam.policy.PolicyConstants.MEMBERSHIP_CREDENTIAL_TYPE;
 
 class JsonPathCredentialConstraintFunctionTest {
 
     private static final String ISSUER = "did:web:issuer";
     private static final String SUBJECT = "did:web:subject";
+    private static final DseNamespaceConfig DEFAULT_CONFIG = new DseNamespaceConfig(
+            "https://w3id.org/dse/v0.0.1/ns/",
+            "dse-policy",
+            "https://w3id.org/dse/policy/"
+    );
+    private static final PolicyConstants POLICY_CONSTANTS = new PolicyConstants(DEFAULT_CONFIG);
 
-    private final JsonPathCredentialConstraintFunction function = new JsonPathCredentialConstraintFunction();
+    private final JsonPathCredentialConstraintFunction function = new JsonPathCredentialConstraintFunction(POLICY_CONSTANTS);
 
     @ParameterizedTest
-    @ValueSource(strings = {DSE_GENERIC_CLAIM_CONSTRAINT + ".$.type.foo"})
+    @MethodSource("provideValidLeftOperands")
     void canHandle(String leftOperand) {
         assertThat(function.canHandle(leftOperand)).isTrue();
+    }
+
+    private static Stream<String> provideValidLeftOperands() {
+        return Stream.of(POLICY_CONSTANTS.getDseGenericClaimConstraint() + ".$.type.foo");
     }
 
     @ParameterizedTest
@@ -175,7 +186,7 @@ class JsonPathCredentialConstraintFunctionTest {
     }
 
     private static String leftOperand(String path) {
-        return "%s.$.%s.%s".formatted(DSE_GENERIC_CLAIM_CONSTRAINT, MEMBERSHIP_CREDENTIAL_TYPE, path);
+        return "%s.$.%s.%s".formatted(POLICY_CONSTANTS.getDseGenericClaimConstraint(), MEMBERSHIP_CREDENTIAL_TYPE, path);
     }
 
     private static ThrowingConsumer<PolicyContext> expectedProblem(String problem) {

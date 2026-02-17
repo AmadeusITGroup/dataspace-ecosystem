@@ -24,18 +24,33 @@ import org.eclipse.edc.spi.entity.Entity;
 
 import static java.util.Objects.requireNonNull;
 import static org.eclipse.edc.spi.constants.CoreConstants.EDC_NAMESPACE;
-import static org.eclipse.edc.spi.core.CoreConstants.DSE_NS;
 
 /**
  * Representation of a Contract Agreement Retirement entry, to be stored in the {@link org.eclipse.edc.dse.agreements.retirement.spi.store.AgreementsRetirementStore}.
+ * 
+ * NOTE: Use {@link AgreementConstants} to get the configurable DSE namespace property names.
+ * The Builder requires AgreementConstants to be passed for proper field validation.
  */
 public class AgreementsRetirementEntry extends Entity {
-
+    
     public static final String AR_ENTRY_TYPE = EDC_NAMESPACE + "AgreementsRetirementEntry";
-
     public static final String AR_ENTRY_AGREEMENT_ID = EDC_NAMESPACE + "agreementId";
-    public static final String AR_ENTRY_REASON = DSE_NS + "reason";
-    public static final String AR_ENTRY_RETIREMENT_DATE = DSE_NS + "agreementRetirementDate";
+    
+    /**
+     * Property name for the retirement reason field.
+     *
+     * @deprecated Use {@link AgreementConstants#getArEntryReason()} instead.
+     */
+    @Deprecated(since = "0.6.4", forRemoval = true)
+    public static final String AR_ENTRY_REASON = EDC_NAMESPACE + "reason";
+    
+    /**
+     * Property name for the retirement date field.
+     *
+     * @deprecated Use {@link AgreementConstants#getArEntryRetirementDate()} instead.
+     */
+    @Deprecated(since = "0.6.4", forRemoval = true)
+    public static final String AR_ENTRY_RETIREMENT_DATE = EDC_NAMESPACE + "agreementRetirementDate";
 
     private String agreementId;
     private String reason;
@@ -57,13 +72,24 @@ public class AgreementsRetirementEntry extends Entity {
 
     public static class Builder extends Entity.Builder<AgreementsRetirementEntry, AgreementsRetirementEntry.Builder> {
 
+        private AgreementConstants agreementConstants;
+
         private Builder() {
             super(new AgreementsRetirementEntry());
+        }
+        
+        private Builder(AgreementConstants agreementConstants) {
+            super(new AgreementsRetirementEntry());
+            this.agreementConstants = agreementConstants;
         }
 
         @JsonCreator
         public static Builder newInstance() {
             return new Builder();
+        }
+        
+        public static Builder newInstance(AgreementConstants agreementConstants) {
+            return new Builder(agreementConstants);
         }
 
         public Builder withAgreementId(String agreementId) {
@@ -90,7 +116,10 @@ public class AgreementsRetirementEntry extends Entity {
         public AgreementsRetirementEntry build() {
             super.build();
             requireNonNull(entity.agreementId, AR_ENTRY_AGREEMENT_ID);
-            requireNonNull(entity.reason, AR_ENTRY_REASON);
+            
+            // Use configurable constants if provided, otherwise use default field name for backward compatibility
+            var reasonFieldName = agreementConstants != null ? agreementConstants.getArEntryReason() : "reason";
+            requireNonNull(entity.reason, "Field '" + reasonFieldName + "' must not be null");
 
             if (entity.agreementRetirementDate == 0L) {
                 entity.agreementRetirementDate = this.entity.clock.instant().getEpochSecond();

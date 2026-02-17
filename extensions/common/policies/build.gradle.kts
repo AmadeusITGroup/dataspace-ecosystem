@@ -4,6 +4,7 @@ plugins {
 
 dependencies {
     api(project(":spi:common-spi"))
+    implementation(project(":core:common"))
     api(project(":spi:telemetry-service-spi"))
     api(libs.edc.spi.jsonld)
     implementation(libs.edc.spi.participant)

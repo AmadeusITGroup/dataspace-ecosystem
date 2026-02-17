@@ -24,6 +24,8 @@ import org.eclipse.edc.dse.agreements.retirement.api.transform.JsonObjectFromAgr
 import org.eclipse.edc.dse.agreements.retirement.api.transform.JsonObjectToAgreementsRetirementEntryTransformer;
 import org.eclipse.edc.dse.agreements.retirement.api.v3.AgreementsRetirementApiV3Controller;
 import org.eclipse.edc.dse.agreements.retirement.spi.service.AgreementsRetirementService;
+import org.eclipse.edc.dse.agreements.retirement.spi.types.AgreementConstants;
+import org.eclipse.edc.dse.common.DseNamespaceConfig;
 import org.eclipse.edc.runtime.metamodel.annotation.Extension;
 import org.eclipse.edc.runtime.metamodel.annotation.Inject;
 import org.eclipse.edc.spi.monitor.Monitor;
@@ -59,14 +61,17 @@ public class AgreementsRetirementApiExtension implements ServiceExtension {
     private AgreementsRetirementService agreementsRetirementService;
     @Inject
     private Monitor monitor;
+    @Inject
+    private DseNamespaceConfig namespaceConfig;
 
     @Override
     public void initialize(ServiceExtensionContext context) {
         var jsonFactory = Json.createBuilderFactory(Map.of());
         var managementTypeTransformerRegistry = transformerRegistry.forContext("management-api");
+        var agreementConstants = new AgreementConstants(namespaceConfig);
 
-        managementTypeTransformerRegistry.register(new JsonObjectFromAgreementRetirementTransformer(jsonFactory));
-        managementTypeTransformerRegistry.register(new JsonObjectToAgreementsRetirementEntryTransformer());
+        managementTypeTransformerRegistry.register(new JsonObjectFromAgreementRetirementTransformer(jsonFactory, agreementConstants));
+        managementTypeTransformerRegistry.register(new JsonObjectToAgreementsRetirementEntryTransformer(agreementConstants));
 
         webService.registerResource(ApiContext.MANAGEMENT, new AgreementsRetirementApiV3Controller(agreementsRetirementService, managementTypeTransformerRegistry, validator, monitor));
     }

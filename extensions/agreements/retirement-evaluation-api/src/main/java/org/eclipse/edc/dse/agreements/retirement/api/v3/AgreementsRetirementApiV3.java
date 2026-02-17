@@ -95,11 +95,11 @@ public interface AgreementsRetirementApiV3 {
         public static final String EXAMPLE = """
                 {
                     "@context": {
-                        "eonax": "https://w3id.org/eonax/v0.0.1/ns/",
+                        "dse": "https://w3id.org/dse/v0.0.1/ns/",
                         "edc": "https://w3id.org/edc/v0.0.1/ns/"
                     },
                     "edc:agreementId": "contract-agreement-id",
-                    "eonax:reason": "This contract agreement was retired since the physical counterpart is no longer valid."
+                    "dse:reason": "This contract agreement was retired since the physical counterpart is no longer valid."
                 }
                 """;
     }

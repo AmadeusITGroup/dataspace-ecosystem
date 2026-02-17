@@ -20,9 +20,11 @@
 package org.eclipse.edc.dse.agreements.retirement.store;
 
 import org.eclipse.edc.dse.agreements.retirement.spi.store.AgreementsRetirementStore;
+import org.eclipse.edc.dse.agreements.retirement.spi.types.AgreementConstants;
 import org.eclipse.edc.dse.agreements.retirement.store.sql.PostgresAgreementRetirementStatements;
 import org.eclipse.edc.dse.agreements.retirement.store.sql.SqlAgreementsRetirementStatements;
 import org.eclipse.edc.dse.agreements.retirement.store.sql.SqlAgreementsRetirementStore;
+import org.eclipse.edc.dse.common.DseNamespaceConfig;
 import org.eclipse.edc.runtime.metamodel.annotation.Extension;
 import org.eclipse.edc.runtime.metamodel.annotation.Inject;
 import org.eclipse.edc.runtime.metamodel.annotation.Provider;
@@ -61,11 +63,15 @@ public class SqlAgreementsRetirementStoreExtension implements ServiceExtension {
     @Inject(required = false)
     private SqlAgreementsRetirementStatements statements;
 
+    @Inject
+    private DseNamespaceConfig dseNamespaceConfig;
+
     @Provider
     public AgreementsRetirementStore sqlStore(ServiceExtensionContext context) {
         sqlSchemaBootstrapper.addStatementFromResource(dataSourceName, "schema.sql");
+        var agreementConstants = new AgreementConstants(dseNamespaceConfig);
         return new SqlAgreementsRetirementStore(dataSourceRegistry, dataSourceName, transactionContext,
-                typeManager.getMapper(), queryExecutor, getStatements());
+                typeManager.getMapper(), queryExecutor, getStatements(), agreementConstants);
     }
 
     @Override

@@ -20,7 +20,9 @@
 package org.eclipse.edc.dse.agreements.retirement.api.transform;
 
 import jakarta.json.Json;
+import org.eclipse.edc.dse.agreements.retirement.spi.types.AgreementConstants;
 import org.eclipse.edc.dse.agreements.retirement.spi.types.AgreementsRetirementEntry;
+import org.eclipse.edc.dse.common.DseNamespaceConfig;
 import org.eclipse.edc.transform.spi.TransformerContext;
 import org.junit.jupiter.api.Test;
 
@@ -29,7 +31,13 @@ import static org.mockito.Mockito.mock;
 
 class JsonObjectToAgreementsRetirementEntryTransformerTest {
 
-    private final JsonObjectToAgreementsRetirementEntryTransformer transformer = new JsonObjectToAgreementsRetirementEntryTransformer();
+    private final DseNamespaceConfig testConfig = new DseNamespaceConfig(
+            "https://w3id.org/dse/v0.0.1/ns/",
+            "dse-policy",
+            "https://w3id.org/dse/policy/"
+    );
+    private final AgreementConstants agreementConstants = new AgreementConstants(testConfig);
+    private final JsonObjectToAgreementsRetirementEntryTransformer transformer = new JsonObjectToAgreementsRetirementEntryTransformer(agreementConstants);
 
     @Test
     void transform() {
@@ -37,7 +45,7 @@ class JsonObjectToAgreementsRetirementEntryTransformerTest {
         var context = mock(TransformerContext.class);
         var jsonEntry = Json.createObjectBuilder()
                 .add(AgreementsRetirementEntry.AR_ENTRY_AGREEMENT_ID, "agreementId")
-                .add(AgreementsRetirementEntry.AR_ENTRY_REASON, "reason")
+                .add(agreementConstants.getArEntryReason(), "reason")
                 .build();
 
         var result = transformer.transform(jsonEntry, context);

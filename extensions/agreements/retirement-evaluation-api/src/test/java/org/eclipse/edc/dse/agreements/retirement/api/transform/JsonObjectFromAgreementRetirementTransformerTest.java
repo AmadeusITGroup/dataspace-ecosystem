@@ -21,7 +21,9 @@ package org.eclipse.edc.dse.agreements.retirement.api.transform;
 
 import jakarta.json.Json;
 import jakarta.json.JsonBuilderFactory;
+import org.eclipse.edc.dse.agreements.retirement.spi.types.AgreementConstants;
 import org.eclipse.edc.dse.agreements.retirement.spi.types.AgreementsRetirementEntry;
+import org.eclipse.edc.dse.common.DseNamespaceConfig;
 import org.eclipse.edc.transform.spi.TransformerContext;
 import org.junit.jupiter.api.Test;
 
@@ -29,8 +31,6 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.eclipse.edc.dse.agreements.retirement.spi.types.AgreementsRetirementEntry.AR_ENTRY_AGREEMENT_ID;
-import static org.eclipse.edc.dse.agreements.retirement.spi.types.AgreementsRetirementEntry.AR_ENTRY_REASON;
-import static org.eclipse.edc.dse.agreements.retirement.spi.types.AgreementsRetirementEntry.AR_ENTRY_RETIREMENT_DATE;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -39,15 +39,20 @@ import static org.mockito.Mockito.verify;
 class JsonObjectFromAgreementRetirementTransformerTest {
 
     private final JsonBuilderFactory factory = Json.createBuilderFactory(Map.of());
-
-    private final JsonObjectFromAgreementRetirementTransformer transformer = new JsonObjectFromAgreementRetirementTransformer(factory);
+    private final DseNamespaceConfig testConfig = new DseNamespaceConfig(
+            "https://w3id.org/dse/v0.0.1/ns/",
+            "dse-policy",
+            "https://w3id.org/dse/policy/"
+    );
+    private final AgreementConstants agreementConstants = new AgreementConstants(testConfig);
+    private final JsonObjectFromAgreementRetirementTransformer transformer = new JsonObjectFromAgreementRetirementTransformer(factory, agreementConstants);
 
     @Test
     void transform() {
 
         var context = mock(TransformerContext.class);
 
-        var entry = AgreementsRetirementEntry.Builder.newInstance()
+        var entry = AgreementsRetirementEntry.Builder.newInstance(agreementConstants)
                 .withAgreementId("agreementId")
                 .withReason("long-reason")
                 .build();
@@ -56,8 +61,8 @@ class JsonObjectFromAgreementRetirementTransformerTest {
 
         assertThat(result).isNotNull();
         assertThat(result.getString(AR_ENTRY_AGREEMENT_ID)).isEqualTo("agreementId");
-        assertThat(result.getString(AR_ENTRY_REASON)).isEqualTo("long-reason");
-        assertThat(result.getJsonNumber(AR_ENTRY_RETIREMENT_DATE)).isNotNull();
+        assertThat(result.getString(agreementConstants.getArEntryReason())).isEqualTo("long-reason");
+        assertThat(result.getJsonNumber(agreementConstants.getArEntryRetirementDate())).isNotNull();
         verify(context, never()).reportProblem(anyString());
     }
 

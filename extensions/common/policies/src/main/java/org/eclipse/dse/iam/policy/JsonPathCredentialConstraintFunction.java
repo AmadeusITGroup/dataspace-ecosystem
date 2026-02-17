@@ -12,7 +12,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.eclipse.dse.iam.policy.PolicyConstants.DSE_GENERIC_CLAIM_CONSTRAINT;
 import static org.eclipse.edc.policy.model.Operator.EQ;
 import static org.eclipse.edc.policy.model.Operator.IN;
 import static org.eclipse.edc.policy.model.Operator.NEQ;
@@ -20,6 +19,12 @@ import static org.eclipse.edc.policy.model.Operator.NEQ;
 public class JsonPathCredentialConstraintFunction<C extends ParticipantAgentPolicyContext> extends AbstractDynamicCredentialConstraintFunction<C> {
 
     private static final List<Operator> SUPPORTED_OPERATORS = List.of(EQ, NEQ, IN);
+    
+    private final PolicyConstants policyConstants;
+
+    public JsonPathCredentialConstraintFunction(PolicyConstants policyConstants) {
+        this.policyConstants = policyConstants;
+    }
 
     @Override
     public boolean evaluate(Object leftOperand, Operator operator, Object rightOperand, Permission rule, C policyContext) {
@@ -79,7 +84,7 @@ public class JsonPathCredentialConstraintFunction<C extends ParticipantAgentPoli
 
     @Override
     public boolean canHandle(Object leftOperand) {
-        return (leftOperand instanceof String) && ((String) leftOperand).startsWith("%s.$".formatted(DSE_GENERIC_CLAIM_CONSTRAINT));
+        return (leftOperand instanceof String) && ((String) leftOperand).startsWith("%s.$".formatted(policyConstants.getDseGenericClaimConstraint()));
     }
 
 
@@ -157,7 +162,7 @@ public class JsonPathCredentialConstraintFunction<C extends ParticipantAgentPoli
     }
 
     private String sanitizeLeftOperand(String leftOperand) {
-        return leftOperand.replace("%s.$.".formatted(DSE_GENERIC_CLAIM_CONSTRAINT), "");
+        return leftOperand.replace("%s.$.".formatted(policyConstants.getDseGenericClaimConstraint()), "");
     }
 
     private Map<String, Object> sanitizeClaims(Map<String, Object> claims) {

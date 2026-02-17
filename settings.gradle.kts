@@ -1,6 +1,7 @@
 rootProject.name = "dataspace-ecosystem"
 
 include(":core")
+include(":core:common")
 include(":core:telemetry-agent-core")
 include(":core:telemetry-service-core")
 include(":core:common:telemetry-record-store")

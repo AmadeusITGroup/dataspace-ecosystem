@@ -17,7 +17,7 @@
                             "odrl:or": [
                                 {
                                     "odrl:leftOperand": {
-                                        "@id": "eox-policy:RestrictedDiscoveryClaim.$.DomainCredential.domain"
+                                        "@id": "dse-policy:RestrictedDiscoveryClaim.$.DomainCredential.domain"
                                     },
                                     "odrl:operator": {
                                         "@id": "odrl:eq"
@@ -26,7 +26,7 @@
                                 },
                                 {
                                     "odrl:leftOperand": {
-                                        "@id": "eox-policy:RestrictedDiscoveryClaim.$.DomainCredential.domain"
+                                        "@id": "dse-policy:RestrictedDiscoveryClaim.$.DomainCredential.domain"
                                     },
                                     "odrl:operator": {
                                         "@id": "odrl:eq"
@@ -90,7 +90,7 @@
                         },
                         "odrl:constraint": {
                             "odrl:leftOperand": {
-                                "@id": "eox-policy:RestrictedDiscoveryClaim.$.DomainCredential.domain"
+                                "@id": "dse-policy:RestrictedDiscoveryClaim.$.DomainCredential.domain"
                             },
                             "odrl:operator": {
                                 "@id": "odrl:eq"
@@ -154,7 +154,7 @@
                             "odrl:and": [
                                 {
                                     "odrl:leftOperand": {
-                                        "@id": "eox-policy:RestrictedDiscoveryClaim.$.DomainCredential.domain"
+                                        "@id": "dse-policy:RestrictedDiscoveryClaim.$.DomainCredential.domain"
                                     },
                                     "odrl:operator": {
                                         "@id": "odrl:eq"
@@ -163,7 +163,7 @@
                                 },
                                 {
                                     "odrl:leftOperand": {
-                                        "@id": "eox-policy:RestrictedDiscoveryClaim.$.DomainCredential.domain"
+                                        "@id": "dse-policy:RestrictedDiscoveryClaim.$.DomainCredential.domain"
                                     },
                                     "odrl:operator": {
                                         "@id": "odrl:eq"
@@ -227,7 +227,7 @@
                         },
                         "odrl:constraint": {
                             "odrl:leftOperand": {
-                                "@id": "eox-policy:RestrictedDiscoveryClaim.$.DomainCredential.domain"
+                                "@id": "dse-policy:RestrictedDiscoveryClaim.$.DomainCredential.domain"
                             },
                             "odrl:operator": {
                                 "@id": "odrl:eq"
@@ -290,7 +290,7 @@
                         },
                         "odrl:constraint": {
                             "odrl:leftOperand": {
-                                "@id": "eox-policy:RestrictedDiscoveryClaim.$.DomainCredential.domain"
+                                "@id": "dse-policy:RestrictedDiscoveryClaim.$.DomainCredential.domain"
                             },
                             "odrl:operator": {
                                 "@id": "odrl:isPartOf"
@@ -352,7 +352,7 @@
                         },
                         "odrl:constraint": {
                             "odrl:leftOperand": {
-                                "@id": "eox-policy:RestrictedDiscoveryClaim.$.DomainCredential.domain"
+                                "@id": "dse-policy:RestrictedDiscoveryClaim.$.DomainCredential.domain"
                             },
                             "odrl:operator": {
                                 "@id": "odrl:isPartOf"
@@ -415,7 +415,7 @@
         "dspace:participantId": "did:web:consumer-identityhub%3A8383:api:did",
         "originator": "http://consumer-controlplane:8282/api/dsp",
         "@context": {
-            "eox-policy": "https://w3id.org/eonax/policy/",
+            "dse-policy": "https://w3id.org/dse/policy/",
             "@vocab": "https://w3id.org/edc/v0.0.1/ns/",
             "edc": "https://w3id.org/edc/v0.0.1/ns/",
             "odrl": "http://www.w3.org/ns/odrl/2/",

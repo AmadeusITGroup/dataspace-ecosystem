@@ -20,6 +20,7 @@
 package org.eclipse.edc.dse.agreements.retirement.api.transform;
 
 import jakarta.json.JsonObject;
+import org.eclipse.edc.dse.agreements.retirement.spi.types.AgreementConstants;
 import org.eclipse.edc.dse.agreements.retirement.spi.types.AgreementsRetirementEntry;
 import org.eclipse.edc.jsonld.spi.transformer.AbstractJsonLdTransformer;
 import org.eclipse.edc.transform.spi.TransformerContext;
@@ -27,19 +28,21 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static org.eclipse.edc.dse.agreements.retirement.spi.types.AgreementsRetirementEntry.AR_ENTRY_AGREEMENT_ID;
-import static org.eclipse.edc.dse.agreements.retirement.spi.types.AgreementsRetirementEntry.AR_ENTRY_REASON;
 
 public class JsonObjectToAgreementsRetirementEntryTransformer extends AbstractJsonLdTransformer<JsonObject, AgreementsRetirementEntry> {
 
-    public JsonObjectToAgreementsRetirementEntryTransformer() {
+    private final AgreementConstants agreementConstants;
+
+    public JsonObjectToAgreementsRetirementEntryTransformer(AgreementConstants agreementConstants) {
         super(JsonObject.class, AgreementsRetirementEntry.class);
+        this.agreementConstants = agreementConstants;
     }
 
     @Override
     public @Nullable AgreementsRetirementEntry transform(@NotNull JsonObject jsonObject, @NotNull TransformerContext context) {
-        var entryBuilder = AgreementsRetirementEntry.Builder.newInstance();
+        var entryBuilder = AgreementsRetirementEntry.Builder.newInstance(agreementConstants);
         entryBuilder.withAgreementId(transformString(jsonObject.get(AR_ENTRY_AGREEMENT_ID), context));
-        entryBuilder.withReason(transformString(jsonObject.get(AR_ENTRY_REASON), context));
+        entryBuilder.withReason(transformString(jsonObject.get(agreementConstants.getArEntryReason()), context));
         return entryBuilder.build();
     }
 }

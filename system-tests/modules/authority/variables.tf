@@ -29,3 +29,15 @@ variable "devbox-registry-cred" {
   description = "The image pull secret name for devbox environment"
   type        = string
 }
+
+variable "dse_namespace_prefix" {
+  description = "DSE namespace prefix"
+  type        = string
+  default     = "dse"
+}
+
+variable "dse_policy_prefix" {
+  description = "DSE policy prefix"
+  type        = string
+  default     = "dse-policy"
+}

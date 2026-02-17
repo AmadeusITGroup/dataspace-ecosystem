@@ -5,6 +5,7 @@ import org.eclipse.dse.iam.core.DefaultScopeExtractor;
 import org.eclipse.dse.iam.core.RequestCatalogDiscoveryContext;
 import org.eclipse.dse.iam.policy.CatalogDiscoveryConstraintFunction;
 import org.eclipse.dse.iam.policy.CatalogDiscoveryPolicyContext;
+import org.eclipse.dse.iam.policy.PolicyConstants;
 import org.eclipse.edc.catalog.transform.JsonObjectToCatalogTransformer;
 import org.eclipse.edc.catalog.transform.JsonObjectToDataServiceTransformer;
 import org.eclipse.edc.catalog.transform.JsonObjectToDatasetTransformer;
@@ -15,6 +16,7 @@ import org.eclipse.edc.connector.controlplane.transform.odrl.to.JsonObjectToCons
 import org.eclipse.edc.connector.controlplane.transform.odrl.to.JsonObjectToOperatorTransformer;
 import org.eclipse.edc.connector.controlplane.transform.odrl.to.JsonObjectToPermissionTransformer;
 import org.eclipse.edc.connector.controlplane.transform.odrl.to.JsonObjectToPolicyTransformer;
+import org.eclipse.edc.dse.common.DseNamespaceConfig;
 import org.eclipse.edc.iam.verifiablecredentials.spi.model.CredentialSubject;
 import org.eclipse.edc.iam.verifiablecredentials.spi.model.Issuer;
 import org.eclipse.edc.iam.verifiablecredentials.spi.model.VerifiableCredential;
@@ -54,7 +56,6 @@ import java.util.Set;
 
 import static org.eclipse.dse.iam.policy.CatalogDiscoveryPolicyContext.CATALOG_DISCOVERY_SCOPE;
 import static org.eclipse.dse.iam.policy.PolicyConstants.DOMAIN_CREDENTIAL_TYPE;
-import static org.eclipse.dse.iam.policy.PolicyConstants.DSE_RESTRICTED_CATALOG_DISCOVERY_CONSTRAINT;
 import static org.eclipse.dse.iam.policy.PolicyConstants.MEMBERSHIP_CREDENTIAL_TYPE;
 import static org.eclipse.edc.connector.controlplane.contract.spi.policy.ContractNegotiationPolicyContext.NEGOTIATION_SCOPE;
 import static org.eclipse.edc.connector.controlplane.contract.spi.policy.TransferProcessPolicyContext.TRANSFER_SCOPE;
@@ -69,6 +70,12 @@ import static org.mockito.Mockito.when;
 
 public class FederatedCatalogFilterServiceTest {
 
+    private static final DseNamespaceConfig DEFAULT_CONFIG = new DseNamespaceConfig(
+            "https://w3id.org/dse/v0.0.1/ns/",
+            "dse-policy",
+            "https://w3id.org/dse/policy/"
+    );
+    private static final PolicyConstants POLICY_CONSTANTS = new PolicyConstants(DEFAULT_CONFIG);
     private static AuthorityCatalogFilterDidResolver didResolverRegistry = mock();
     private static PolicyEngine policyEngine = null;
     private static RuleBindingRegistry registry = new RuleBindingRegistryImpl();
@@ -91,8 +98,8 @@ public class FederatedCatalogFilterServiceTest {
         policyEngine = new PolicyEngineImpl(new ScopeFilter(registry), new RuleValidator(registry));
         policyEngine.registerPostValidator(RequestCatalogDiscoveryContext.class, new DefaultScopeExtractor<>(Set.of(READ_ALL_CREDENTIAL_SCOPE)));
         registry.bind(ODRL_USE_ACTION_ATTRIBUTE,  CATALOG_DISCOVERY_SCOPE);
-        policyEngine.registerFunction(CatalogDiscoveryPolicyContext.class, Permission.class, new CatalogDiscoveryConstraintFunction<>());
-        registry.dynamicBind(s -> s.startsWith(DSE_RESTRICTED_CATALOG_DISCOVERY_CONSTRAINT) ? Set.of(CATALOG_DISCOVERY_SCOPE, NEGOTIATION_SCOPE, TRANSFER_SCOPE) : Set.of());
+        policyEngine.registerFunction(CatalogDiscoveryPolicyContext.class, Permission.class, new CatalogDiscoveryConstraintFunction<>(POLICY_CONSTANTS));
+        registry.dynamicBind(s -> s.startsWith(POLICY_CONSTANTS.getDseRestrictedCatalogDiscoveryConstraint()) ? Set.of(CATALOG_DISCOVERY_SCOPE, NEGOTIATION_SCOPE, TRANSFER_SCOPE) : Set.of());
         registerTransformers();
         when(didResolverRegistry.fetchCatalogFilterUrl()).thenReturn(Result.success("http://example.com/catalog"));
         String reply = loadCatalogFromFile(CATALOG_REPLY);

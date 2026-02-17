@@ -1,5 +1,6 @@
 package org.eclipse.dse.iam.policy;
 
+import org.eclipse.edc.dse.common.DseNamespaceConfig;
 import org.eclipse.edc.iam.verifiablecredentials.spi.model.VerifiableCredential;
 import org.eclipse.edc.json.JacksonTypeManager;
 import org.eclipse.edc.participant.spi.ParticipantAgent;
@@ -17,11 +18,16 @@ import static java.util.Collections.emptyMap;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.eclipse.dse.iam.policy.AbstractDynamicCredentialConstraintFunction.VC_CLAIM;
 import static org.eclipse.dse.iam.policy.MembershipConstraintFunction.ACTIVE;
-import static org.eclipse.dse.iam.policy.PolicyConstants.DSE_MEMBERSHIP_CONSTRAINT;
 
 class MembershipConstraintFunctionTest {
 
     private static final TypeManager TYPE_MANAGER = new JacksonTypeManager();
+    private static final DseNamespaceConfig DEFAULT_CONFIG = new DseNamespaceConfig(
+            "https://w3id.org/dse/v0.0.1/ns/",
+            "dse-policy",
+            "https://w3id.org/dse/policy/"
+    );
+    private static final PolicyConstants POLICY_CONSTANTS = new PolicyConstants(DEFAULT_CONFIG);
     private static final String TEST_VC = "{\n" +
             "      \"credentialSubject\": [\n" +
             "        {\n" +
@@ -37,7 +43,7 @@ class MembershipConstraintFunctionTest {
             "      \"id\": \"88f2e6a3-a382-4c57-b9bb-b833525c650d\",\n" +
             "      \"type\": [\n" +
             "        \"VerifiableCredential\",\n" +
-            "        \"https://w3id.org/eonax/credentials/MembershipCredential\"\n" +
+            "        \"https://w3id.org/dse/credentials/MembershipCredential\"\n" +
             "      ],\n" +
             "      \"issuer\": {\n" +
             "        \"id\": \"did:web:issuer\",\n" +
@@ -50,7 +56,7 @@ class MembershipConstraintFunctionTest {
             "      \"name\": null\n" +
             "    }";
 
-    private final MembershipConstraintFunction function = new MembershipConstraintFunction();
+    private final MembershipConstraintFunction function = new MembershipConstraintFunction(POLICY_CONSTANTS);
 
     @Test
     void evaluate_success() {
@@ -58,7 +64,7 @@ class MembershipConstraintFunctionTest {
         Map<String, Object> claims = Map.of(VC_CLAIM, List.of(vc));
         var context = new TestPolicyContext(claims);
 
-        var result = function.evaluate(DSE_MEMBERSHIP_CONSTRAINT, Operator.EQ, ACTIVE, null, context);
+        var result = function.evaluate(POLICY_CONSTANTS.getDseMembershipConstraint(), Operator.EQ, ACTIVE, null, context);
 
         assertThat(result).isTrue();
     }
@@ -67,7 +73,7 @@ class MembershipConstraintFunctionTest {
     void evaluate_noMembershipClaim_shouldReturnFalse() {
         var context = new TestPolicyContext(Map.of());
 
-        var result = function.evaluate(DSE_MEMBERSHIP_CONSTRAINT, Operator.EQ, ACTIVE, null, context);
+        var result = function.evaluate(POLICY_CONSTANTS.getDseMembershipConstraint(), Operator.EQ, ACTIVE, null, context);
 
         assertThat(result).isFalse();
     }
