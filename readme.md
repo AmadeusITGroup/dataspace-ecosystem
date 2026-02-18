@@ -1,7 +1,7 @@
 # Dataspace Ecosystem
 
-![Latest Release](https://img.shields.io/github/v/release/AmadeusITGroup/Dataspace_Ecosystem?label=release)
-![Contributors](https://img.shields.io/github/contributors/AmadeusITGroup/Dataspace_Ecosystem?color=blue)
+![EDC Version](https://img.shields.io/badge/EDC-0.14.0-blue)
+![DSE_Version](https://img.shields.io/badge/DSE-0.6.3-orange)
 
 ## 1. Overview
 
