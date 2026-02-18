@@ -10,7 +10,7 @@ import org.eclipse.edc.web.spi.WebService;
 @Extension(value = IdentityHubIatpExtension.NAME)
 public class IdentityHubIatpExtension implements ServiceExtension {
 
-    public static final String NAME = "Eona-X IATP";
+    public static final String NAME = "DSE IATP";
 
     @Inject
     private WebService webService;
