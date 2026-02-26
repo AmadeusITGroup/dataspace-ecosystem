@@ -67,10 +67,8 @@ implementation for the *TelemetryRecordStore* interface and designate it as the 
 Through the Launcher, we can enhance this service with different implementations. The base implementation in the core
 folder serves as the default. If we want to change an implementation, we can define it inside the launchers folder.
 
-For example, in ```launcher/telemetry-agent/telemetry-agent-postgresql-eventhub```, the *build.gradle.kts* file includes
-```runtimeOnly(project(":extensions:common:store:sql:telemetry-store-sql"))```. This means that this implementation will
-be loaded at runtime and will inject a different implementation. If we examine this code, we will see that
-*telemetry-store-sql* provides an implementation for *TelemetryRecordStore*, replacing the default one.
+This means that this implementation will
+be loaded at runtime and will inject a different implementation.
 
 ### Extensions
 

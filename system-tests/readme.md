@@ -10,7 +10,7 @@
 ## Create and prepare a local Kubernetes cluster
 
 ```bash
-kind create cluster -n dse-cluster --config kind.config.yaml
+kind create cluster --name dse-cluster --config kind.config.yaml
 ```
 
 ### Install Ingress Controller
@@ -67,7 +67,7 @@ kind load docker-image \
   backend-service-provider:latest \
   telemetry-storage-postgresql-hashicorpvault:latest \
   telemetry-csv-manager-postgresql-hashicorpvault:latest \
-  -n dse-cluster
+  --name dse-cluster
 ```
 
 ## Using Podman

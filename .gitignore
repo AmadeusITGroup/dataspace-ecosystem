@@ -45,3 +45,6 @@ Chart.lock
 
 ## OpenLens configuration files
 **/.openlens/
+
+# Python virtual environment
+venv/
