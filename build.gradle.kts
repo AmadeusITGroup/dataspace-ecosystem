@@ -54,6 +54,9 @@ allprojects {
 subprojects {
     afterEvaluate {
         val vaultType: String = project.findProperty("vaultType") as? String ?: "hashicorp"
+        val baseImage: String = project.findProperty("baseImage") as? String ?: "centos:latest"
+        val registryUrl: String = project.findProperty("registryUrl") as? String ?: "quay.io/centos"
+        val installJava: String = project.findProperty("installJava") as? String ?: "true"
         
         // Skip building Docker images for non-selected vault variants
         val shouldSkipVaultVariant = when {
@@ -130,6 +133,9 @@ subprojects {
                     "podman", "build",
                     "--build-arg", "JAR=$jarFile",
                     "--build-arg", "OTEL_JAR=$otelFile",
+                    "--build-arg", "BASE_IMAGE=$baseImage",
+                    "--build-arg", "REGISTRY_URL=$registryUrl",
+                    "--build-arg", "INSTALL_JAVA=$installJava",
                     "-t", imageName,
                     "-f", dockerFile,
                     dockerContextDir
@@ -173,6 +179,9 @@ subprojects {
                     platform.set(System.getProperty("platform"))
                 buildArgs.put("JAR", "build/libs/${project.name}.jar")
                 buildArgs.put("OTEL_JAR", "build/${agentFileOnBuildDirectory.name}")
+                buildArgs.put("REGISTRY_URL", registryUrl)
+                buildArgs.put("BASE_IMAGE", baseImage)
+                buildArgs.put("INSTALL_JAVA", installJava)
                 inputDir.set(file(dockerContextDir))
             }
             // make sure  always runs after "dockerize" and after "copyOtel"

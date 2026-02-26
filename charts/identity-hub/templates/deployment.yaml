@@ -32,7 +32,7 @@ spec:
       securityContext:
         {{- toYaml .Values.identityhub.podSecurityContext | nindent 8 }}
       initContainers:
-        {{- toYaml .Values.identityhub.initContainers | nindent 8 }}
+        {{- tpl (toYaml .Values.identityhub.initContainers) . | nindent 8 }}
       containers:
         - name: {{ .Chart.Name }}
           securityContext:

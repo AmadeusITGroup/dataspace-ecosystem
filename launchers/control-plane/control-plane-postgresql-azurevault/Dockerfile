@@ -1,11 +1,10 @@
-ARG REGISTRY_URL="docker.io"
-# Please make sure to keep this image consistent with the one used
-# for the cert-installer init container
-FROM ${REGISTRY_URL}/eclipse-temurin:21.0.9_10-jre-alpine-3.23
-
-# Update Alpine packages to remove vulnerabilities
-RUN apk update && apk --no-cache upgrade --available
-
+ARG REGISTRY_URL="quay.io/centos"
+ARG BASE_IMAGE="centos:latest"
+FROM ${REGISTRY_URL}/${BASE_IMAGE}
+# Set INSTALL_JAVA=false only if the base image already includes a JRE (e.g. eclipse-temurin).
+ARG INSTALL_JAVA=true
+RUN if [ "$INSTALL_JAVA" = "true" ]; then yum update -y && yum clean all; fi
+RUN if [ "$INSTALL_JAVA" = "true" ]; then yum install java-21-openjdk -y && yum clean all; fi
 # Optional JVM arguments, such as memory settings
 ARG JVM_ARGS=""
 ARG JAR
@@ -14,7 +13,7 @@ ARG OTEL_JAR
 WORKDIR /app
 
 # Create a group and user (non-root) with fixed UID/GID
-RUN addgroup -g 1000 appuser && adduser -u 1000 -G appuser -s /bin/sh -D appuser
+RUN groupadd -g 1000 appuser && useradd -u 1000 -g appuser -s /bin/sh -m appuser
 
 COPY ${JAR} controlplane.jar
 COPY ${OTEL_JAR} opentelemetry-javaagent.jar

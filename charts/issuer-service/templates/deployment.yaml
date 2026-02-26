@@ -32,7 +32,7 @@ spec:
       securityContext:
         {{- toYaml .Values.issuerservice.podSecurityContext | nindent 8}}
       initContainers:
-        {{- toYaml .Values.issuerservice.initContainers | nindent 8}}
+        {{- tpl (toYaml .Values.issuerservice.initContainers) . | nindent 8}}
       containers:
       - name: {{.Chart.Name}}
         securityContext:

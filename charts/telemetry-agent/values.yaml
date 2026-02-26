@@ -14,24 +14,28 @@ telemetryagent:
     pullPolicy: IfNotPresent
     # -- Overrides the image tag whose default is the chart appVersion
     tag: ""
+  # -- Cert installer initContainer image
+  certInstallerImage: ""
   # -- name of the Kubernetes Service Account object
   serviceAccountName: ""
   initContainers:
   - name: cert-installer
     command:
-      - /bin/sh
+      - sh
+      - '-c'
+      - |
+        /bin/bash <<'EOF'
+        cp /etc/pki/ca-trust/extracted/java/cacerts /opt/ca/cacerts
+        chmod 666 /opt/ca/cacerts
+        keytool -import -trustcacerts -keystore /opt/ca/cacerts \
+          -storepass changeit -noprompt -alias vaultCa -file /certs/tls.crt
+        EOF
     volumeMounts:
       - name: cert-volume
         mountPath: /certs
       - name: shared-volume
-        mountPath: /shared
-    image: 'eclipse-temurin:21.0.9_10-jre-alpine-3.23'
-    args:
-      - '-c'
-      - |
-        cp $JAVA_HOME/lib/security/cacerts /shared/cacerts
-        keytool -import -trustcacerts -keystore /shared/cacerts \
-          -storepass changeit -noprompt -alias vaultCa -file /certs/tls.crt
+        mountPath: /opt/ca
+    image: '{{ .Values.telemetryagent.certInstallerImage }}'
   livenessProbe:
     # -- Whether to enable kubernetes [liveness-probe](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/)
     enabled: true

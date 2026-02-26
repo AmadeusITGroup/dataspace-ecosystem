@@ -32,7 +32,7 @@ spec:
       securityContext:
         {{- toYaml .Values.controlplane.podSecurityContext | nindent 8}}
       initContainers:
-        {{- toYaml .Values.controlplane.initContainers | nindent 8}}
+        {{- tpl (toYaml .Values.controlplane.initContainers) . | nindent 8}}
       containers:
         - name: {{.Chart.Name}}
           securityContext:

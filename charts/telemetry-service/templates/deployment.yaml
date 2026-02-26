@@ -32,7 +32,7 @@ spec:
       securityContext:
         {{- toYaml .Values.telemetryservice.podSecurityContext | nindent 8 }}
       initContainers:
-        {{- toYaml .Values.telemetryservice.initContainers | nindent 8 }}
+        {{- tpl (toYaml .Values.telemetryservice.initContainers) . | nindent 8 }}
       containers:
         - name: {{ .Chart.Name }}
           securityContext:

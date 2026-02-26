@@ -1,13 +1,15 @@
-ARG REGISTRY_URL="docker.io"
-FROM ${REGISTRY_URL}/eclipse-temurin:21.0.9_10-jre-alpine-3.23
-
-# Update Alpine packages to remove vulnerabilities
-RUN apk update && apk --no-cache upgrade --available
+ARG REGISTRY_URL="quay.io/centos"
+ARG BASE_IMAGE="centos:latest"
+FROM ${REGISTRY_URL}/${BASE_IMAGE}
+# Set INSTALL_JAVA=false only if the base image already includes a JRE (e.g. eclipse-temurin).
+ARG INSTALL_JAVA=true
+RUN if [ "$INSTALL_JAVA" = "true" ]; then yum update -y && yum clean all; fi
+RUN if [ "$INSTALL_JAVA" = "true" ]; then yum install java-21-openjdk -y && yum clean all; fi
 
 WORKDIR /app
 
 # Create non-root user
-RUN addgroup -g 1000 appuser && adduser -u 1000 -G appuser -s /bin/sh -D appuser
+RUN groupadd -g 1000 appuser && useradd -u 1000 -g appuser -s /bin/sh -m appuser
 
 COPY ./build/libs/kafka-proxy-k8s-manager.jar /app/
 

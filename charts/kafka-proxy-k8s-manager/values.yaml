@@ -17,23 +17,27 @@ kafkaProxy:
       repository: ""
       tag: ""
       pullPolicy: IfNotPresent
+    # Cert installer initContainer image
+    certInstallerImage: ""
 
     initContainers:
       - name: cert-installer
         command:
-          - /bin/sh
+          - sh
+          - '-c'
+          - |
+            /bin/bash <<'EOF'
+            cp /etc/pki/ca-trust/extracted/java/cacerts /opt/ca/cacerts
+            chmod 666 /opt/ca/cacerts
+            keytool -import -trustcacerts -keystore /opt/ca/cacerts \
+              -storepass changeit -noprompt -alias vaultCa -file /certs/tls.crt
+            EOF
         volumeMounts:
           - name: cert-volume
             mountPath: /certs
           - name: cacerts-volume
-            mountPath: /certificates
-        image: 'eclipse-temurin:21.0.9_10-jre-alpine-3.23'
-        args:
-          - '-c'
-          - |
-            cp $JAVA_HOME/lib/security/cacerts /certificates/cacerts
-            keytool -import -trustcacerts -keystore /certificates/cacerts \
-              -storepass changeit -noprompt -alias vaultCa -file /certs/tls.crt
+            mountPath: /opt/ca
+        image: '{{ .Values.kafkaProxy.manager.certInstallerImage }}'
 
     # Resource limits and requests
     resources:

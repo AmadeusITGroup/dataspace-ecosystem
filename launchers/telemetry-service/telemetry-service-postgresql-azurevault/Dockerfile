@@ -1,9 +1,10 @@
-ARG REGISTRY_URL="docker.io"
-FROM ${REGISTRY_URL}/eclipse-temurin:21.0.9_10-jre-alpine-3.23
-
-# Update Alpine packages to remove vulnerabilities
-RUN apk update && apk --no-cache upgrade --available
-
+ARG REGISTRY_URL="quay.io/centos"
+ARG BASE_IMAGE="centos:latest"
+FROM ${REGISTRY_URL}/${BASE_IMAGE}
+# Set INSTALL_JAVA=false only if the base image already includes a JRE (e.g. eclipse-temurin).
+ARG INSTALL_JAVA=true
+RUN if [ "$INSTALL_JAVA" = "true" ]; then yum update -y && yum clean all; fi
+RUN if [ "$INSTALL_JAVA" = "true" ]; then yum install java-21-openjdk -y && yum clean all; fi
 # Optional JVM arguments, such as memory settings
 ARG JVM_ARGS=""
 ARG JAR
@@ -11,8 +12,14 @@ ARG OTEL_JAR
 
 WORKDIR /app
 
+# Create a group and user (non-root) with fixed UID/GID
+RUN groupadd -g 1000 appuser && useradd -u 1000 -g appuser -s /bin/sh -m appuser
+
 COPY ${JAR} telemetry-service.jar
 COPY ${OTEL_JAR} opentelemetry-javaagent.jar
+
+# Change ownership of /app to the non-root user
+RUN chown -R appuser:appuser /app
 
 HEALTHCHECK NONE
 
