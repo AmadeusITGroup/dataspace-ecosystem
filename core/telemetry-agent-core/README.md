@@ -48,13 +48,30 @@ Manages automatic credential acquisition and refresh from the Telemetry Service:
 - Fetches credentials from `TelemetryServiceClient`
 - Stores credentials in `TokenCache` for the agent to use
 - Automatically refreshes credentials at half their TTL (Time To Live)
-- Implements retry logic with configurable delays
+- Implements **exponential backoff retry mechanism** for resilient failure handling
+
+**Exponential Backoff Behavior:**
+When credential fetching fails, the manager implements exponential backoff to avoid overwhelming the Telemetry Service:
+- **First failure**: Retry after 1 second (default initial delay)
+- **Second failure**: Retry after 2 seconds (2× previous delay)
+- **Third failure**: Retry after 4 seconds (2× previous delay)
+- **Continues doubling** until reaching maximum delay
+- **Capped at**: 300 seconds (5 minutes by default)
+- **On success**: Counter resets, next failure (if any) starts at initial delay again
+
+**Configuration:**
+- `dse.credential-manager.retry.initial-delay.seconds` - Initial retry delay (default: `1`)
+- `dse.credential-manager.retry.max-delay.seconds` - Maximum retry delay cap (default: `300`)
+- `dse.credential-manager.retry.backoff-multiplier` - Exponential multiplier (default: `2`)
+
+**Why Exponential Backoff:**
+Prevents constant retries from being flagged as malicious traffic by firewalls/APIM during service outages, while giving the Telemetry Service time to recover.
 
 **Lifecycle:**
 ```
 Start → Fetch Credential → Cache → Schedule Next Refresh (at TTL/2) → Repeat
            ↓ (if failed)
-      Retry after delay
+      Retry after exponential backoff delay (1s → 2s → 4s → 8s → ... → 300s max)
 ```
 
 #### `TokenCache`

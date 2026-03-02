@@ -48,6 +48,15 @@ public class TelemetryAgentCoreExtension implements ServiceExtension {
     @Setting(description = "The base delay for the telemetry agent retry mechanism in millisecond", type = "long", defaultValue = DEFAULT_SEND_RETRY_BASE_DELAY + "")
     private static final String TELEMETRY_AGENT_SEND_RETRY_BASE_DELAY_MS = "dse.telemetry-agent.send.retry.base-delay.ms";
 
+    @Setting(description = "Initial retry delay in seconds for credential fetching from telemetry service", type = "long", defaultValue = "1")
+    private static final String CREDENTIAL_MANAGER_INITIAL_RETRY_DELAY_SECONDS = "dse.credential-manager.retry.initial-delay.seconds";
+
+    @Setting(description = "Maximum retry delay in seconds for credential fetching from telemetry service (cap for exponential backoff)", type = "long", defaultValue = "300")
+    private static final String CREDENTIAL_MANAGER_MAX_RETRY_DELAY_SECONDS = "dse.credential-manager.retry.max-delay.seconds";
+
+    @Setting(description = "Backoff multiplier for credential fetching retry delays (exponential backoff factor)", type = "int", defaultValue = "2")
+    private static final String CREDENTIAL_MANAGER_BACKOFF_MULTIPLIER = "dse.credential-manager.retry.backoff-multiplier";
+
     @Setting(description = "Authority did", key = "dse.authority.did", required = true)
     public String authorityDid;
 
@@ -143,7 +152,19 @@ public class TelemetryAgentCoreExtension implements ServiceExtension {
 
         var telemetryServiceClient = defaultTelemetryServiceClient(context);
 
-        credentialsManager = new TelemetryServiceCredentialManager(monitor, telemetryServiceClient, cache, executorInstrumentation);
+        var initialRetryDelay = context.getSetting(CREDENTIAL_MANAGER_INITIAL_RETRY_DELAY_SECONDS, 1L);
+        var maxRetryDelay = context.getSetting(CREDENTIAL_MANAGER_MAX_RETRY_DELAY_SECONDS, 300L);
+        var backoffMultiplier = context.getSetting(CREDENTIAL_MANAGER_BACKOFF_MULTIPLIER, 2);
+
+        credentialsManager = new TelemetryServiceCredentialManager(
+                monitor,
+                telemetryServiceClient,
+                cache,
+                executorInstrumentation,
+                initialRetryDelay,
+                maxRetryDelay,
+                backoffMultiplier
+        );
         context.registerService(TelemetryServiceCredentialManager.class, credentialsManager);
     }
 
