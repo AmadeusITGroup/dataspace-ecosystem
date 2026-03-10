@@ -25,6 +25,7 @@ application {
 tasks.withType<com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar> {
     mergeServiceFiles()
     archiveFileName.set("${project.name}.jar")
+    destinationDirectory.set(layout.buildDirectory.dir("shadow"))
     dependsOn(distTar, distZip)
     mustRunAfter(distTar, distZip)
 }

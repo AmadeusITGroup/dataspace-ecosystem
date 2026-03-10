@@ -2,7 +2,7 @@
 
 # Variables
 GO_VERSION := 1.24.7
-GO_IMAGE := golang:$(GO_VERSION)
+GO_IMAGE := docker.io/library/golang:$(GO_VERSION)
 
 # Build environment variables (can be overridden)
 GOOS ?= $(shell go env GOOS 2>/dev/null || echo linux)
@@ -23,8 +23,8 @@ endif
 MAKEFILE_DIR := $(dir $(realpath $(firstword $(MAKEFILE_LIST))))
 PROJECT_ROOT := $(shell cd $(MAKEFILE_DIR) && git rev-parse --show-toplevel 2>/dev/null || echo $(MAKEFILE_DIR))
 
-# Check if docker/podman is available, fallback to local go if needed
-CONTAINER_CMD := $(shell command -v docker 2> /dev/null || command -v podman 2> /dev/null)
+# Check if podman/docker is available, fallback to local go if needed
+CONTAINER_CMD := $(shell command -v podman 2> /dev/null || command -v docker 2> /dev/null)
 
 # Detect if we're running on Windows (Git Bash/MSYS)
 UNAME_S := $(shell uname -s 2>/dev/null || echo "Windows")

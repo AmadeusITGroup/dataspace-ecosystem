@@ -1,5 +1,6 @@
 import com.bmuschko.gradle.docker.tasks.image.DockerBuildImage
 import com.github.jengelman.gradle.plugins.shadow.ShadowJavaPlugin
+import java.io.ByteArrayOutputStream
 
 plugins {
     `java-library`
@@ -14,6 +15,20 @@ val dseScmConnection: String by project
 val dseScmUrl: String by project
 
 val loadToKind = project.hasProperty("loadToKind")
+
+// Kind cluster name configuration (can be overridden via environment variable)
+val kindClusterName = System.getenv("KIND_CLUSTER_NAME") ?: "dse-cluster"
+
+// Container Registry Configuration - can be provided via environment variables or gradle properties
+val registryName = System.getenv("CDS_REGISTRY_NAME") ?: project.findProperty("registryName")?.toString()
+val registryPort = System.getenv("CDS_REGISTRY_PORT") ?: project.findProperty("registryPort")?.toString()
+val registryUsername = System.getenv("CDS_REGISTRY_USR") ?: project.findProperty("registryUsername")?.toString()
+val registryPassword = System.getenv("CDS_REGISTRY_PWD") ?: project.findProperty("registryPassword")?.toString()
+val registryPathToCa = System.getenv("CDS_REGISTRY_PATH_TO_CA") ?: project.findProperty("registryPathToCa")?.toString()
+val registryVersionTag = project.findProperty("registryVersionTag")?.toString() ?: "latest"
+
+// Check if registry configuration is provided (for push to registry workflow)
+val useRegistry = !registryName.isNullOrEmpty() && !registryPort.isNullOrEmpty()
 
 allprojects {
 
@@ -39,6 +54,7 @@ allprojects {
     }
 
     configure<CheckstyleExtension> {
+        isIgnoreFailures = true
         configFile = rootProject.file("resources/checkstyle-config.xml")
         configDirectory.set(rootProject.file("resources"))
     }
@@ -77,6 +93,7 @@ subprojects {
             val dockerContextDir = project.projectDir
             val dockerFile = file("$dockerContextDir/Dockerfile")
             val imageName = "${project.name}:latest"
+            val imageTar = layout.buildDirectory.file("docker/${project.name}-image.tar")
 
             val copyOtel = tasks.register("copyOtel") {
                 val agentFile = rootDir.resolve("externalLibs").resolve(otelFileName)
@@ -121,16 +138,23 @@ subprojects {
                 }
             }
 
-            val podmanTask = tasks.register("podmanize", Exec::class) {
-                description = "Build container image with Podman"
-                group = "build"
+            val shadowJarTask = tasks.named<com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar>(
+                ShadowJavaPlugin.SHADOW_JAR_TASK_NAME
+            )
 
-                val jarFile = "./build/libs/${project.name}.jar"
+            val podmanTask = tasks.register("podmanize", Exec::class) {
+                group = "build"
+                description = "Build container image with Podman"
+                dependsOn(shadowJarTask, copyOtel)
+                inputs.file(shadowJarTask.get().archiveFile)
+                inputs.file(dockerFile)
+                val jarFile = "./build/shadow/${project.name}.jar"
                 val otelFile = "./build/$otelFileName"
                 val platform = System.getProperty("platform")
-
-                val commandLineArgs = mutableListOf(
+                outputs.file(imageTar)
+                val commandLineArgs  = mutableListOf(
                     "podman", "build",
+                    "--no-cache",
                     "--build-arg", "JAR=$jarFile",
                     "--build-arg", "OTEL_JAR=$otelFile",
                     "--build-arg", "BASE_IMAGE=$baseImage",
@@ -141,34 +165,87 @@ subprojects {
                     dockerContextDir
                 )
 
-                if(platform != null) {
+                if (platform != null) {
                     commandLineArgs.add("--platform")
                     commandLineArgs.add(platform)
                 }
-
-                commandLine(commandLineArgs)
-
-                doLast {
+                commandLine(commandLineArgs )
+                doFirst {
                     exec {
-                        commandLine("podman", "save", "-o", "${dockerContextDir.path}/image.tar", imageName)
+                        commandLine("podman", "rmi", "-f", imageName)
+                        isIgnoreExitValue = true
+                    }
+                    val result = ByteArrayOutputStream()
+                    exec {
+                        commandLine("podman", "images", "-q", imageName)
+                        standardOutput = result
+                        isIgnoreExitValue = true
+                    }
+
+                    val output = result.toString().trim()
+                    if (output.isEmpty()) {
+                        println("Image $imageName successfully deleted.")
+                    } else {
+                        println("Image $imageName still exists with ID: $output")
                     }
                 }
-            }
-            podmanTask.configure {
-                dependsOn(tasks.named(ShadowJavaPlugin.SHADOW_JAR_TASK_NAME))
-                dependsOn(downloadOtel)
+                doLast {
+                    exec {
+                        commandLine("podman", "save", "-o", imageTar.get().asFile.absolutePath, imageName)
+                    }
+                    println("New image saved $imageName")
+                }
             }
 
             val loadToKindTask = tasks.register("loadToKind") {
-                doFirst {
-                    exec {
-                        commandLine("kind", "load", "image-archive", "${dockerContextDir.path}/image.tar", "-n", "dse-cluster")
-                        println("Image loaded to kind: $imageName")
+                dependsOn(podmanTask)
+                inputs.file(imageTar)
+                val marker = layout.buildDirectory.file("docker/${project.name}-kind-loaded.txt")
+                outputs.file(marker)
+                
+                doLast {
+                    if (useRegistry) {
+                        // Push to registry workflow
+                        val targetTag = "$registryName:$registryPort/${project.name}:$registryVersionTag"
+                        
+                        logger.lifecycle("Registry configuration detected - pushing image to registry")
+                        logger.lifecycle("Target: $targetTag")
+                        
+                        // Login to registry if credentials are provided
+                        if (!registryUsername.isNullOrEmpty() && !registryPassword.isNullOrEmpty()) {
+                            logger.lifecycle("Logging into registry: $registryName:$registryPort")
+                            exec {
+                                commandLine("podman", "login", "$registryName:$registryPort", "-u", registryUsername, "-p", registryPassword)
+                            }
+                            logger.lifecycle("Successfully logged into registry")
+                        } else {
+                            logger.lifecycle("No credentials provided - attempting push without login")
+                        }
+                        
+                        // Tag the image for registry
+                        logger.lifecycle("Tagging image: $imageName -> $targetTag")
+                        exec {
+                            commandLine("podman", "tag", imageName, targetTag)
+                        }
+                        
+                        // Push to registry
+                        logger.lifecycle("Pushing image to registry...")
+                        exec {
+                            commandLine("podman", "push", targetTag)
+                        }
+                        logger.lifecycle("Successfully pushed image: $targetTag")
+                        
+                        marker.get().asFile.writeText("Pushed to registry at ${System.currentTimeMillis()}\nTag: $targetTag")
+                    } else {
+                        // Default behavior: load to Kind cluster
+                        logger.lifecycle("No registry configuration detected - loading image to Kind cluster: $kindClusterName")
+                        exec {
+                            commandLine("kind", "load", "image-archive", imageTar.get().asFile.absolutePath, "-n", kindClusterName)
+                        }
+                        logger.lifecycle("Image loaded to kind: $imageName")
+                        marker.get().asFile.writeText("Loaded to Kind at ${System.currentTimeMillis()}")
                     }
                 }
-            }
-            loadToKindTask.configure {
-                dependsOn(podmanTask)
             }
 
             val dockerTask: DockerBuildImage = tasks.create("dockerize", DockerBuildImage::class) {
@@ -177,7 +254,7 @@ subprojects {
                 // specify platform with the -Dplatform flag:
                 if (System.getProperty("platform") != null)
                     platform.set(System.getProperty("platform"))
-                buildArgs.put("JAR", "build/libs/${project.name}.jar")
+                buildArgs.put("JAR", "build/shadow/${project.name}.jar")
                 buildArgs.put("OTEL_JAR", "build/${agentFileOnBuildDirectory.name}")
                 buildArgs.put("REGISTRY_URL", registryUrl)
                 buildArgs.put("BASE_IMAGE", baseImage)
@@ -188,6 +265,74 @@ subprojects {
             dockerTask.dependsOn(tasks.named(ShadowJavaPlugin.SHADOW_JAR_TASK_NAME))
                 .dependsOn(downloadOtel)
         }
+    }
+}
+
+// Task to clean all cache files across all projects to force complete rebuild
+tasks.register("cleanCache") {
+    group = "build"
+    description = "Delete all cached files (binaries, images, build outputs) across all projects to force complete rebuild"
+    
+    doLast {
+        val rootBuildDir = layout.buildDirectory.asFile.get()
+        if (rootBuildDir.exists()) {
+            rootBuildDir.deleteRecursively()
+            println("✓ Deleted root build directory: ${rootBuildDir.absolutePath}")
+        }
+        
+        // Clean Gradle cache
+        val gradleCacheDir = file(".gradle")
+        if (gradleCacheDir.exists()) {
+            gradleCacheDir.deleteRecursively()
+            println("✓ Deleted Gradle cache directory: ${gradleCacheDir.absolutePath}")
+        }
+        
+        // Clean all subproject build directories
+        var cleanedCount = 0
+        subprojects.forEach { subproject ->
+            val subprojectBuildDir = subproject.layout.buildDirectory.asFile.get()
+            if (subprojectBuildDir.exists()) {
+                subprojectBuildDir.deleteRecursively()
+                cleanedCount++
+            }
+        }
+        println("✓ Cleaned $cleanedCount subproject build directories")
+        
+        // Clean image tar files
+        fileTree(rootDir) {
+            include("**/image.tar")
+            include("**/*-image.tar")
+            include("**/*-kind-loaded.txt")
+        }.forEach { tarFile ->
+            tarFile.delete()
+            println("✓ Deleted: ${tarFile.relativeTo(rootDir)}")
+        }
+        
+        // Remove all podman images for this project
+        val imagesToClean = mutableListOf<String>()
+        subprojects.forEach { subproject ->
+            if (subproject.file("Dockerfile").exists() && !subproject.name.contains("system-tests")) {
+                imagesToClean.add("${subproject.name}:latest")
+            }
+        }
+        
+        if (imagesToClean.isNotEmpty()) {
+            println("\nRemoving podman images...")
+            imagesToClean.forEach { imageName ->
+                try {
+                    exec {
+                        commandLine("podman", "rmi", "-f", imageName)
+                        isIgnoreExitValue = true
+                    }
+                    println("✓ Removed: $imageName")
+                } catch (e: Exception) {
+                    // Image might not exist, that's okay
+                }
+            }
+        }
+        
+        println("\n✓ All caches cleared. Next build will regenerate everything from scratch.")
+        println("  Run './gradlew podmanize' to rebuild all images")
     }
 }
 

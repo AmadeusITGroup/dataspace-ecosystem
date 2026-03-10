@@ -11,7 +11,7 @@ WORKDIR /app
 # Create non-root user
 RUN groupadd -g 1000 appuser && useradd -u 1000 -g appuser -s /bin/sh -m appuser
 
-COPY ./build/libs/kafka-proxy-k8s-manager.jar /app/
+COPY ./build/shadow/kafka-proxy-k8s-manager.jar /app/
 
 RUN mkdir -p /shared /tmp && chown -R appuser:appuser /app /shared /tmp
 

@@ -15,4 +15,5 @@ application {
 tasks.withType<com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar> {
     mergeServiceFiles()
     archiveFileName.set("kafka-proxy-k8s-manager.jar")
+    destinationDirectory.set(layout.buildDirectory.dir("shadow"))
 }
