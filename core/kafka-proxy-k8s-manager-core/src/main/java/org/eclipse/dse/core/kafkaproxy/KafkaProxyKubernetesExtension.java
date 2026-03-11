@@ -13,6 +13,7 @@
 
 package org.eclipse.dse.core.kafkaproxy;
 
+import io.fabric8.kubernetes.api.model.LocalObjectReference;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import org.eclipse.dse.core.kafkaproxy.config.KafkaProxyConfig;
 import org.eclipse.dse.core.kafkaproxy.service.AutomaticDiscoveryQueueService;
@@ -24,6 +25,8 @@ import org.eclipse.edc.runtime.metamodel.annotation.Provider;
 import org.eclipse.edc.spi.system.ServiceExtension;
 import org.eclipse.edc.spi.system.ServiceExtensionContext;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -146,10 +149,53 @@ public class KafkaProxyKubernetesExtension implements ServiceExtension {
         
         // Initialize services
         var kubernetesClient = new DefaultKubernetesClient();
+
+        // Inherit imagePullSecrets from the manager pod itself so dynamically created
+        // proxy pods can pull the same private images (e.g. in devbox with cdsregistrycred).
+        // When the manager pod has no imagePullSecrets (production), this list will be empty
+        // and proxy pods are created without pull secrets — no config change required.
+        List<LocalObjectReference> inheritedImagePullSecrets = new ArrayList<>();
+        String podName = System.getenv("POD_NAME");
+        String podNamespace = System.getenv("POD_NAMESPACE");
+        if (podName != null && !podName.isBlank() && podNamespace != null && !podNamespace.isBlank()) {
+            try {
+                var managerPod = kubernetesClient.pods().inNamespace(podNamespace).withName(podName).get();
+                if (managerPod == null) {
+                    monitor.info("Manager pod '" + podName + "' not found in namespace '" + podNamespace +
+                            "' — proxy deployments will not use pull secrets");
+                } else {
+                    var podSpec = managerPod.getSpec();
+                    if (podSpec == null) {
+                        monitor.info("Manager pod '" + podName + "' in namespace '" + podNamespace +
+                                "' has no spec — proxy deployments will not use pull secrets");
+                    } else {
+                        var imagePullSecrets = podSpec.getImagePullSecrets();
+                        if (imagePullSecrets != null && !imagePullSecrets.isEmpty()) {
+                            inheritedImagePullSecrets = imagePullSecrets;
+                            monitor.info("Inherited " + inheritedImagePullSecrets.size() + " imagePullSecret(s) from manager pod: " +
+                                    inheritedImagePullSecrets.stream()
+                                            .map(LocalObjectReference::getName)
+                                            .reduce((a, b) -> a + ", " + b)
+                                            .orElse(""));
+                        } else {
+                            monitor.info("Manager pod '" + podName + "' in namespace '" + podNamespace +
+                                    "' has no imagePullSecrets — proxy deployments will not use pull secrets");
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                monitor.warning("Could not read imagePullSecrets from manager pod '" + podName + "': " + e.getMessage() +
+                        " — proxy deployments will be created without pull secrets");
+            }
+        } else {
+            monitor.info("POD_NAME/POD_NAMESPACE not set — skipping imagePullSecrets inheritance (running outside Kubernetes?)");
+        }
+
         var vaultService = new VaultService(vaultAddr, vaultToken, vaultFolder);
         var deployerService = new KubernetesDeployerService(kubernetesClient, proxyNamespace, proxyImage, 
                 vaultService, participantId, serviceClusterIp, baseProxyPort, authEnabled, authMechanism, authTenantId, authClientId, authStaticUsers, authImage,
-                tlsListenerEnabled, tlsListenerCertSecret, tlsListenerKeySecret, tlsListenerCaSecret, additionalPodLabels, maxBrokerPorts);
+                tlsListenerEnabled, tlsListenerCertSecret, tlsListenerKeySecret, tlsListenerCaSecret, additionalPodLabels, maxBrokerPorts,
+                inheritedImagePullSecrets);
         var checkerService = new KubernetesCheckerService(kubernetesClient, proxyNamespace, participantId);
         
         var automaticQueueService = new AutomaticDiscoveryQueueService(sharedDir, vaultService, checkerService);

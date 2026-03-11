@@ -16,6 +16,7 @@ package org.eclipse.dse.core.kafkaproxy.service;
 import io.fabric8.kubernetes.api.model.ContainerPortBuilder;
 import io.fabric8.kubernetes.api.model.EnvVarBuilder;
 import io.fabric8.kubernetes.api.model.IntOrString;
+import io.fabric8.kubernetes.api.model.LocalObjectReference;
 import io.fabric8.kubernetes.api.model.SecretBuilder;
 import io.fabric8.kubernetes.api.model.Service;
 import io.fabric8.kubernetes.api.model.ServiceBuilder;
@@ -28,6 +29,7 @@ import org.eclipse.dse.core.kafkaproxy.model.DeploymentStatus;
 import org.eclipse.dse.core.kafkaproxy.model.EdrProperties;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
 
@@ -69,12 +71,16 @@ public class KubernetesDeployerService {
     // Maximum number of broker ports to expose (for multi-broker clusters)
     private final int maxBrokerPorts;
 
+    // imagePullSecrets inherited from the manager pod at startup (may be empty)
+    private final List<LocalObjectReference> imagePullSecrets;
+
     public KubernetesDeployerService(KubernetesClient kubernetesClient, String proxyNamespace, String proxyImage, 
                                    VaultService vaultService, String participantId, String clusterIp, int baseProxyPort, boolean authEnabled, String authMechanism,
                                    String authTenantId, String authClientId, String authStaticUsers, String authImage,
                                    boolean tlsListenerEnabled, String tlsListenerCertSecret, 
                                    String tlsListenerKeySecret, String tlsListenerCaSecret,
-                                   Map<String, String> additionalPodLabels, int maxBrokerPorts) {
+                                   Map<String, String> additionalPodLabels, int maxBrokerPorts,
+                                   List<LocalObjectReference> imagePullSecrets) {
         this.kubernetesClient = kubernetesClient;
         this.proxyNamespace = proxyNamespace;
         this.proxyImage = proxyImage;
@@ -94,6 +100,7 @@ public class KubernetesDeployerService {
         this.tlsListenerCaSecret = tlsListenerCaSecret;
         this.additionalPodLabels = additionalPodLabels != null ? new HashMap<>(additionalPodLabels) : new HashMap<>();
         this.maxBrokerPorts = maxBrokerPorts;
+        this.imagePullSecrets = imagePullSecrets != null ? List.copyOf(imagePullSecrets) : java.util.Collections.emptyList();
     }
     
     /**
@@ -344,6 +351,26 @@ public class KubernetesDeployerService {
         // Use fixed port
         int port = generateConsistentPort(edrKey);
         
+        var podSpecBuilder = new io.fabric8.kubernetes.api.model.PodSpecBuilder()
+                .addNewContainer()
+                    .withName("kafka-proxy")
+                    .withImage(authEnabled && authImage != null ? authImage : proxyImage)
+                    .withImagePullPolicy("IfNotPresent")
+                    .withPorts(createContainerPorts(port))
+                    .withArgs(args)
+                    .withEnv(createEnvironmentVariables(edrKey, properties))
+                    .withVolumeMounts(createVolumeMounts(properties))
+                .endContainer()
+                .withVolumes(createVolumes(properties));
+
+        // Inherit imagePullSecrets from manager pod — present in devbox, absent in production
+        if (!imagePullSecrets.isEmpty()) {
+            podSpecBuilder.withImagePullSecrets(imagePullSecrets);
+            LOGGER.info(format("Applying %d inherited imagePullSecret(s) to proxy deployment: %s",
+                    imagePullSecrets.size(),
+                    imagePullSecrets.stream().map(LocalObjectReference::getName).collect(java.util.stream.Collectors.joining(", "))));
+        }
+
         return new DeploymentBuilder()
                 .withNewMetadata()
                     .withName(proxyName)
@@ -359,18 +386,7 @@ public class KubernetesDeployerService {
                         .withNewMetadata()
                             .withLabels(labels)
                         .endMetadata()
-                        .withNewSpec()
-                            .addNewContainer()
-                                .withName("kafka-proxy")
-                                .withImage(authEnabled && authImage != null ? authImage : proxyImage)
-                                .withImagePullPolicy("IfNotPresent")
-                                .withPorts(createContainerPorts(port))
-                                .withArgs(args)
-                                .withEnv(createEnvironmentVariables(edrKey, properties))
-                                .withVolumeMounts(createVolumeMounts(properties))
-                            .endContainer()
-                            .withVolumes(createVolumes(properties))
-                        .endSpec()
+                        .withSpec(podSpecBuilder.build())
                     .endTemplate()
                 .endSpec()
                 .build();
