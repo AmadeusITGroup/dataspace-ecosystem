@@ -121,9 +121,20 @@ module "authority" {
 #####################
 
 module "broker" {
-  source                 = "./modules/broker"
-  environment            = var.environment
-  devbox-registry        = var.devbox-registry
-  devbox-registry-cred   = var.devbox-registry-cred
+  source               = "./modules/broker"
+  environment          = var.environment
+  devbox-registry      = var.devbox-registry
+  devbox-registry-cred = var.devbox-registry-cred
+}
+
+############################
+## AZURITE BLOB STORAGE E2E ##
+############################
+
+module "azurite_blobstorage" {
+  source = "./modules/azurite-blobstorage"
+
+  account_name = var.azurite_blobstorage_account_name
+  account_key  = var.azurite_blobstorage_account_key
 }
 

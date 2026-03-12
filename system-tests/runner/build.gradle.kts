@@ -29,6 +29,8 @@ dependencies {
 
     testImplementation(libs.postgres)
 
+    testFixturesImplementation(libs.azure.storageblob)
+
     testFixturesApi(libs.restAssured)
     testFixturesApi(testFixtures(libs.edc.ext.api.management.test.fixtures))
 

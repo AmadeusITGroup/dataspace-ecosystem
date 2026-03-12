@@ -60,6 +60,7 @@ import static org.eclipse.edc.spi.constants.CoreConstants.EDC_NAMESPACE;
 import static org.eclipse.edc.spi.core.CoreConstants.DSE_POLICY_PREFIX;
 import static org.eclipse.edc.test.system.AbstractAuthority.DOMAIN_ROUTE;
 import static org.eclipse.edc.test.system.AbstractAuthority.DOMAIN_TRAVEL;
+import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_AZURE_BLOB;
 import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_FAILURE_REST_API;
 import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_KAFKA_STREAM;
 import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_REST_20_SEC_API;
@@ -69,6 +70,12 @@ import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_REST_API_EMBEDD
 import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_REST_API_OAUTH2;
 import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_REST_API_ROUTE_DOMAIN_RESTRICTED;
 import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_REST_API_TRAVEL_DOMAIN_RESTRICTED;
+import static org.eclipse.edc.test.system.LocalProvider.AZURE_STORAGE_ACCOUNT_KEY;
+import static org.eclipse.edc.test.system.LocalProvider.AZURE_STORAGE_ACCOUNT_NAME;
+import static org.eclipse.edc.test.system.LocalProvider.AZURE_STORAGE_BLOB_CONTENT;
+import static org.eclipse.edc.test.system.LocalProvider.AZURE_STORAGE_BLOB_NAME;
+import static org.eclipse.edc.test.system.LocalProvider.AZURE_STORAGE_CONTAINER_DEST;
+import static org.eclipse.edc.test.system.LocalProvider.AZURE_STORAGE_CONTAINER_SRC;
 import static org.eclipse.edc.test.system.LocalProvider.EMBEDDED_QUERY_PARAM;
 import static org.eclipse.edc.test.system.LocalProvider.OAUTH2_CLIENT_SECRET;
 import static org.eclipse.edc.test.system.LocalProvider.OAUTH2_CLIENT_SECRET_KEY;
@@ -83,6 +90,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class LocalEndToEndTests extends AbstractEndToEndTests {
 
     public static final String KAFKA_BROKER_PULL = "KafkaBroker-PULL";
+    public static final String AZURE_STORAGE_PUSH = "AzureStorage-PUSH";
     // TEST-ONLY SECRET: This hardcoded secret is used exclusively for JWT generation in tests.
     public static final String SECRET = "a-string-secret-at-least-256-bits-long";
     public static String dummyJwt;
@@ -319,6 +327,25 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
                 "baseUrl", "http://provider-backend:8080/api/provider/data",
                 "proxyQueryParams", Boolean.TRUE.toString()
         ), restrictedDiscoveryClaimConstraint(DOMAIN_CREDENTIAL_TYPE, "domain", "odrl:eq", DOMAIN_TRAVEL));
+
+        // Azure Blob Storage asset
+        // Store the Azure storage account key in vault under two aliases:
+        // 1. "<accountName>" — used by DataSourceFactory/DataSinkFactory via DataAddress.keyName
+        // 2. "<accountName>-key1" — used by upstream AccountCacheImpl (BlobStoreApiImpl)
+        //    which resolves keys from vault using the convention: vault.resolveSecret(accountName + "-key1")
+        PROVIDER.createSecret(AZURE_STORAGE_ACCOUNT_NAME, AZURE_STORAGE_ACCOUNT_KEY);
+        PROVIDER.createSecret(AZURE_STORAGE_ACCOUNT_NAME + "-key1", AZURE_STORAGE_ACCOUNT_KEY);
+        // Also store in consumer vault for destination provisioning
+        CONSUMER.createSecret(AZURE_STORAGE_ACCOUNT_NAME, AZURE_STORAGE_ACCOUNT_KEY);
+        CONSUMER.createSecret(AZURE_STORAGE_ACCOUNT_NAME + "-key1", AZURE_STORAGE_ACCOUNT_KEY);
+        
+        PROVIDER.createEntry(ASSET_ID_AZURE_BLOB, "Test Azure Blob", "Azure Blob Storage test asset", Map.of(
+                "type", "AzureStorage",
+                "account", AZURE_STORAGE_ACCOUNT_NAME,
+                "container", AZURE_STORAGE_CONTAINER_SRC,
+                "blobName", AZURE_STORAGE_BLOB_NAME,
+                "keyName", AZURE_STORAGE_ACCOUNT_NAME
+        ), genericClaimConstraint(MEMBERSHIP_CREDENTIAL_TYPE, "name", "odrl:eq", "consumer"));
     }
 
     private static JsonObject genericClaimConstraint(String credentialType, String path, String operator, String rightOperand) {
@@ -363,7 +390,8 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
                     ASSET_ID_KAFKA_STREAM,
                     ASSET_ID_KAFKA_STREAM + "-tst-2",
                     ASSET_ID_REST_API_ROUTE_DOMAIN_RESTRICTED,
-                    ASSET_ID_REST_API_TRAVEL_DOMAIN_RESTRICTED
+                    ASSET_ID_REST_API_TRAVEL_DOMAIN_RESTRICTED,
+                    ASSET_ID_AZURE_BLOB
             );
 
             assertThat(queryParticipantDatasets(AUTHORITY, PROVIDER.did(), PROVIDER.controlPlaneCatalogFilterUrl()))
@@ -500,6 +528,79 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
                 var response = CONSUMER.queryData(contractId, Map.of(), INTERNAL_SERVER_ERROR.getStatusCode(), TransferErrorResponse.class);
                 assertThat(response.getErrors()).containsExactly("Received code transferring HTTP data: 500 - Server Error.");
             });
+        }
+
+        @Test
+        void transfer_azure_blob_storage() {
+            // Step 1: Negotiate contract and start transfer with destination data address
+            var transferProcessId = startAzureBlobTransferWithNegotiation(CONSUMER, PROVIDER, ASSET_ID_AZURE_BLOB);
+            
+            // Step 2: Wait for transfer to complete (PUSH transfers complete when data is written)
+            await().atMost(TEST_TIMEOUT).untilAsserted(() -> {
+                var state = CONSUMER.participantClient().getTransferProcessState(transferProcessId);
+                // For PUSH transfers, COMPLETED indicates the data was successfully written
+                assertThat(state).isEqualTo("COMPLETED");
+            });
+
+            // Step 3: Verify the blob was written to the requested destination blob name.
+            var blobHelper = new BlobStoreTestHelper(AZURE_STORAGE_ACCOUNT_NAME, AZURE_STORAGE_ACCOUNT_KEY);
+            var blobContent = blobHelper.downloadBlob(AZURE_STORAGE_CONTAINER_DEST, AZURE_STORAGE_BLOB_NAME);
+            assertThat(blobContent.strip()).isEqualTo(AZURE_STORAGE_BLOB_CONTENT);
+        }
+        
+        /**
+         * Start an Azure Blob Storage PUSH transfer including contract negotiation.
+         * This initiates contract negotiation, waits for it to complete, then starts the transfer.
+         */
+        private String startAzureBlobTransferWithNegotiation(AbstractParticipant consumer, AbstractParticipant provider, String assetId) {
+            // First, negotiate the contract
+            var negotiationId = consumer.participantClient().initContractNegotiation(provider.participantClient(), assetId);
+            
+            // Wait for negotiation to complete
+            await().atMost(TEST_TIMEOUT).untilAsserted(() -> {
+                var state = consumer.participantClient().getContractNegotiationState(negotiationId);
+                assertThat(state).isEqualTo("FINALIZED");
+            });
+            
+            // Get contract agreement from the negotiation
+            var contractAgreementId = consumer.participantClient().baseManagementRequest()
+                    .when()
+                    .get("/v3/contractnegotiations/" + negotiationId)
+                    .then()
+                    .statusCode(200)
+                    .extract().jsonPath().getString("contractAgreementId");
+            
+            var providerUrl = provider.controlPlaneProtocolUrl();
+            var consumerDid = consumer.did();
+            
+            var body = Map.of(
+                    "@context", Map.of(
+                            "@vocab", "https://w3id.org/edc/v0.0.1/ns/"
+                    ),
+                    "@type", "TransferRequest",
+                    "counterPartyAddress", providerUrl,
+                    "protocol", "dataspace-protocol-http",
+                    "connectorId", consumerDid,
+                    "contractId", contractAgreementId,
+                    "transferType", AZURE_STORAGE_PUSH,
+                    "dataDestination", Map.of(
+                            "type", "AzureStorage",
+                            "account", AZURE_STORAGE_ACCOUNT_NAME,
+                            "container", AZURE_STORAGE_CONTAINER_DEST,
+                            "blobName", AZURE_STORAGE_BLOB_NAME,
+                            "keyName", AZURE_STORAGE_ACCOUNT_NAME
+                    )
+            );
+            
+            return consumer.participantClient().baseManagementRequest()
+                    .contentType(ContentType.JSON)
+                    .body(body)
+                    .when()
+                    .post("/v3/transferprocesses")
+                    .then()
+                    .log().ifError()
+                    .statusCode(200)
+                    .extract().jsonPath().getString("@id");
         }
 
         @Test

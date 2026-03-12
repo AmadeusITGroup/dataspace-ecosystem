@@ -6,6 +6,8 @@ edc = "0.14.0"
 edc-build = "1.1.0"
 
 assertj = "3.27.3"
+azure-identity = "1.18.1"
+azure-storageblob = "12.30.0"
 azureMessagingEventHub = "5.19.2"
 awaitility = "4.2.0"
 nimbus = "9.45"
@@ -106,6 +108,9 @@ edc-spi-boot = { module = "org.eclipse.edc:web-spi", version.ref = "edc" }
 edc-ext-sql-edrindex = { module = "org.eclipse.edc:edr-index-sql", version.ref = "edc" }
 
 edc-ext-azure-vault = { module = "org.eclipse.edc.azure:vault-azure", version.ref = "edc" }
+edc-ext-azure-blob-core = { module = "org.eclipse.edc.azure:azure-blob-core", version.ref = "edc" }
+edc-ext-azure-data-plane-storage = { module = "org.eclipse.edc.azure:data-plane-azure-storage", version.ref = "edc" }
+edc-ext-azure-test = { module = "org.eclipse.edc.azure:azure-test", version.ref = "edc" }
 edc-identitytrust-core = { module = "org.eclipse.edc:identity-trust-core", version.ref = "edc" }
 edc-identitytrust-issuersconfiguration = { module = "org.eclipse.edc:identity-trust-issuers-configuration", version.ref = "edc" }
 edc-identity-did-core = { module = "org.eclipse.edc:identity-did-core", version.ref = "edc" }
@@ -171,6 +176,8 @@ junit-jupiter-engine = { module = "org.junit.jupiter:junit-jupiter-engine", vers
 kafka-clients = { module = "org.apache.kafka:kafka-clients", version.ref = "kafka" }
 postgres = { module = "org.postgresql:postgresql", version.ref = "postgres" }
 azure-messaging-eventhub = { group = "com.azure", name = "azure-messaging-eventhubs", version.ref = "azureMessagingEventHub" }
+azure-identity = { group = "com.azure", name = "azure-identity", version.ref = "azure-identity" }
+azure-storageblob = { group = "com.azure", name = "azure-storage-blob", version.ref = "azure-storageblob" }
 jersey-multipart = { module = "org.glassfish.jersey.media:jersey-media-multipart", version.ref = "jersey" }
 jjwt-api = { module = "io.jsonwebtoken:jjwt-api", version.ref = "jjwt" }
 jjwt-impl = { module = "io.jsonwebtoken:jjwt-impl", version.ref = "jjwt" }
@@ -179,6 +186,7 @@ jackson-annotations = { module = "com.fasterxml.jackson.core:jackson-annotations
 
 # Security fix for PSMP-984
 netty-codec-http2 = { module = "io.netty:netty-codec-http2", version.ref = "netty" }
+
 
 [bundles]
 connector = ["edc-core-boot", "edc-core-connector", "edc-observability-api", "edc-jdklogger",

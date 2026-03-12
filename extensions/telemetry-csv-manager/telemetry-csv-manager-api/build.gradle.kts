@@ -14,7 +14,7 @@ dependencies {
     implementation("io.minio:minio:8.6.0")
     implementation(libs.jjwt.api)
     implementation("com.azure:azure-storage-blob:12.31.3")
-    implementation("com.azure:azure-identity:1.18.1")
+    implementation(libs.azure.identity)
     runtimeOnly(libs.jjwt.impl)
     runtimeOnly(libs.jjwt.jackson)
 

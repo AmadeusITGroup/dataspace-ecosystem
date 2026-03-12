@@ -35,6 +35,17 @@ variable "account_name_azurite" {
   description = "Account name for event hub"
 }
 
+variable "azurite_blobstorage_account_name" {
+  default     = "devstoreaccount1"
+  description = "Azurite blob storage account name (well-known default)"
+}
+
+variable "azurite_blobstorage_account_key" {
+  description = "Azurite blob storage account key (well-known default)"
+  default     = "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==" # gitleaks:allow
+  sensitive   = true
+}
+
 variable "devbox-registry" {
   description = "The container registry for devbox environment"
   type        = string

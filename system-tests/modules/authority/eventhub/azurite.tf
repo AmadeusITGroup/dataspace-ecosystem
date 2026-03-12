@@ -1,5 +1,6 @@
 locals {
-  azurite_image = "mcr.microsoft.com/azure-storage/azurite:${var.azurite_version}"
+  azurite_image   = "mcr.microsoft.com/azure-storage/azurite:${var.azurite_version}"
+  azure_cli_image = "mcr.microsoft.com/azure-cli:2.84.0"
 }
 
 resource "kubernetes_stateful_set" "azurite" {
@@ -157,7 +158,7 @@ resource "kubernetes_job" "create_blob_container" {
 
         container {
           name  = "create-blob-container"
-          image = "mcr.microsoft.com/azure-cli"
+          image = local.azure_cli_image
           command = [
             "sh", "-c",
             <<-EOT
