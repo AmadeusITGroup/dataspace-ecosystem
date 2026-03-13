@@ -1,12 +1,12 @@
 locals {
   identityhub_release_name = "${var.participant_name}-identityhub"
 
-  did_url                  = var.selfhosted_did_url != "" ? var.selfhosted_did_url : "did:web:${local.identityhub_release_name}%3A8383:api:did"
-  sts_port                 = 8484
-  sts_path                 = "/api/sts"
-  sts_url                  = var.selfhosted_sts_url != "" ? var.selfhosted_sts_url : "http://${local.identityhub_release_name}:${local.sts_port}${local.sts_path}/token"
-  sts_client_secret_alias  = "${local.did_url}-sts-client-secret"
-  did_url_base64_url       = replace(replace(replace(base64encode(local.did_url), "+", "-"), "/", "_"), "=", "")
+  did_url                 = var.selfhosted_did_url != "" ? var.selfhosted_did_url : "did:web:${local.identityhub_release_name}%3A8383:api:did"
+  sts_port                = 8484
+  sts_path                = "/api/sts"
+  sts_url                 = var.selfhosted_sts_url != "" ? var.selfhosted_sts_url : "http://${local.identityhub_release_name}:${local.sts_port}${local.sts_path}/token"
+  sts_client_secret_alias = "${local.did_url}-sts-client-secret"
+  did_url_base64_url      = replace(replace(replace(base64encode(local.did_url), "+", "-"), "/", "_"), "=", "")
 
   participant_identity_hub_image = (
     var.environment == "local" ? "localhost/identity-hub-postgresql-hashicorpvault" :

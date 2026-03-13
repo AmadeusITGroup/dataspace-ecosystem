@@ -8,7 +8,7 @@ locals {
   db_billing_user  = "billinguser"
   db_user_password = "${var.authority_name}pwd"
 
-  authority_did    = local.did_url
+  authority_did = local.did_url
 }
 module "db" {
   source = "../db"

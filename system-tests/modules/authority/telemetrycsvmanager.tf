@@ -3,7 +3,7 @@ locals {
   telemetry_csv_manager_image = (
     var.environment == "local" ? "localhost/telemetry-csv-manager-postgresql-hashicorpvault" :
     var.environment == "devbox" ? "${var.devbox-registry}/telemetry-csv-manager-postgresql-hashicorpvault" :
-     "telemetry-csv-manager-postgresql-hashicorpvault"
+    "telemetry-csv-manager-postgresql-hashicorpvault"
   )
 }
 

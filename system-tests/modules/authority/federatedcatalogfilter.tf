@@ -3,8 +3,8 @@ locals {
 
   federated_catalog_filter_image = (
     var.environment == "local" ? "localhost/federated-catalog-filter-postgresql-hashicorpvault" :
-      var.environment == "devbox" ? "${var.devbox-registry}/federated-catalog-filter-postgresql-hashicorpvault" :
-      "federated-catalog-filter-postgresql-hashicorpvault"
+    var.environment == "devbox" ? "${var.devbox-registry}/federated-catalog-filter-postgresql-hashicorpvault" :
+    "federated-catalog-filter-postgresql-hashicorpvault"
   )
   filter_url = "http://${local.catalog_filter_release_name}:8383/api/catalogfilter/filter"
 }
@@ -15,7 +15,7 @@ resource "helm_release" "federated-catalog-filter" {
   recreate_pods     = true
   repository        = "../charts"
   chart             = "federated-catalog-filter"
-# version           = "latest"
+  # version           = "latest"
   values = [
     yamlencode({
       "imagePullSecrets" : var.environment == "devbox" ? [

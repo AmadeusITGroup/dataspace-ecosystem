@@ -10,7 +10,7 @@ IDE or run as part of the build process.
 By using this code style configuration, we aim to maintain a consistent coding style across the project, making it
 easier for developers to read and understand the code.
 
-## Running Checkstyle
+## Running Java checkstyle
 
 The Checkstyle can be run using Gradle:
 
@@ -31,6 +31,16 @@ write code. This can help you catch issues early and ensure that your code adher
 After the installation, you can configure the Checkstyle plugin to use the
 provided [XML configuration file](resources/checkstyle-config.xml). This will ensure that the plugin checks your code
 against the same rules that are enforced in the CI build process.
+
+## Running Terraform checks
+If you're working on Terraform files under the system-tests directory, we have validation checks available. You can run them using the following commands:
+
+```bash
+cd system-tests/
+terraform fmt -recursive
+terraform init -backend=false -input=false -no-color
+terraform validate -no-color
+```
 
 ## PR checkstyle validation
 

@@ -6,7 +6,7 @@ locals {
     "app.kubernetes.io/part-of" = "dataspace-ecosystem"
   }
 
-   kafka_proxy_image = (
+  kafka_proxy_image = (
     var.environment == "local" ? "localhost/kafka-proxy-entra-auth:latest" :
     var.environment == "devbox" ? "${var.devbox-registry}/kafka-proxy-entra-auth:latest" :
     "kafka-proxy-entra-auth:latest"
@@ -340,8 +340,8 @@ resource "kubernetes_deployment" "proxy_provider" {
         }
 
         container {
-          name  = "kafka-proxy-provider"
-          image = local.kafka_proxy_image
+          name              = "kafka-proxy-provider"
+          image             = local.kafka_proxy_image
           image_pull_policy = var.environment == "local" ? "Never" : "IfNotPresent"
 
           port {
