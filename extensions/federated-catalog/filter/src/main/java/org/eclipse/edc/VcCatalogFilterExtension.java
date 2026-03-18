@@ -3,8 +3,10 @@ package org.eclipse.edc;
 import org.eclipse.edc.api.VcCatalogFilterController;
 import org.eclipse.edc.connector.controlplane.transform.odrl.to.JsonObjectToActionTransformer;
 import org.eclipse.edc.connector.controlplane.transform.odrl.to.JsonObjectToConstraintTransformer;
+import org.eclipse.edc.connector.controlplane.transform.odrl.to.JsonObjectToDutyTransformer;
 import org.eclipse.edc.connector.controlplane.transform.odrl.to.JsonObjectToOperatorTransformer;
 import org.eclipse.edc.connector.controlplane.transform.odrl.to.JsonObjectToPermissionTransformer;
+import org.eclipse.edc.connector.controlplane.transform.odrl.to.JsonObjectToProhibitionTransformer;
 import org.eclipse.edc.iam.did.spi.resolution.DidResolverRegistry;
 import org.eclipse.edc.jsonld.spi.JsonLd;
 import org.eclipse.edc.policy.engine.spi.PolicyEngine;
@@ -121,6 +123,8 @@ public class VcCatalogFilterExtension implements ServiceExtension {
         transformerRegistry.register(new JsonObjectToActionTransformer());
         transformerRegistry.register(new JsonObjectToConstraintTransformer());
         transformerRegistry.register(new JsonObjectToOperatorTransformer());
+        transformerRegistry.register(new JsonObjectToProhibitionTransformer());
+        transformerRegistry.register(new JsonObjectToDutyTransformer());
     }
 
     @Settings
