@@ -8,7 +8,7 @@ dependencies {
     implementation(libs.edc.core.runtime)
     
     // Kubernetes client
-    implementation("io.fabric8:kubernetes-client:6.9.2")
+    implementation("io.fabric8:kubernetes-client:7.6.1")
     
     // Vault client
     implementation("com.bettercloud:vault-java-driver:5.1.0")
@@ -27,6 +27,6 @@ dependencies {
     testImplementation(libs.assertj)
     testImplementation("org.mockito:mockito-core:5.5.0")
     testImplementation("org.mockito:mockito-junit-jupiter:5.5.0")
-    testImplementation("io.fabric8:kubernetes-server-mock:6.9.2")
+    testImplementation("io.fabric8:kubernetes-server-mock:7.6.1")
     testRuntimeOnly(libs.junit.jupiter.engine)
 }
