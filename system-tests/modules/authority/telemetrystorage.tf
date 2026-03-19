@@ -1,9 +1,9 @@
 locals {
   telemetrystorage_release_name = "${var.authority_name}-telemetrystorage"
   telemetry_storage_image = (
-    var.environment == "local" ? "localhost/telemetry-storage-postgresql-hashicorpvault" :
-    var.environment == "devbox" ? "${var.devbox-registry}/telemetry-storage-postgresql-hashicorpvault" :
-    "telemetry-storage-postgresql-hashicorpvault"
+    var.environment == "local" ? "localhost/telemetry-storage" :
+    var.environment == "devbox" ? "${var.devbox-registry}/telemetry-storage" :
+    "telemetry-storage"
   )
 }
 
@@ -69,23 +69,12 @@ resource "helm_release" "telemetrystorage" {
               "name" : kubernetes_secret.billing-db-user-credentials.metadata.0.name
             }
           }
-        },
-        "vault" : {
-          "hashicorp" : {
-            "url" : module.vault.vault_url
-            "token" : {
-              "secret" : {
-                "name" : module.vault.vault_secret_name
-                "tokenKey" : "rootToken"
-              }
-            }
-          }
         }
       }
     })
   ]
 
-  depends_on = [module.vault, module.db]
+  depends_on = [module.db]
 }
 
 

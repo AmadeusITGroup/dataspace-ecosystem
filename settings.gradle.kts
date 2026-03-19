@@ -105,18 +105,12 @@ include(":launchers:telemetry-agent:telemetry-agent-postgresql-azurevault")
 include(":launchers:telemetry-agent:telemetry-agent-postgresql-hashicorpvault")
 
 include(":launchers:telemetry-storage")
-include(":launchers:telemetry-storage:telemetry-storage-base")
-include(":launchers:telemetry-storage:telemetry-storage-postgresql-hashicorpvault")
-include(":launchers:telemetry-storage:telemetry-storage-postgresql-azurevault")
 include(":launchers:kafka-proxy-k8s-manager")
 include(":launchers:kafka-proxy-k8s-manager:kafka-proxy-k8s-manager-base")
 
 include(":plugins")
 
 include(":launchers:telemetry-csv-manager")
-include(":launchers:telemetry-csv-manager:telemetry-csv-manager-base")
-include(":launchers:telemetry-csv-manager:telemetry-csv-manager-postgresql-hashicorpvault")
-include(":launchers:telemetry-csv-manager:telemetry-csv-manager-postgresql-azurevault")
 
 include(":system-tests:backend-service-provider")
 include(":system-tests:runner")

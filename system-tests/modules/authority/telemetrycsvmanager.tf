@@ -1,9 +1,9 @@
 locals {
   telemetrycsvmanager_release_name = "${var.authority_name}-telemetrycsvmanager"
   telemetry_csv_manager_image = (
-    var.environment == "local" ? "localhost/telemetry-csv-manager-postgresql-hashicorpvault" :
-    var.environment == "devbox" ? "${var.devbox-registry}/telemetry-csv-manager-postgresql-hashicorpvault" :
-    "telemetry-csv-manager-postgresql-hashicorpvault"
+    var.environment == "local" ? "localhost/telemetry-csv-manager" :
+    var.environment == "devbox" ? "${var.devbox-registry}/telemetry-csv-manager" :
+    "telemetry-csv-manager"
   )
 }
 
@@ -49,7 +49,6 @@ resource "helm_release" "telemetrycsvmanager" {
         "config" : <<EOT
 web.http.telemetrycsvmanager.port=8181
 web.http.telemetrycsvmanager.path=/telemetrycsvmanager
-edc.vault.hashicorp.token.scheduled-renew-enabled=false
         EOT
 
         "objectStorageType" : "azurite"
@@ -81,21 +80,10 @@ edc.vault.hashicorp.token.scheduled-renew-enabled=false
               "name" : kubernetes_secret.billing-db-user-credentials.metadata.0.name
             }
           }
-        },
-        "vault" : {
-          "hashicorp" : {
-            "url" : module.vault.vault_url
-            "token" : {
-              "secret" : {
-                "name" : module.vault.vault_secret_name
-                "tokenKey" : "rootToken"
-              }
-            }
-          }
         }
       }
     })
   ]
 
-  depends_on = [module.vault, module.db]
+  depends_on = [module.db]
 }

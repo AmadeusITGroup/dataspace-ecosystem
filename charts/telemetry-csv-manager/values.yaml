@@ -14,26 +14,7 @@ telemetrycsvmanager:
     pullPolicy: IfNotPresent
     # -- Overrides the image tag whose default is the chart appVersion
     tag: ""
-  # -- Cert installer initContainer image
-  certInstallerImage: ""
-  initContainers:
-    - name: cert-installer
-      command:
-        - sh
-        - '-c'
-        - |
-          /bin/bash <<'EOF'
-          cp /etc/pki/ca-trust/extracted/java/cacerts /opt/ca/cacerts
-          chmod 666 /opt/ca/cacerts
-          keytool -import -trustcacerts -keystore /opt/ca/cacerts \
-            -storepass changeit -noprompt -alias vaultCa -file /certs/tls.crt
-          EOF
-      volumeMounts:
-        - name: cert-volume
-          mountPath: /certs
-        - name: shared-volume
-          mountPath: /opt/ca
-      image: '{{ .Values.telemetrycsvmanager.certInstallerImage }}'
+  initContainers: []
   livenessProbe:
     # -- Whether to enable kubernetes [liveness-probe](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/)
     enabled: true
@@ -91,50 +72,6 @@ telemetrycsvmanager:
         userKey: "username"
         # -- secret key containing the password
         passwordKey: "password"
-
-  vault:
-    # -- Hashicorp Vault
-    hashicorp:
-      url: ""
-      cert:
-        secretName: "tls-ca"
-        tlsPath: "/shared/"
-      token:
-        renewal:
-          # -- enable token renewal
-          enabled: false
-          renewBuffer: 30
-          ttl: 300
-        secret:
-          # -- name of the Kubernetes secret containing the Hashicorp Vault token
-          name: ""
-          # -- secret key containing the token
-          tokenKey: ""
-      timeout: 30
-      healthCheck:
-        enabled: true
-        standbyOk: true
-      paths:
-        secret: /v1/secret
-        folder: ""
-        health: /v1/sys/health
-    # -- Azure Key Vault
-    azure:
-      name: ""
-      url: ""
-      unsafe: false
-      credentials:
-        secret:
-          # -- name of the Kubernetes secret containing the Azure Vault credentials
-          name: ""
-          # -- secret key containing the Service Principal ID
-          clientIdKey: ""
-          # -- secret key containing the Tenant ID
-          tenantIdKey: ""
-          # -- secret key containing the Service Principal client secret
-          clientSecretKey: ""
-          # -- secret key containing the Service Principal client certificate
-          clientCertificateKey: ""
 
   service:
     # -- [Service type](https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types) to expose the running application on a set of Pods as a network service.
