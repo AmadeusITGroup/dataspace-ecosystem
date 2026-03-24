@@ -10,6 +10,8 @@ dependencies {
     implementation(libs.edc.lib.token)
     implementation(libs.edc.spi.identity.did)
     implementation(libs.edc.lib.http)
+    implementation(libs.edc.spi.transform)
+    implementation(libs.edc.lib.transform)
     api(project(":spi:common-spi"))
     api(project(":spi:federated-catalog-filter-spi"))
 }

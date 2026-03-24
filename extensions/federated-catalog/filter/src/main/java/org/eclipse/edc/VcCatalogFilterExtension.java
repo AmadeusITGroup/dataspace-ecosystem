@@ -1,5 +1,6 @@
 package org.eclipse.edc;
 
+import jakarta.json.Json;
 import org.eclipse.edc.api.VcCatalogFilterController;
 import org.eclipse.edc.connector.controlplane.transform.odrl.to.JsonObjectToActionTransformer;
 import org.eclipse.edc.connector.controlplane.transform.odrl.to.JsonObjectToConstraintTransformer;
@@ -21,6 +22,8 @@ import org.eclipse.edc.spi.system.ServiceExtension;
 import org.eclipse.edc.spi.system.ServiceExtensionContext;
 import org.eclipse.edc.spi.types.TypeManager;
 import org.eclipse.edc.transform.spi.TypeTransformerRegistry;
+import org.eclipse.edc.transform.transformer.edc.from.JsonObjectFromCriterionTransformer;
+import org.eclipse.edc.transform.transformer.edc.from.JsonObjectFromQuerySpecTransformer;
 import org.eclipse.edc.util.AuthorityCatalogFilterDidResolver;
 import org.eclipse.edc.util.FederatedCatalogService;
 import org.eclipse.edc.web.jersey.providers.jsonld.JerseyJsonLdInterceptor;
@@ -30,6 +33,7 @@ import org.eclipse.edc.web.spi.configuration.PortMapping;
 import org.eclipse.edc.web.spi.configuration.PortMappingRegistry;
 
 import java.net.http.HttpClient;
+import java.util.Map;
 
 import static org.eclipse.edc.jsonld.spi.JsonLdKeywords.VOCAB;
 import static org.eclipse.edc.jsonld.spi.Namespaces.DCAT_PREFIX;
@@ -119,10 +123,13 @@ public class VcCatalogFilterExtension implements ServiceExtension {
     }
 
     private void registerTransformers() {
+        var factory = Json.createBuilderFactory(Map.of());
         transformerRegistry.register(new JsonObjectToPermissionTransformer());
         transformerRegistry.register(new JsonObjectToActionTransformer());
         transformerRegistry.register(new JsonObjectToConstraintTransformer());
         transformerRegistry.register(new JsonObjectToOperatorTransformer());
+        transformerRegistry.register(new JsonObjectFromQuerySpecTransformer(factory));
+        transformerRegistry.register(new JsonObjectFromCriterionTransformer(factory, typeManager, JSON_LD));
         transformerRegistry.register(new JsonObjectToProhibitionTransformer());
         transformerRegistry.register(new JsonObjectToDutyTransformer());
     }

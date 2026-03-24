@@ -60,7 +60,7 @@ abstract class AbstractParticipant extends AbstractEntity {
     }
 
     protected String controlPlaneCatalogFilterUrl() {
-        return "http://%s/%s/cp/management/catalog/participantCatalog".formatted(CLUSTER_HOSTNAME, name());
+        return "http://%s/%s/cp/management/v1alpha/catalog/query".formatted(CLUSTER_HOSTNAME, name());
     }
 
     protected void createEntry(String assetId, String name, String description, Map<String, Object> dataAddressProps, JsonObject... additionalConstraints) {

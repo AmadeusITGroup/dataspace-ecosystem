@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.json.JsonObject;
 import jakarta.ws.rs.core.Response;
 
 @OpenAPIDefinition(security = {@SecurityRequirement(name = "bearerAuth"), @SecurityRequirement(name = "apiKeyAuth")})
@@ -33,6 +34,6 @@ public interface FederatedCatalogFilteringApiV2 {
                     @ApiResponse(responseCode = "500", description = "Failed to fetch the filtered catalog")
             }
     )
-    Response getCatalog();
+    Response fetchCatalog(JsonObject query);
 
 }

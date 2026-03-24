@@ -48,7 +48,6 @@ public interface FederatedCatalogFilterApiV2 {
     @Operation(description = "Filters federated catalog assets based on participant vcs",
             security = {@SecurityRequirement(name = "bearerAuth"), @SecurityRequirement(name = "apiKeyAuth")},
             responses = {
-                    @ApiResponse(responseCode = "204", description = "No catalog entries after filtering"),
                     @ApiResponse(responseCode = "400", description = "Missing access token"),
                     @ApiResponse(responseCode = "403", description = "Access token is expired or invalid"),
                     @ApiResponse(responseCode = "500", description = "Failed to transfer data, something went wrong on the server side")

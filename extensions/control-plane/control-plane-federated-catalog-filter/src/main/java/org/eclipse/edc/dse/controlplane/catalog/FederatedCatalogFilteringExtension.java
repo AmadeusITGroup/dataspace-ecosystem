@@ -10,6 +10,9 @@ import org.eclipse.edc.runtime.metamodel.annotation.Setting;
 import org.eclipse.edc.spi.iam.IdentityService;
 import org.eclipse.edc.spi.system.ServiceExtension;
 import org.eclipse.edc.spi.system.ServiceExtensionContext;
+import org.eclipse.edc.transform.spi.TypeTransformerRegistry;
+import org.eclipse.edc.transform.transformer.edc.to.JsonObjectToCriterionTransformer;
+import org.eclipse.edc.transform.transformer.edc.to.JsonObjectToQuerySpecTransformer;
 import org.eclipse.edc.web.spi.WebService;
 import org.eclipse.edc.web.spi.configuration.ApiContext;
 
@@ -30,6 +33,9 @@ public class FederatedCatalogFilteringExtension implements ServiceExtension {
     @Inject
     private Clock clock;
 
+    @Inject
+    private TypeTransformerRegistry transformerRegistry;
+
     @Override
     public String name() {
         return "Participant Catalog Filtering Extension";
@@ -40,8 +46,14 @@ public class FederatedCatalogFilteringExtension implements ServiceExtension {
 
     @Override
     public void initialize(ServiceExtensionContext context) {
+        registerTransformers();
         webService.registerResource(ApiContext.MANAGEMENT, new CatalogFilteringController(
-                new AuthorityCatalogDidResolver(didResolverRegistry, authorityDid), context.getMonitor(), identityService, context.getParticipantId(), clock, authorityDid, didResolverRegistry, new ObjectMapper()));
+                new AuthorityCatalogDidResolver(didResolverRegistry, authorityDid), context.getMonitor(), identityService, context.getParticipantId(), clock, authorityDid, new ObjectMapper(), transformerRegistry));
+    }
+
+    private void registerTransformers() {
+        transformerRegistry.register(new JsonObjectToQuerySpecTransformer());
+        transformerRegistry.register(new JsonObjectToCriterionTransformer());
     }
 
 }

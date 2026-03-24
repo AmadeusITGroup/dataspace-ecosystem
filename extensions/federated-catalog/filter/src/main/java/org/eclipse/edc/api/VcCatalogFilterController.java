@@ -51,21 +51,24 @@ public class VcCatalogFilterController implements FederatedCatalogFilterApiV2 {
             Collection<Catalog> filtered = null;
             IdentityServiceValidator validator =  new IdentityServiceValidator(identityService, monitor);
             ClaimToken credentials = validator.validate(req.tokenRepresentation());
-            if (credentials != null) {
-                filtered = federatedCatalogService.fetchAndFilterCatalog(credentials, req.participantDid());
+            if (credentials == null) {
+                return Response.status(Response.Status.FORBIDDEN).build();
             }
-            if (filtered != null && !filtered.isEmpty()) {
+            filtered = federatedCatalogService.fetchAndFilterCatalog(credentials, req.participantDid(), req.query());
+            if (!filtered.isEmpty()) {
                 return Response.ok(filtered.stream()
                         .map(c -> transformerRegistry.transform(c, JsonObject.class))
                         .filter(Result::succeeded)
                         .map(AbstractResult::getContent)
                         .collect(toJsonArray())).build();
             } else {
-                return Response.status(Response.Status.NO_CONTENT).build();
+                return Response.ok(filtered).build();
             }
         } catch (Exception e) {
             monitor.severe("Error processing catalog filter request", e);
-            return Response.status(500).build();
+            return Response.status(500)
+                    .entity("Internal server error while processing catalog filter request")
+                    .build();
         }
     }
 

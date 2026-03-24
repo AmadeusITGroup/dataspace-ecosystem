@@ -83,7 +83,7 @@ abstract class AbstractAuthority extends AbstractEntity {
                 .baseUri(catalogUrl)
                 .contentType(JSON)
                 .when()
-                .get()
+                .post()
                 .then()
                 .statusCode(200)
                 .extract().body().asString();

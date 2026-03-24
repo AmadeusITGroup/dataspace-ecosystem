@@ -13,6 +13,7 @@ import org.eclipse.edc.policy.engine.spi.PolicyEngine;
 import org.eclipse.edc.policy.model.Policy;
 import org.eclipse.edc.spi.iam.ClaimToken;
 import org.eclipse.edc.spi.monitor.Monitor;
+import org.eclipse.edc.spi.query.QuerySpec;
 import org.eclipse.edc.spi.result.Result;
 import org.eclipse.edc.transform.spi.TypeTransformerRegistry;
 
@@ -51,9 +52,9 @@ public class FederatedCatalogService {
         this.jsonLd = jsonLd;
     }
 
-    public Collection<Catalog> fetchAndFilterCatalog(ClaimToken participantVcs, String participantDid) throws Exception {
+    public Collection<Catalog> fetchAndFilterCatalog(ClaimToken participantVcs, String participantDid, QuerySpec query) throws Exception {
         CatalogDiscoveryPolicyContext policyContext = createContext(participantVcs);
-        Collection<Catalog> catalogs = retrieveCatalog();
+        Collection<Catalog> catalogs = retrieveCatalog(query);
         if (catalogs == null || catalogs.isEmpty()) {
             monitor.warning("No catalogs retrieved from the remote source");
             return Collections.emptyList();
@@ -120,17 +121,26 @@ public class FederatedCatalogService {
         return new CatalogDiscoveryPolicyContext(agent);
     }
 
-    protected Collection<Catalog> retrieveCatalog() throws IOException, InterruptedException {
+    protected Collection<Catalog> retrieveCatalog(QuerySpec query) throws IOException, InterruptedException {
         Result<String> urlResult = didResolver.fetchCatalogFilterUrl();
         if (urlResult.failed()) {
             throw new RuntimeException("Failed to resolve catalog URL: " + urlResult.getFailureMessages());
         }
         String catalogUrl = urlResult.getContent();
 
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(catalogUrl))
-                .POST(HttpRequest.BodyPublishers.noBody())
-                .build();
+        HttpRequest.Builder builder = HttpRequest.newBuilder()
+                .uri(URI.create(catalogUrl));
+
+        if (query != null) {
+            JsonObject jsonBody = transformerRegistry.transform(query, JsonObject.class)
+                    .orElseThrow(failure -> new RuntimeException("QuerySpec transform failed: " + failure));
+            builder.header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(jsonBody.toString()));
+        } else {
+            builder.POST(HttpRequest.BodyPublishers.noBody());
+        }
+
+        HttpRequest request = builder.build();
 
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
         if (response.statusCode() != 200) {

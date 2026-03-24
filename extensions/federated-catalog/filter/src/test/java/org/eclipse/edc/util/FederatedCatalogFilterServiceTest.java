@@ -135,7 +135,7 @@ public class FederatedCatalogFilterServiceTest {
         FederatedCatalogService service = new FederatedCatalogService(policyEngine, monitor, didResolverRegistry, transformerRegistry, jsonLd, httpClient);
         Collection<Catalog> catalogs = new ArrayList<>();
         try {
-            catalogs = service.retrieveCatalog();
+            catalogs = service.retrieveCatalog(null);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }

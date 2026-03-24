@@ -1,19 +1,22 @@
 package org.eclipse.edc.dse.controlplane.catalog.filter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.json.JsonObject;
 import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.GET;
+import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.eclipse.edc.FilterRequest;
-import org.eclipse.edc.iam.did.spi.resolution.DidResolverRegistry;
 import org.eclipse.edc.spi.iam.IdentityService;
 import org.eclipse.edc.spi.iam.TokenParameters;
 import org.eclipse.edc.spi.iam.TokenRepresentation;
 import org.eclipse.edc.spi.monitor.Monitor;
+import org.eclipse.edc.spi.query.QuerySpec;
 import org.eclipse.edc.spi.result.Result;
+import org.eclipse.edc.transform.spi.TypeTransformerRegistry;
+import org.eclipse.edc.web.spi.exception.InvalidRequestException;
 
 import java.io.IOException;
 import java.net.URI;
@@ -33,7 +36,7 @@ import static org.eclipse.edc.jwt.spi.JwtRegisteredClaimNames.SCOPE;
 import static org.eclipse.edc.jwt.spi.JwtRegisteredClaimNames.SUBJECT;
 import static org.eclipse.edc.spi.core.CoreConstants.DSE_VC_TYPE_SCOPE_ALIAS;
 
-@Path("/catalog")
+@Path("/v1alpha/catalog")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class CatalogFilteringController implements FederatedCatalogFilteringApiV2 {
@@ -52,13 +55,14 @@ public class CatalogFilteringController implements FederatedCatalogFilteringApiV
 
     private final HttpClient httpClient;
 
+    private final TypeTransformerRegistry transformerRegistry;
+
     private final AuthorityCatalogDidResolver authorityCatalogDidResolver;
 
     private static final String READ_ALL_CREDENTIAL_SCOPE = "%s:VerifiableCredential:read".formatted(DSE_VC_TYPE_SCOPE_ALIAS);
 
     public CatalogFilteringController(AuthorityCatalogDidResolver authorityCatalogDidResolver, Monitor monitor,
-                                      IdentityService identityService, String ownDid, Clock clock, String authorityDid,
-                                      DidResolverRegistry didResolverRegistry, ObjectMapper mapper) {
+                                      IdentityService identityService, String ownDid, Clock clock, String authorityDid, ObjectMapper mapper, TypeTransformerRegistry transformerRegistry) {
         this.monitor = monitor;
         this.identityService = identityService;
         this.ownDid = ownDid;
@@ -67,17 +71,19 @@ public class CatalogFilteringController implements FederatedCatalogFilteringApiV
         this.httpClient = HttpClient.newHttpClient();
         this.mapper = mapper;
         this.authorityCatalogDidResolver = authorityCatalogDidResolver;
+        this.transformerRegistry = transformerRegistry;
     }
 
-    @GET
-    @Path("/participantCatalog")
+    @POST
+    @Path("/query")
     @Override
-    public Response getCatalog() {
+    public Response fetchCatalog(JsonObject catalogQuery) {
         Result<String> catalogFilterUrlResult = authorityCatalogDidResolver.fetchCatalogFilterUrl();
         if (catalogFilterUrlResult.failed()) {
             throw new RuntimeException("Could not resolve authority catalog filter url: " +
                     catalogFilterUrlResult.getFailureMessages());
         }
+        QuerySpec querySpec = transformToQuerySpec(catalogQuery);
         String catalogFilterUrl = catalogFilterUrlResult.getContent();
         String filteredCatalog = null;
         List<String> scopes = List.of(READ_ALL_CREDENTIAL_SCOPE);
@@ -95,8 +101,8 @@ public class CatalogFilteringController implements FederatedCatalogFilteringApiV
         Result<TokenRepresentation> vcToken = identityService.obtainClientCredentials(tokenParameters);
         if (vcToken.succeeded()) {
             TokenRepresentation token = vcToken.getContent();
-            FilterRequest filterRequest = new FilterRequest(token, ownDid);
             try {
+                FilterRequest filterRequest = new FilterRequest(token, ownDid, querySpec);
                 String jsonBody = mapper.writeValueAsString(filterRequest);
                 HttpRequest request = HttpRequest.newBuilder()
                         .uri(URI.create(catalogFilterUrl))
@@ -114,4 +120,9 @@ public class CatalogFilteringController implements FederatedCatalogFilteringApiV
         }
         return Response.status(500).build();
     }
+
+    private QuerySpec transformToQuerySpec(JsonObject catalogQuery) {
+        return catalogQuery != null ? transformerRegistry.transform(catalogQuery, QuerySpec.class).orElseThrow(InvalidRequestException::new) : null;
+    }
+
 }
