@@ -17,6 +17,8 @@ import org.eclipse.dse.core.kafkaproxy.service.FileQueueService.EdrQueueEntry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -79,5 +81,59 @@ class FileQueueServiceTest {
     void shouldCheckSharedDirectoryAccessibility() {
         // Act & Assert
         assertThat(fileQueueService.isSharedDirectoryAccessible()).isTrue();
+    }
+
+    // -------------------------------------------------------------------------
+    // Path-traversal / path-manipulation security tests (CWE-22 / CWE-73)
+    // -------------------------------------------------------------------------
+
+    @ParameterizedTest(name = "updateDeploymentStatus rejects malicious key: [{0}]")
+    @ValueSource(strings = {
+            "../etc/passwd",
+            "../../secret",
+            "edr/../../etc/shadow",
+            "edr\\..\\..",
+            "edr%2F..%2F..",
+            "edr key",         // spaces not allowed
+            "edr.key",         // dots not allowed
+            ""                 // empty string
+    })
+    void shouldRejectPathTraversalInDeploymentStatus(String maliciousKey) {
+        // Invalid keys are rejected and logged internally — no exception propagates,
+        // and no file must be written anywhere on the filesystem.
+        fileQueueService.updateDeploymentStatus(maliciousKey, true);
+
+        assertThat(tempDir.toFile().listFiles()).isEmpty();
+    }
+
+    @ParameterizedTest(name = "updateCleanupStatus rejects malicious key: [{0}]")
+    @ValueSource(strings = {
+            "../etc/passwd",
+            "../../secret",
+            "edr/../../etc/shadow",
+            "edr\\..\\..",
+            "edr%2F..%2F..",
+            "edr key",
+            "edr.key",
+            ""
+    })
+    void shouldRejectPathTraversalInCleanupStatus(String maliciousKey) {
+        // Invalid keys are rejected and logged internally — no exception propagates,
+        // and no file must be written anywhere on the filesystem.
+        fileQueueService.updateCleanupStatus(maliciousKey, true);
+
+        assertThat(tempDir.toFile().listFiles()).isEmpty();
+    }
+
+    @Test
+    void shouldAcceptValidAlphanumericEdrKey() throws Exception {
+        // Valid keys should work without throwing
+        fileQueueService.updateDeploymentStatus("edr-123_ABC", true);
+        fileQueueService.updateCleanupStatus("edr-123_ABC", false);
+
+        assertThat(Files.readString(tempDir.resolve("kafka_edr_edr-123_ABC_deployment_status.txt")))
+                .isEqualTo("success");
+        assertThat(Files.readString(tempDir.resolve("kafka_edr_edr-123_ABC_cleanup_status.txt")))
+                .isEqualTo("failed");
     }
 }

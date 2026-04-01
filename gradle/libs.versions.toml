@@ -173,6 +173,7 @@ mockserver-client = { module = "org.mock-server:mockserver-client-java", version
 mockserver-netty = { module = "org.mock-server:mockserver-netty", version.ref = "httpMockServer" }
 junit-jupiter-api = { module = "org.junit.jupiter:junit-jupiter-api", version.ref = "jupiter" }
 junit-jupiter-engine = { module = "org.junit.jupiter:junit-jupiter-engine", version.ref = "jupiter" }
+junit-jupiter-params = { module = "org.junit.jupiter:junit-jupiter-params", version.ref = "jupiter" }
 kafka-clients = { module = "org.apache.kafka:kafka-clients", version.ref = "kafka" }
 postgres = { module = "org.postgresql:postgresql", version.ref = "postgres" }
 azure-messaging-eventhub = { group = "com.azure", name = "azure-messaging-eventhubs", version.ref = "azureMessagingEventHub" }
