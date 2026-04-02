@@ -47,12 +47,14 @@ dependencies {
     testFixturesImplementation(libs.edc.core.token)
     testFixturesImplementation(libs.edc.lib.token)
     testFixturesImplementation(libs.edc.spi.jsonld)
+    testFixturesImplementation(libs.edc.ext.jsonld)
+    testFixturesImplementation(libs.edc.junit)
     testFixturesImplementation(libs.edc.federatedcatalog.spi.core)
     testFixturesImplementation(libs.edc.identityhub.spi.core)
     testFixturesImplementation(libs.edc.spi.identity.did)
+    testFixturesImplementation(libs.edc.dsp.spi.v2025)
     testFixturesImplementation(libs.awaitility)
     testImplementation(libs.kafka.clients)
     testFixturesImplementation(libs.kafka.clients)
 
 }
-

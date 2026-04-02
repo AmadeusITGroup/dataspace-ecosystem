@@ -54,6 +54,7 @@ import static org.eclipse.dse.iam.policy.PolicyConstants.GENERIC_CLAIM_CONSTRAIN
 import static org.eclipse.dse.iam.policy.PolicyConstants.MEMBERSHIP_CREDENTIAL_TYPE;
 import static org.eclipse.dse.iam.policy.PolicyConstants.RESTRICTED_CATALOG_DISCOVERY_CONSTRAINT;
 import static org.eclipse.edc.connector.controlplane.test.system.utils.PolicyFixtures.atomicConstraint;
+import static org.eclipse.edc.connector.controlplane.transfer.spi.types.TransferProcessStates.STARTED;
 import static org.eclipse.edc.connector.controlplane.transfer.spi.types.TransferProcessStates.TERMINATED;
 import static org.eclipse.edc.jsonld.spi.JsonLdKeywords.ID;
 import static org.eclipse.edc.spi.constants.CoreConstants.EDC_NAMESPACE;
@@ -441,6 +442,25 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
             CONSUMER.finishDataTransfer(transferProcessId);
         }
 
+        @Test
+        void transfer_starts_via_dsp08() {
+            var consumerClient = CONSUMER.participantClientDsp08();
+            var providerClient = PROVIDER.participantClientDsp08();
+
+            var transferProcessId = consumerClient.requestAssetFrom(ASSET_ID_REST_API, providerClient)
+                    .withTransferType(HTTP_DATA_PULL)
+                    .execute();
+
+            try {
+                await().atMost(TEST_TIMEOUT).untilAsserted(() -> {
+                    var state = consumerClient.getTransferProcessState(transferProcessId);
+                    assertThat(state).isEqualTo(STARTED.name());
+                });
+            } finally {
+                CONSUMER.finishDataTransfer(transferProcessId);
+            }
+        }
+
         private void publishMessagesToKafka() {
             try {
                 kafkacatPod = discoverPodName("", "kafkacat-");
@@ -572,6 +592,7 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
             
             var providerUrl = provider.controlPlaneProtocolUrl();
             var consumerDid = consumer.did();
+            var providerClient = provider.participantClient();
             
             var body = Map.of(
                     "@context", Map.of(
@@ -579,7 +600,7 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
                     ),
                     "@type", "TransferRequest",
                     "counterPartyAddress", providerUrl,
-                    "protocol", "dataspace-protocol-http",
+                    "protocol", providerClient.getProtocol(),
                     "connectorId", consumerDid,
                     "contractId", contractAgreementId,
                     "transferType", AZURE_STORAGE_PUSH,
@@ -720,13 +741,14 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
         protected void transferProcess(AbstractParticipant consumer, AbstractParticipant provider, String contractId) {
             var providerUrl = provider.controlPlaneProtocolUrl();
             var consumerDid = consumer.did();
+            var providerClient = provider.participantClient();
             var body = Map.of(
                     "@context", Map.of(
                             "@vocab", "https://w3id.org/edc/v0.0.1/ns/"
                     ),
                     "@type", "TransferRequest",
                     "counterPartyAddress", providerUrl,
-                    "protocol", "dataspace-protocol-http",
+                    "protocol", providerClient.getProtocol(),
                     "connectorId", consumerDid,
                     "contractId", contractId,
                     "transferType", "HttpData-PULL"

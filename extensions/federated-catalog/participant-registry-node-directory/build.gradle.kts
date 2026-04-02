@@ -10,5 +10,3 @@ dependencies {
     api(libs.edc.spi.identity.did)
     api(libs.edc.spi.dsp.http)
 }
-
-

@@ -76,6 +76,7 @@ edc-lib-http = { module = "org.eclipse.edc:http-lib", version.ref = "edc" }
 edc-lib-json = { module = "org.eclipse.edc:json-lib", version.ref = "edc" }
 edc-lib-token = { module = "org.eclipse.edc:token-lib", version.ref = "edc" }
 edc-lib-jsonld = { module = "org.eclipse.edc:json-ld-lib", version.ref = "edc" }
+edc-ext-jsonld = { module = "org.eclipse.edc:json-ld", version.ref = "edc" }
 edc-lib-sql = { module = "org.eclipse.edc:sql-lib", version.ref = "edc" }
 edc-lib-transform = { module = "org.eclipse.edc:transform-lib", version.ref = "edc" }
 edc-spi-transform = { module = "org.eclipse.edc:transform-spi", version.ref = "edc" }
@@ -118,7 +119,7 @@ edc-identity-did-web = { module = "org.eclipse.edc:identity-did-web", version.re
 edc-oauth2-oauth2client = {module = "org.eclipse.edc:oauth2-client", version.ref = "edc" }
 edc-sql-jti-store = { module = "org.eclipse.edc:jti-validation-store-sql", version.ref = "edc" }
 edc-dsp = { module = "org.eclipse.edc:dsp", version.ref = "edc" }
-edc-dsp08-apiconfiguration = { module = "org.eclipse.edc:dsp-http-api-configuration-08", version.ref = "edc" }
+edc-dsp-spi-v2025 = { module = "org.eclipse.edc:dsp-spi-2025", version.ref = "edc" }
 
 # Control Plane
 edc-controlplane-api-secrets = { module = "org.eclipse.edc:secrets-api", version.ref = "edc" }

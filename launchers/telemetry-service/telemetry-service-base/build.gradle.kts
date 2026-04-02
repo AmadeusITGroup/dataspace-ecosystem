@@ -14,7 +14,6 @@ dependencies {
     runtimeOnly(libs.edc.identitytrust.issuersconfiguration)
     runtimeOnly(libs.edc.sql.jti.store)
     runtimeOnly(libs.edc.oauth2.oauth2client)
-    runtimeOnly(libs.edc.dsp08.apiconfiguration)
     runtimeOnly(libs.edc.dsp)
 }
 

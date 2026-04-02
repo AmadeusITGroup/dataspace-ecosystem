@@ -6,6 +6,9 @@ import jakarta.json.JsonValue;
 import org.eclipse.edc.connector.controlplane.test.system.utils.LazySupplier;
 import org.eclipse.edc.connector.controlplane.test.system.utils.Participant;
 import org.eclipse.edc.connector.controlplane.test.system.utils.PolicyFixtures;
+import org.eclipse.edc.jsonld.JsonLdExtension;
+import org.eclipse.edc.jsonld.spi.JsonLd;
+import org.eclipse.edc.junit.extensions.TestServiceExtensionContext;
 
 import java.net.URI;
 import java.util.ArrayList;
@@ -29,8 +32,15 @@ import static org.eclipse.edc.spi.core.CoreConstants.DSE_POLICY_PREFIX;
 import static org.eclipse.edc.test.system.ParticipantConstants.CLUSTER_HOSTNAME;
 import static org.eclipse.edc.test.system.ParticipantConstants.CONTROL_PLANE_DSP_PORT;
 import static org.eclipse.edc.test.system.ParticipantConstants.IDENTITY_HUB_DID_PORT;
+import static org.eclipse.edc.protocol.dsp.http.spi.types.HttpMessageProtocol.DATASPACE_PROTOCOL_HTTP;
+import static org.eclipse.edc.protocol.dsp.spi.type.Dsp2025Constants.DATASPACE_PROTOCOL_HTTP_V_2025_1;
+import static org.eclipse.edc.protocol.dsp.spi.type.Dsp2025Constants.V_2025_1_PATH;
 
 abstract class AbstractParticipant extends AbstractEntity {
+
+    private JsonLd jsonLd;
+    private ParticipantClient cachedParticipantClient;
+    private ParticipantClient cachedParticipantClientDsp08;
 
     @Override
     protected String did() {
@@ -47,8 +57,16 @@ abstract class AbstractParticipant extends AbstractEntity {
         return "http://%s/%s/vault".formatted(CLUSTER_HOSTNAME, name());
     }
 
-    protected String controlPlaneProtocolUrl() {
+    private String controlPlaneProtocolBaseUrl() {
         return "http://%s-controlplane:%s/api/dsp".formatted(name(), CONTROL_PLANE_DSP_PORT);
+    }
+
+    protected String controlPlaneProtocolUrl() {
+        return controlPlaneProtocolBaseUrl() + V_2025_1_PATH;
+    }
+
+    protected String controlPlaneProtocolUrlDsp08() {
+        return controlPlaneProtocolBaseUrl();
     }
 
     protected String controlPlaneManagementUrl() {
@@ -136,13 +154,40 @@ abstract class AbstractParticipant extends AbstractEntity {
     }
 
     public ParticipantClient participantClient() {
-        return ParticipantClient.Builder.newInstance()
-                .name(name())
-                .id(did())
-                .dataPlaneData(dataPlaneDataUrl())
-                .controlPlaneManagement(controlPlaneManagementUrl())
-                .controlPlaneProtocol(controlPlaneProtocolUrl())
-                .build();
+        if (cachedParticipantClient == null) {
+            cachedParticipantClient = ParticipantClient.Builder.newInstance()
+                    .name(name())
+                    .id(did())
+                    .protocol(DATASPACE_PROTOCOL_HTTP_V_2025_1)
+                    .jsonLd(jsonLd())
+                    .dataPlaneData(dataPlaneDataUrl())
+                    .controlPlaneManagement(controlPlaneManagementUrl())
+                    .controlPlaneProtocol(controlPlaneProtocolUrl())
+                    .build();
+        }
+        return cachedParticipantClient;
+    }
+
+    public ParticipantClient participantClientDsp08() {
+        if (cachedParticipantClientDsp08 == null) {
+            cachedParticipantClientDsp08 = ParticipantClient.Builder.newInstance()
+                    .name(name())
+                    .id(did())
+                    .protocol(DATASPACE_PROTOCOL_HTTP)
+                    .jsonLd(jsonLd())
+                    .dataPlaneData(dataPlaneDataUrl())
+                    .controlPlaneManagement(controlPlaneManagementUrl())
+                    .controlPlaneProtocol(controlPlaneProtocolUrlDsp08())
+                    .build();
+        }
+        return cachedParticipantClientDsp08;
+    }
+
+    private JsonLd jsonLd() {
+        if (jsonLd == null) {
+            jsonLd = new JsonLdExtension().createJsonLdService(TestServiceExtensionContext.testServiceExtensionContext());
+        }
+        return jsonLd;
     }
 
     private JsonObject createPermission(JsonValue constraint) {

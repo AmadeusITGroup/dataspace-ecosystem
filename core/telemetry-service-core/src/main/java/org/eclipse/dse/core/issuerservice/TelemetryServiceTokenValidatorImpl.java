@@ -19,7 +19,7 @@ import org.eclipse.edc.spi.monitor.Monitor;
 import org.eclipse.edc.spi.result.ServiceResult;
 import org.eclipse.edc.spi.types.domain.message.RemoteMessage;
 
-import static org.eclipse.edc.protocol.dsp.http.spi.types.HttpMessageProtocol.DATASPACE_PROTOCOL_HTTP;
+import static org.eclipse.edc.protocol.dsp.spi.type.Dsp2025Constants.DATASPACE_PROTOCOL_HTTP_V_2025_1;
 
 
 @Extension(value = "TelemetryServiceTokenValidator.class")
@@ -31,7 +31,7 @@ public class TelemetryServiceTokenValidatorImpl implements TelemetryServiceToken
     private final DataspaceProfileContextRegistry dataspaceProfileContextRegistry;
     private final Monitor monitor;
     private final RemoteMessage remoteMessage = TelemetryRequestMessage.Builder.newInstance()
-            .protocol(DATASPACE_PROTOCOL_HTTP)
+            .protocol(DATASPACE_PROTOCOL_HTTP_V_2025_1)
             .build();
 
     public TelemetryServiceTokenValidatorImpl(IdentityService identityService, PolicyEngine policyEngine, Monitor monitor,

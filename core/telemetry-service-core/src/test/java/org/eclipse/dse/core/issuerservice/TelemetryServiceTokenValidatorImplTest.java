@@ -18,6 +18,7 @@ import org.eclipse.edc.spi.types.domain.message.RemoteMessage;
 import org.junit.jupiter.api.Test;
 
 import static java.util.Collections.emptyMap;
+import static org.eclipse.edc.protocol.dsp.spi.type.Dsp2025Constants.DATASPACE_PROTOCOL_HTTP_V_2025_1;
 import static org.eclipse.edc.junit.assertions.AbstractResultAssert.assertThat;
 import static org.eclipse.edc.spi.result.ServiceFailure.Reason.UNAUTHORIZED;
 import static org.mockito.ArgumentMatchers.any;
@@ -44,7 +45,6 @@ class TelemetryServiceTokenValidatorImplTest {
     @Test
     void shouldVerifyToken() {
         var participantId = "participantId";
-        var protocol = "dataspace-protocol-http";
         var participantAgent = new ParticipantAgent(emptyMap(), emptyMap());
         var claimToken = ClaimToken.Builder.newInstance().build();
         var policy = Policy.Builder.newInstance().build();
@@ -57,9 +57,9 @@ class TelemetryServiceTokenValidatorImplTest {
 
         assertThat(result).isSucceeded().isSameAs(participantAgent);
         verify(agentService).createFor(claimToken, participantId);
-        // The implementation creates a new policy instance, not using the original policy parameter
-        verify(policyEngine).evaluate(any(Policy.class), any(RequestPolicyContext.class));
-        verify(dataspaceProfileContextRegistry).getIdExtractionFunction(protocol);
+        // The implementation evaluates the provided policy instance passed to the validator
+        verify(policyEngine).evaluate(same(policy), any(RequestPolicyContext.class));
+        verify(dataspaceProfileContextRegistry).getIdExtractionFunction(DATASPACE_PROTOCOL_HTTP_V_2025_1);
         verify(identityService).verifyJwtToken(same(tokenRepresentation), any());
     }
 

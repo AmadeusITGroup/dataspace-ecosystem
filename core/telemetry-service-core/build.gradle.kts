@@ -16,6 +16,7 @@ dependencies {
     implementation(libs.edc.spi.controlplane)
     implementation(libs.edc.controlplane.core)
     implementation(libs.edc.spi.dsp.http)
+    implementation(libs.edc.dsp.spi.v2025)
 
     testImplementation(testFixtures(project(":spi:telemetry-agent-spi")))
     testImplementation(libs.edc.core.junit)
