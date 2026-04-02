@@ -57,6 +57,16 @@ spec:
             failureThreshold: {{.Values.controlplane.livenessProbe.failureThreshold}}
             successThreshold: {{.Values.controlplane.livenessProbe.successThreshold}}
         {{- end}}
+        {{- if .Values.controlplane.startupProbe.enabled}}
+          startupProbe:
+            httpGet:
+              path: {{.Values.controlplane.endpoints.default.path}}/check/liveness
+              port: {{.Values.controlplane.endpoints.default.port}}
+            periodSeconds: {{.Values.controlplane.startupProbe.periodSeconds}}
+            failureThreshold: {{.Values.controlplane.startupProbe.failureThreshold}}
+            timeoutSeconds: {{.Values.controlplane.startupProbe.timeoutSeconds}}
+            successThreshold: {{.Values.controlplane.startupProbe.successThreshold}}
+        {{- end}}
         {{- if .Values.controlplane.readinessProbe.enabled}}
           readinessProbe:
             httpGet:

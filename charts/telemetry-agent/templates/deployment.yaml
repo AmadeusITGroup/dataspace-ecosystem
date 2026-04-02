@@ -58,6 +58,16 @@ spec:
             failureThreshold: {{ .Values.telemetryagent.livenessProbe.failureThreshold }}
             successThreshold: {{ .Values.telemetryagent.livenessProbe.successThreshold }}
           {{- end }}
+          {{- if .Values.telemetryagent.startupProbe.enabled }}
+          startupProbe:
+            httpGet:
+              path: {{ .Values.telemetryagent.endpoints.default.path }}/check/liveness
+              port: {{ .Values.telemetryagent.endpoints.default.port }}
+            periodSeconds: {{ .Values.telemetryagent.startupProbe.periodSeconds }}
+            failureThreshold: {{ .Values.telemetryagent.startupProbe.failureThreshold }}
+            timeoutSeconds: {{ .Values.telemetryagent.startupProbe.timeoutSeconds }}
+            successThreshold: {{ .Values.telemetryagent.startupProbe.successThreshold }}
+          {{- end }}
           {{- if .Values.telemetryagent.readinessProbe.enabled }}
           readinessProbe:
             httpGet:

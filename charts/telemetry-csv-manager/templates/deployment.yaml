@@ -57,6 +57,16 @@ spec:
             failureThreshold: {{.Values.telemetrycsvmanager.livenessProbe.failureThreshold}}
             successThreshold: {{.Values.telemetrycsvmanager.livenessProbe.successThreshold}}
         {{- end}}
+        {{- if .Values.telemetrycsvmanager.startupProbe.enabled}}
+          startupProbe:
+            httpGet:
+              path: {{.Values.telemetrycsvmanager.endpoints.default.path}}/check/liveness
+              port: {{.Values.telemetrycsvmanager.endpoints.default.port}}
+            periodSeconds: {{.Values.telemetrycsvmanager.startupProbe.periodSeconds}}
+            failureThreshold: {{.Values.telemetrycsvmanager.startupProbe.failureThreshold}}
+            timeoutSeconds: {{.Values.telemetrycsvmanager.startupProbe.timeoutSeconds}}
+            successThreshold: {{.Values.telemetrycsvmanager.startupProbe.successThreshold}}
+        {{- end}}
         {{- if .Values.telemetrycsvmanager.readinessProbe.enabled}}
           readinessProbe:
             httpGet:

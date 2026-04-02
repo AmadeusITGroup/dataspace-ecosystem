@@ -58,6 +58,16 @@ spec:
             failureThreshold: {{ .Values.identityhub.livenessProbe.failureThreshold }}
             successThreshold: {{ .Values.identityhub.livenessProbe.successThreshold }}
           {{- end }}
+          {{- if .Values.identityhub.startupProbe.enabled }}
+          startupProbe:
+            httpGet:
+              path: {{ .Values.identityhub.endpoints.default.path }}/check/liveness
+              port: {{ .Values.identityhub.endpoints.default.port }}
+            periodSeconds: {{ .Values.identityhub.startupProbe.periodSeconds }}
+            failureThreshold: {{ .Values.identityhub.startupProbe.failureThreshold }}
+            timeoutSeconds: {{ .Values.identityhub.startupProbe.timeoutSeconds }}
+            successThreshold: {{ .Values.identityhub.startupProbe.successThreshold }}
+          {{- end }}
           {{- if .Values.identityhub.readinessProbe.enabled }}
           readinessProbe:
             httpGet:

@@ -58,6 +58,16 @@ spec:
             failureThreshold: {{ .Values.dataplane.livenessProbe.failureThreshold }}
             successThreshold: {{ .Values.dataplane.livenessProbe.successThreshold }}
           {{- end }}
+          {{- if .Values.dataplane.startupProbe.enabled }}
+          startupProbe:
+            httpGet:
+              path: {{ .Values.dataplane.endpoints.default.path }}/check/liveness
+              port: {{ .Values.dataplane.endpoints.default.port }}
+            periodSeconds: {{ .Values.dataplane.startupProbe.periodSeconds }}
+            failureThreshold: {{ .Values.dataplane.startupProbe.failureThreshold }}
+            timeoutSeconds: {{ .Values.dataplane.startupProbe.timeoutSeconds }}
+            successThreshold: {{ .Values.dataplane.startupProbe.successThreshold }}
+          {{- end }}
           {{- if .Values.dataplane.readinessProbe.enabled }}
           readinessProbe:
             httpGet:

@@ -70,6 +70,14 @@ spec:
             {{- include "kafka-proxy.volumeMounts" . | nindent 12 }}
             - name: cacerts-volume
               mountPath: {{ .Values.kafkaProxy.manager.certDir }}
+          {{- if .Values.healthCheck.enabled }}
+          livenessProbe:
+            {{- toYaml .Values.healthCheck.livenessProbe | nindent 12 }}
+          startupProbe:
+            {{- toYaml .Values.healthCheck.startupProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.healthCheck.readinessProbe | nindent 12 }}
+          {{- end }}
           resources:
             {{- toYaml .Values.kafkaProxy.manager.resources | nindent 12 }}
         {{- with .Values.extraContainers }}

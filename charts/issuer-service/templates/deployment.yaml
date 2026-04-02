@@ -57,6 +57,16 @@ spec:
           failureThreshold: {{.Values.issuerservice.livenessProbe.failureThreshold}}
           successThreshold: {{.Values.issuerservice.livenessProbe.successThreshold}}
         {{- end}}
+        {{- if .Values.issuerservice.startupProbe.enabled}}
+        startupProbe:
+          httpGet:
+            path: {{.Values.issuerservice.endpoints.default.path}}/check/liveness
+            port: {{.Values.issuerservice.endpoints.default.port}}
+          periodSeconds: {{.Values.issuerservice.startupProbe.periodSeconds}}
+          failureThreshold: {{.Values.issuerservice.startupProbe.failureThreshold}}
+          timeoutSeconds: {{.Values.issuerservice.startupProbe.timeoutSeconds}}
+          successThreshold: {{.Values.issuerservice.startupProbe.successThreshold}}
+        {{- end}}
         {{- if .Values.issuerservice.readinessProbe.enabled}}
         readinessProbe:
           httpGet:

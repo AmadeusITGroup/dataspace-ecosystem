@@ -58,6 +58,16 @@ spec:
             failureThreshold: {{ .Values.federatedcatalog.livenessProbe.failureThreshold }}
             successThreshold: {{ .Values.federatedcatalog.livenessProbe.successThreshold }}
           {{- end }}
+          {{- if .Values.federatedcatalog.startupProbe.enabled }}
+          startupProbe:
+            httpGet:
+              path: {{ .Values.federatedcatalog.endpoints.default.path }}/check/liveness
+              port: {{ .Values.federatedcatalog.endpoints.default.port }}
+            periodSeconds: {{ .Values.federatedcatalog.startupProbe.periodSeconds }}
+            failureThreshold: {{ .Values.federatedcatalog.startupProbe.failureThreshold }}
+            timeoutSeconds: {{ .Values.federatedcatalog.startupProbe.timeoutSeconds }}
+            successThreshold: {{ .Values.federatedcatalog.startupProbe.successThreshold }}
+          {{- end }}
           {{- if .Values.federatedcatalog.readinessProbe.enabled }}
           readinessProbe:
             httpGet:
