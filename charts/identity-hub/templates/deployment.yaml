@@ -63,6 +63,7 @@ spec:
             httpGet:
               path: {{ .Values.identityhub.endpoints.default.path }}/check/liveness
               port: {{ .Values.identityhub.endpoints.default.port }}
+            initialDelaySeconds: {{ .Values.identityhub.startupProbe.initialDelaySeconds }}
             periodSeconds: {{ .Values.identityhub.startupProbe.periodSeconds }}
             failureThreshold: {{ .Values.identityhub.startupProbe.failureThreshold }}
             timeoutSeconds: {{ .Values.identityhub.startupProbe.timeoutSeconds }}

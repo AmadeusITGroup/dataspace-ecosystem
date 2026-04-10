@@ -38,34 +38,36 @@ federatedcatalogfilter:
     image: '{{ .Values.federatedcatalogfilter.certInstallerImage }}'
   livenessProbe:
     # -- Whether to enable kubernetes [liveness-probe](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/)
-    enabled: false
+    enabled: true
     # -- seconds to wait before performing the first liveness check
-    initialDelaySeconds: 5
+    initialDelaySeconds: 0
     # -- this fields specifies that kubernetes should perform a liveness check every 10 seconds
     periodSeconds: 10
     # -- number of seconds after which the probe times out
     timeoutSeconds: 5
-    # -- when a probe fails kubernetes will try 6 times before giving up
-    failureThreshold: 6
+    # -- when a probe fails kubernetes will try 3 times before giving up
+    failureThreshold: 3
     # -- number of consecutive successes for the probe to be considered successful after having failed
     successThreshold: 1
   startupProbe:
-    enabled: false
-    periodSeconds: 3
+    enabled: true
+    # -- seconds to wait before performing the first startup check
+    initialDelaySeconds: 10
+    periodSeconds: 10
     failureThreshold: 30
-    timeoutSeconds: 2
+    timeoutSeconds: 5
     successThreshold: 1
   readinessProbe:
     # -- Whether to enable kubernetes [readiness-probes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/)
-    enabled: false
+    enabled: true
     # -- seconds to wait before performing the first readiness check
-    initialDelaySeconds: 5
+    initialDelaySeconds: 0
     # -- this fields specifies that kubernetes should perform a readiness check every 10 seconds
     periodSeconds: 10
     # -- number of seconds after which the probe times out
     timeoutSeconds: 5
-    # -- when a probe fails kubernetes will try 6 times before giving up
-    failureThreshold: 6
+    # -- when a probe fails kubernetes will try 3 times before giving up
+    failureThreshold: 3
     # -- number of consecutive successes for the probe to be considered successful after having failed
     successThreshold: 1
   # -- federated catalog endpoints
@@ -213,6 +215,10 @@ federatedcatalogfilter:
   volumes: []
   # -- [resource management](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/) for the container
   resources: {}
+  # Recommended production values (no CPU limit to avoid JVM throttling under burst workloads):
+  # requests:
+  #   cpu: 500m
+  #   memory: 512Mi
   # We usually recommend not to specify default resources and to leave this as a conscious
   # choice for the user. This also increases chances charts run on environments with little
   # resources, such as Minikube. If you do want to specify resources, uncomment the following

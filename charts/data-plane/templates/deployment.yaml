@@ -63,6 +63,7 @@ spec:
             httpGet:
               path: {{ .Values.dataplane.endpoints.default.path }}/check/liveness
               port: {{ .Values.dataplane.endpoints.default.port }}
+            initialDelaySeconds: {{ .Values.dataplane.startupProbe.initialDelaySeconds }}
             periodSeconds: {{ .Values.dataplane.startupProbe.periodSeconds }}
             failureThreshold: {{ .Values.dataplane.startupProbe.failureThreshold }}
             timeoutSeconds: {{ .Values.dataplane.startupProbe.timeoutSeconds }}

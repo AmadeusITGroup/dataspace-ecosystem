@@ -67,6 +67,7 @@ spec:
             httpGet:
               path: {{ .Values.federatedcatalogfilter.endpoints.default.path }}/check/liveness
               port: {{ .Values.federatedcatalogfilter.endpoints.default.port }}
+            initialDelaySeconds: {{ .Values.federatedcatalogfilter.startupProbe.initialDelaySeconds }}
             periodSeconds: {{ .Values.federatedcatalogfilter.startupProbe.periodSeconds }}
             failureThreshold: {{ .Values.federatedcatalogfilter.startupProbe.failureThreshold }}
             timeoutSeconds: {{ .Values.federatedcatalogfilter.startupProbe.timeoutSeconds }}
