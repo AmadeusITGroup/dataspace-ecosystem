@@ -21,10 +21,10 @@ dependencies {
     testImplementation("org.hibernate.orm:hibernate-core:7.1.2.Final")
     testRuntimeOnly("org.hsqldb:hsqldb:2.7.4")
 
-    testImplementation(platform("org.junit:junit-bom:5.10.0"))
+    testImplementation(platform("org.junit:junit-bom:6.0.3"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testImplementation("com.h2database:h2:2.2.224")
-    testImplementation("org.junit.jupiter:junit-jupiter:5.10.0")
+    testImplementation("org.junit.jupiter:junit-jupiter:6.0.3")
     testImplementation("org.mockito:mockito-core:5.10.0")
     testImplementation("org.mockito:mockito-junit-jupiter:5.10.0")
 }
