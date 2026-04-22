@@ -1,0 +1,12 @@
+@startuml
+UI -> Control_Plane : GET /participantCatalog
+Control_Plane -> Control_Plane : Generate Access Token Via Identity Service
+Control_Plane -> Catalog_Filter : POST /filter (tokenRepresentation, participantId)
+Catalog_Filter -> Catalog_Filter : Validate Access Token Via Identity Service
+Catalog_Filter -> Catalog_Filter : Create Catalog Discovery Context with Participant Claims
+Catalog_Filter -> Federated_Catalog : POST /api/catalog/v1alpha/catalog/query
+Federated_Catalog --> Catalog_Filter : Returns Available Catalogs
+Catalog_Filter -> Catalog_Filter : Filter out Offers based on Participant Claims
+Catalog_Filter --> Control_Plane : Return Filtered Catalogs
+Control_Plane --> UI : Return Filtered Catalogs
+@enduml

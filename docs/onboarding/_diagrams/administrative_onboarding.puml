@@ -1,0 +1,70 @@
+@startuml
+
+skinParam NoteBackgroundColor WhiteSmoke
+skinParam NoteFontColor Black
+skinParam ParticipantBackgroundColor WhiteSmoke
+skinParam ActorBackgroundColor WhiteSmoke
+skinParam AgentBackgroundColor White
+skinParam AgentBorderColor SkyBlue
+skinparam shadowing false
+skinparam BoxPadding 10
+
+!define ParticipantColor f8f2ff
+!define GxdchColor d9edff
+!define TrustAnchorColor D5F5E3
+!define DataspaceAuthorityColor FCF3CF
+!define WarningColor Business
+!define LeadColor Technology
+
+autonumber
+
+box "Participant ecosystem" #ParticipantColor
+    actor ParticipantAgent as "Participant Agent"
+    participant ParticipantIdentityHub as "Identity Hub" #Business
+    database ParticipantVcStore as "VC Store"
+end box
+
+box "Dataspace Authority" #DataspaceAuthorityColor
+    participant DataspacePortal as "Dataspace Authority Portal" #Business
+    participant RegistrationService as "Registration Service" #Business
+'    database DataspaceAuthorityVault as "Vault"
+    database ParticipantRegistry as "Participant Registry"
+    actor MembershipTeam as "Membership\nTeam"
+end box
+
+'box "Trust Anchor" #TrustAnchorColor
+'    participant TrustAnchorSigningService as "Signing Service"
+'end box
+'
+'box "GXDCH" #GxdchColor
+'    participant ComplianceService as "Compliance Service"
+'end box
+
+autonumber 1
+
+ParticipantAgent ->> DataspacePortal : provides participant info (legal name,\nvatID, headquarter address...) similar\nto the ones in LegalParticipant Gaia-X VC
+activate DataspacePortal
+activate ParticipantAgent
+DataspacePortal ->> MembershipTeam : notify membership team (e.g. mail...)
+activate MembershipTeam
+MembershipTeam -->> DataspacePortal : acknowledge
+DataspacePortal -->> ParticipantAgent : acknowledge
+deactivate DataspacePortal
+
+MembershipTeam ->> MembershipTeam : verify info\nprovided by\nthe participant
+
+MembershipTeam ->> DataspacePortal : request token creation
+activate DataspacePortal
+DataspacePortal ->> RegistrationService : request token
+activate RegistrationService
+deactivate ParticipantRegistry
+RegistrationService -->> DataspacePortal : token (contains participant\ninfos in claims)
+deactivate RegistrationService
+DataspacePortal -->> MembershipTeam : token
+deactivate DataspacePortal
+
+MembershipTeam -->> ParticipantAgent : token (e.g. mail...)
+deactivate ParticipantAgent
+deactivate MembershipTeam
+
+@enduml

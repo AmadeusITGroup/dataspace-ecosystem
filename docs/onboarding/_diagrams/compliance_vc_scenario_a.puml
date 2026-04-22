@@ -1,0 +1,55 @@
+@startuml
+
+skinParam NoteBackgroundColor WhiteSmoke
+skinParam NoteFontColor Black
+skinParam ParticipantBackgroundColor WhiteSmoke
+skinParam ActorBackgroundColor WhiteSmoke
+skinParam AgentBackgroundColor White
+skinParam AgentBorderColor SkyBlue
+skinparam shadowing false
+skinparam BoxPadding 10
+
+!define ParticipantColor f8f2ff
+!define GxdchColor d9edff
+!define TrustAnchorColor D5F5E3
+!define DseColor FCF3CF
+!define WarningColor Business
+!define LeadColor Technology
+
+autonumber
+
+box "Participant ecosystem" #ParticipantColor
+    actor ParticipantAgent as "Agent"
+    participant ParticipantIdentityHub as "Identity Hub" #Business
+    database ParticipantVcStore as "VC Store"
+end box
+
+'box "Dse" #DseColor
+'    participant RegistrationService as "Registration Service" #Business
+'    participant DataspacePortal as "Dataspace Portal" #Business
+'    database DseParticipantStore as "Participant Store"
+'    actor DseAgent as "Agent"
+'end box
+'
+'box "Trust Anchor" #TrustAnchorColor
+'    participant TrustAnchorSigningService as "Signing Service"
+'end box
+'
+'box "GXDCH" #GxdchColor
+'    participant ComplianceService as "Compliance Service"
+'end box
+
+autonumber 1
+
+ParticipantAgent ->> ParticipantIdentityHub : store compliance VC
+activate ParticipantAgent
+activate ParticipantIdentityHub
+ParticipantIdentityHub ->> ParticipantVcStore : store VC
+activate ParticipantVcStore
+ParticipantVcStore -->> ParticipantIdentityHub : acknowledge VC stored
+deactivate ParticipantVcStore
+ParticipantIdentityHub -->> ParticipantAgent : acknowledge VC stored
+deactivate ParticipantIdentityHub
+deactivate ParticipantAgent
+
+@enduml

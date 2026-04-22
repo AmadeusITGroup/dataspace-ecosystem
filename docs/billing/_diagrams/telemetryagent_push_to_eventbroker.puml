@@ -1,0 +1,60 @@
+@startuml
+
+skinParam NoteBackgroundColor WhiteSmoke
+skinParam NoteFontColor Black
+skinParam ParticipantBackgroundColor WhiteSmoke
+skinParam ActorBackgroundColor WhiteSmoke
+skinParam AgentBackgroundColor White
+skinParam AgentBorderColor SkyBlue
+skinparam shadowing false
+skinparam BoxPadding 10
+
+!define ParticipantAColor f8f2ff
+!define ParticipantBColor d9edff
+!define VCIssuersColor D5F5E3
+!define DataspaceAuthorityColor FCF3CF
+!define WarningColor Business
+!define LeadColor Technology
+
+autonumber
+
+box "Participant ecosystem" #ParticipantAColor
+    participant ParticipantDidServer as "DID Server"
+    participant ParticipantIdentityHub as "Identity Hub" #Business
+    participant ParticipantControlPlane as "Control Plane" #Business
+    participant ParticipantDataPlane as "Data Plane" #Business
+    participant ParticipantTelemetryAgent as "Telemetry\nAgent" #Business
+    database ParticipantVault as "Vault"
+    database ParticipantDB as "DB"
+end box
+
+box "DSE" #DataspaceAuthorityColor
+    participant DseEventBroker as "Event Broker"
+    participant DseTelemetryService as "Telemetry\nService" #Business
+end box
+
+box "VC Issuers" #VCIssuersColor
+    participant VcIssuersDidServer as "DID Server"
+end box
+
+autonumber 1
+
+ParticipantTelemetryAgent ->> ParticipantDB : query unsent records
+activate ParticipantTelemetryAgent
+activate ParticipantDB
+ParticipantDB -->> ParticipantTelemetryAgent : records
+deactivate ParticipantDB
+
+ParticipantTelemetryAgent ->> ParticipantVault : fetch event-hub\ntoken
+activate ParticipantVault
+ParticipantVault ->> ParticipantTelemetryAgent : token
+deactivate ParticipantVault
+
+ParticipantTelemetryAgent ->> DseEventBroker : publish record (auth with token)
+activate DseEventBroker
+DseEventBroker -->> ParticipantTelemetryAgent : acknowledge
+
+
+
+
+@enduml

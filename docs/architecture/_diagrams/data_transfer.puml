@@ -1,0 +1,62 @@
+@startuml
+
+skinParam NoteBackgroundColor WhiteSmoke
+skinParam NoteFontColor Black
+skinParam ParticipantBackgroundColor WhiteSmoke
+skinParam ActorBackgroundColor WhiteSmoke
+skinParam AgentBackgroundColor White
+skinParam AgentBorderColor SkyBlue
+skinparam shadowing false
+skinparam BoxPadding 10
+
+!define ParticipantAColor f8f2ff
+!define ParticipantBColor d9edff
+!define VCIssuersColor D5F5E3
+!define DataspaceAuthorityColor FCF3CF
+!define WarningColor Business
+!define LeadColor Technology
+
+autonumber
+
+participant ParticipantAApps as "Participant A Apps"
+
+box "Participant A ecosystem" #ParticipantAColor
+    database ParticipantADatabase as "Database"
+    database ParticipantAVault as "Vault"
+    participant ParticipantAIdentityHub as "Identity Hub" #Business
+    participant ParticipantAControlPlane as "Control Plane" #Business
+    participant ParticipantADataPlane as "Data Plane" #Business
+end box
+
+box "Participant B ecosystem" #ParticipantBColor
+    participant ParticipantBDataPlane as "Data Plane" #Business
+    participant ParticipantBControlPlane as "Control Plane" #Business
+    participant ParticipantBIdentityHub as "Identity Hub" #Business
+    database ParticipantBDatabase as "Database"
+    database ParticipantBVault as "Vault"
+end box
+
+participant ParticipantBApi as "Participant B API"
+
+autonumber 1
+
+ParticipantAApps ->> ParticipantADataPlane : data request (contains asset id or contract id)
+activate ParticipantAApps
+activate ParticipantADataPlane
+
+ParticipantADataPlane ->> ParticipantAVault : query access token for asset/contract id
+activate ParticipantAVault
+ParticipantAVault -->> ParticipantADataPlane : access token
+deactivate ParticipantAVault
+ParticipantADataPlane ->> ParticipantBDataPlane : data request
+activate ParticipantBDataPlane
+ParticipantBDataPlane ->> ParticipantBDataPlane : verify token
+ParticipantBDataPlane ->> ParticipantBApi : fetch data
+activate ParticipantBApi
+ParticipantBApi -->> ParticipantBDataPlane : data
+deactivate ParticipantBApi
+ParticipantBDataPlane --> ParticipantADataPlane : data
+deactivate ParticipantBDataPlane
+ParticipantADataPlane -->> ParticipantAApps : data
+
+@enduml

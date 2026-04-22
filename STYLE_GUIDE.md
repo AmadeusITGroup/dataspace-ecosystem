@@ -20,10 +20,10 @@ The Checkstyle can be run using Gradle:
 
 If any violation is found, this execution will trigger a build failure.
 
-Moreover, if you are using an IDE, you can also run Checkstyle as a plugin:
+Moreover, if you are using an IDE, you can also run Checkstyle as a plugin. Most IDEs have Checkstyle support available; here are examples for two popular IDEs:
 
 - [Checkstyle-IDEA](https://plugins.jetbrains.com/plugin/1065-checkstyle-idea) for IntelliJ IDEA
-- [Checkstyle-Eclipse](https://checkstyle.org/eclipse-cs/#!/) for Eclipse
+- [Checkstyle for VS Code](https://marketplace.visualstudio.com/items?itemName=shengchen.vscode-checkstyle) for VS Code
 
 By installing the Checkstyle plugin in your IDE, you can get real-time feedback on your code style violations as you
 write code. This can help you catch issues early and ensure that your code adheres to the project's coding standards.
@@ -48,16 +48,25 @@ Besides running Checkstyle locally, we also run it on our GitHub Actions pipelin
 Action pipelines, and reviewers might reject PRs due to Checkstyle violations.
 Thus, it is **highly** recommended to run Checkstyle locally as well.
 
-## [Optional] Configure code formating save action in IDE
+## [Optional] Configure code formatting save action in IDE
 
 To ensure that your code is always formatted according to the project's coding style, you can configure your IDE to
 automatically format your code on save. This can help you avoid Checkstyle violations and maintain a consistent coding
-style throughout the project.
+style throughout the project. Below are examples for IntelliJ IDEA and VS Code:
 
 ### IntelliJ IDEA
 
 ![Intellij Code Save Action](images/saveaction_intellij.png)
 
-### Eclipse
+### VS Code
 
-![Eclipse Code Save Action](images/saveaction_eclipse.png)
+In VS Code, you can enable format on save by adding the following to your `settings.json`:
+
+```json
+{
+  "editor.formatOnSave": true,
+  "[java]": {
+    "editor.defaultFormatter": "redhat.java"
+  }
+}
+```

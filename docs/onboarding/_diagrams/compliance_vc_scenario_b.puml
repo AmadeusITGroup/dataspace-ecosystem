@@ -1,0 +1,84 @@
+@startuml
+
+skinParam NoteBackgroundColor WhiteSmoke
+skinParam NoteFontColor Black
+skinParam ParticipantBackgroundColor WhiteSmoke
+skinParam ActorBackgroundColor WhiteSmoke
+skinParam AgentBackgroundColor White
+skinParam AgentBorderColor SkyBlue
+skinparam shadowing false
+skinparam BoxPadding 10
+
+!define ParticipantColor f8f2ff
+!define GxdchColor d9edff
+!define TrustAnchorColor D5F5E3
+!define DataspaceAuthorityColor FCF3CF
+!define WarningColor Business
+!define LeadColor Technology
+
+autonumber
+
+box "Participant ecosystem" #ParticipantColor
+    actor ParticipantAgent as "Agent"
+    participant ParticipantIdentityHub as "Identity Hub" #Business
+    database ParticipantVcStore as "VC Store"
+end box
+
+box "Dataspace Authority" #DataspaceAuthorityColor
+    participant DataspaceAuthorityPortal as "Dataspace Authority Portal" #Business
+    participant RegistrationService as "Registration Service" #Business
+    database DataspaceAuthorityParticipantStore as "Participant Store"
+    actor DataspaceAuthorityAgent as "Agent"
+end box
+
+box "Trust Anchor" #TrustAnchorColor
+    participant TrustAnchorSigningService as "Signing Service"
+end box
+
+box "GXDCH" #GxdchColor
+    participant ComplianceService as "Compliance Service"
+end box
+
+autonumber 1
+
+ParticipantAgent ->> DataspaceAuthorityPortal : VC request containing token
+activate DataspaceAuthorityPortal
+activate ParticipantAgent
+DataspaceAuthorityPortal ->> RegistrationService : request containing token
+activate RegistrationService
+RegistrationService ->> RegistrationService : verify token
+
+RegistrationService ->> RegistrationService : create LegalParticipant,\nRegistrationNumber and\nTermsAndConditions credentials
+
+group scenario B1: Dataspace Authority is a Gaia-X Trust Anchor
+RegistrationService ->> RegistrationService : sign credentials
+end group
+
+group scenario B2: Dataspace Authority is not a Trust Anchor
+RegistrationService ->> TrustAnchorSigningService : credentials
+activate TrustAnchorSigningService
+TrustAnchorSigningService -->> RegistrationService : VCs
+deactivate TrustAnchorSigningService
+end group
+
+RegistrationService ->> ComplianceService : request containing the 3 VCs packed as a VP
+activate ComplianceService
+ComplianceService -->> RegistrationService : compliance VC
+deactivate ComplianceService
+RegistrationService -->> DataspaceAuthorityPortal : compliance VC
+deactivate RegistrationService
+
+DataspaceAuthorityPortal -->> ParticipantAgent : compliance VC
+deactivate DataspaceAuthorityPortal
+
+ParticipantAgent ->> ParticipantIdentityHub : store compliance VC
+activate ParticipantIdentityHub
+ParticipantIdentityHub ->> ParticipantVcStore : store compliance VC
+activate ParticipantVcStore
+ParticipantVcStore -->> ParticipantIdentityHub : acknowledge VC stored
+deactivate ParticipantVcStore
+ParticipantIdentityHub -->> ParticipantAgent : acknowledge VC stored
+deactivate ParticipantIdentityHub
+deactivate ParticipantAgent
+
+@enduml

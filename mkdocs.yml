@@ -1,0 +1,167 @@
+# MkDocs Configuration for Dataspace Ecosystem KIT - PUBLIC Documentation
+# Documentation: https://www.mkdocs.org/user-guide/configuration/
+
+# This file is synced to the public repo as mkdocs.yml
+# It contains only the public-facing documentation sections.
+# For the full internal site, see mkdocs.yml in the private repo.
+
+site_name: Dataspace Ecosystem KIT
+site_description: Keep It Together - Documentation for Dataspace Ecosystem
+site_author: Amadeus Creation Platform Team
+site_url: https://amadeusitgroup.github.io/dataspace-ecosystem/
+
+# Repository
+repo_name: AmadeusITGroup/dataspace-ecosystem
+repo_url: https://github.com/AmadeusITGroup/dataspace-ecosystem
+edit_uri: edit/main/docs/
+
+# Copyright
+copyright: Copyright &copy; 2026 Amadeus Creation Platform
+
+# Theme Configuration
+theme:
+  name: material
+  language: en
+  features:
+    - navigation.instant
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.expand
+    - navigation.path
+    - navigation.top
+    - navigation.footer
+    - navigation.indexes
+    - search.suggest
+    - search.highlight
+    - search.share
+    - content.code.copy
+    - content.code.annotate
+    - content.action.edit
+    - toc.follow
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  font:
+    text: Roboto
+    code: Roboto Mono
+  icon:
+    repo: fontawesome/brands/github
+
+# Plugins
+plugins:
+  - search:
+      separator: '[\s\-,:!=\[\]()"/]+|(?!\b)(?=[A-Z][a-z])|\.(?!\d)|&[lg]t;'
+  - minify:
+      minify_html: true
+
+# Extensions
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+      toc_depth: 3
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.magiclink:
+      repo_url_shorthand: true
+      user: AmadeusITGroup
+      repo: dataspace-ecosystem
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+
+# Page Navigation (PUBLIC sections only - no Internal)
+nav:
+  - Home:
+      - index.md
+      - Overview:
+          - overview/index.md
+          - Introduction: overview/introduction.md
+          - Key Concepts: overview/key-concepts.md
+  - Architecture:
+      - architecture/index.md
+      - System Overview: architecture/system-overview.md
+      - Components:
+          - Control Plane: architecture/components/control-plane.md
+          - Data Plane: architecture/components/data-plane.md
+          - Federated Catalog: architecture/components/federated-catalog.md
+          - Identity Hub: architecture/components/identity-hub.md
+          - Telemetry: architecture/components/telemetry.md
+      - API Reference:
+          - architecture/components-api/index.md
+          - Overview: architecture/components-api/overview.md
+          - Control Plane API: architecture/components-api/control-plane-api.md
+          - Data Plane API: architecture/components-api/data-plane-api.md
+          - Identity API: architecture/components-api/identity-api.md
+  - Getting Started:
+      - getting-started/index.md
+      - Prerequisites: getting-started/prerequisites.md
+      - Quick Start: getting-started/quick-start.md
+      - Configuration: getting-started/configuration.md
+  - Developer Guide:
+      - developer-guide/index.md
+      - Project Structure: developer-guide/project-structure.md
+      - Setup:
+          - developer-guide/setup/index.md
+          - Development Setup: developer-guide/setup/development-setup.md
+          - Go Development Setup: developer-guide/setup/go-development-setup.md
+          - Documentation Setup: developer-guide/setup/docs-setup.md
+      - Build:
+          - developer-guide/build-docs/index.md
+          - Base Image Configuration: developer-guide/build-docs/base-image-configuration.md
+          - Vault Selection Guide: developer-guide/build-docs/vault-selection-guide.md
+      - Testing: developer-guide/testing.md
+      - Contributing: developer-guide/contributing.md
+  - Onboarding:
+      - onboarding/index.md
+  - Billing:
+      - billing/index.md
+
+# Extra configuration
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/AmadeusITGroup/dataspace-ecosystem
+  generator: false
+  version:
+    provider: mike

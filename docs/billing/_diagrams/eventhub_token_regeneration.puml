@@ -1,0 +1,55 @@
+@startuml
+
+skinParam NoteBackgroundColor WhiteSmoke
+skinParam NoteFontColor Black
+skinParam ParticipantBackgroundColor WhiteSmoke
+skinParam ActorBackgroundColor WhiteSmoke
+skinParam AgentBackgroundColor White
+skinParam AgentBorderColor SkyBlue
+skinparam shadowing false
+skinparam BoxPadding 10
+
+!define ParticipantAColor f8f2ff
+!define ParticipantBColor d9edff
+!define VCIssuersColor D5F5E3
+!define DataspaceAuthorityColor FCF3CF
+!define WarningColor Business
+!define LeadColor Technology
+
+autonumber
+
+box "Participant ecosystem" #ParticipantAColor
+    participant DataPlane as "Data Plane" #Business
+    participant TelemetryAgent as "Telemetry\nAgent" #Business
+    database Vault as "Vault"
+end box
+
+box "DSE" #DataspaceAuthorityColor
+    participant EventBroker as "Event Broker"
+    participant TelemetryService as "Telemetry\nService" #Business
+    database ParticipantRegistry as "Participant Registry"
+end box
+
+autonumber 1
+
+activate TelemetryAgent
+TelemetryAgent ->> TelemetryAgent : generate self-signed\ntoken to read membership\ncredential
+TelemetryAgent ->> TelemetryService : request event-hub token (contains self-signed token)
+activate TelemetryService
+
+TelemetryService ->> ParticipantRegistry : fetch participant
+activate ParticipantRegistry
+ParticipantRegistry -->> TelemetryService : participant
+deactivate ParticipantRegistry
+
+TelemetryService ->> TelemetryService : asset participant\nin state ONBOARDED
+TelemetryService ->> TelemetryService : generate SAS token
+
+TelemetryService -->> TelemetryAgent : sas token
+deactivate TelemetryService
+
+TelemetryAgent ->> Vault : store token
+activate Vault
+Vault -->> TelemetryAgent : acknowledge
+
+@enduml

@@ -1,0 +1,144 @@
+@startuml
+
+skinParam NoteBackgroundColor WhiteSmoke
+skinParam NoteFontColor Black
+skinParam ParticipantBackgroundColor WhiteSmoke
+skinParam ActorBackgroundColor WhiteSmoke
+skinParam AgentBackgroundColor White
+skinParam AgentBorderColor SkyBlue
+skinparam shadowing false
+skinparam BoxPadding 10
+
+!define ParticipantColor f8f2ff
+!define GxdchColor d9edff
+!define TrustAnchorColor D5F5E3
+!define DataspaceAuthorityColor FCF3CF
+!define WarningColor Business
+!define LeadColor Technology
+
+autonumber
+
+box "Participant ecosystem" #ParticipantColor
+    actor ParticipantAgent as "Participant Agent"
+    participant ParticipantDid as "DID" #Business
+    participant ParticipantControlPlane as "Control Plane" #Business
+    participant ParticipantIdentityHub as "Identity Hub" #Business
+    database ParticipantVcStore as "VC Store"
+end box
+
+box "Dataspace Authority" #DataspaceAuthorityColor
+'    participant DataspacePortal as "Dataspace Authority Portal" #Business
+    participant RegistrationService as "Registration Service" #Business
+    database ParticipantRegistry as "Participant Registry"
+    database DataspaceAuthorityVault as "Vault"
+end box
+
+box "Trust Anchor" #TrustAnchorColor
+    participant TrustAnchorDid as "DID"
+end box
+
+'box "GXDCH" #GxdchColor
+'    participant ComplianceService as "Compliance Service"
+'end box
+
+autonumber 1
+
+== Initiate onboarding ==
+
+ParticipantAgent ->> RegistrationService : token received from previous step + DID
+activate ParticipantAgent
+activate RegistrationService
+RegistrationService ->> RegistrationService : verify token
+
+RegistrationService ->> ParticipantRegistry : create participant with VERIFIED\nstatus and participant infos from token
+activate ParticipantRegistry
+ParticipantRegistry -->> RegistrationService : acknowledge
+deactivate ParticipantRegistry
+RegistrationService -->> ParticipantAgent : onboarding policy
+deactivate RegistrationService
+deactivate ParticipantAgent
+
+
+
+== Request membership VC ==
+
+ParticipantAgent ->> ParticipantControlPlane : membership credential\nrequest (contains onboarding\npolicy obtained above)
+activate ParticipantAgent
+activate ParticipantControlPlane
+ParticipantControlPlane ->> ParticipantControlPlane : create self-signed token with write access for\nmembership credential type + read access\nfor VCs to evaluate onboarding policy
+ParticipantControlPlane ->> RegistrationService : membership credential request (contains token generated above)
+activate RegistrationService
+
+RegistrationService ->> RegistrationService : verify token,\nextract did and resolve\nidentity hub url
+
+group VC verification
+    RegistrationService ->> ParticipantIdentityHub : fetch VCs
+    activate ParticipantIdentityHub
+    ParticipantIdentityHub ->> ParticipantVcStore : fetch VCs
+    activate ParticipantVcStore
+    ParticipantVcStore -->> ParticipantIdentityHub : VCs
+    deactivate ParticipantVcStore
+    ParticipantIdentityHub --> RegistrationService : VCs
+    deactivate ParticipantIdentityHub
+    RegistrationService ->> TrustAnchorDid : fetch public key
+    activate TrustAnchorDid
+    TrustAnchorDid --> RegistrationService : public key
+     deactivate TrustAnchorDid
+    RegistrationService ->> RegistrationService : verify VCs
+
+end group
+
+RegistrationService ->> RegistrationService : enforce onboarding policy\nagainst verified VCs claims
+
+RegistrationService ->> DataspaceAuthorityVault : store participant self-signed token
+activate DataspaceAuthorityVault
+DataspaceAuthorityVault -->> RegistrationService : acknowledge
+deactivate DataspaceAuthorityVault
+
+RegistrationService ->> ParticipantRegistry : set participant status as ONBOARDING
+activate ParticipantRegistry
+ParticipantRegistry -->> RegistrationService : acknowledge
+deactivate ParticipantRegistry
+
+RegistrationService -->> ParticipantControlPlane : request id
+deactivate RegistrationService
+ParticipantControlPlane ->> ParticipantAgent : request id
+deactivate ParticipantControlPlane
+deactivate ParticipantAgent
+
+== Register Service delivers membership credential (asynchronous process) ==
+
+RegistrationService ->> ParticipantRegistry : fetch participant with\nstatus ONBOARDING
+activate RegistrationService
+activate ParticipantRegistry
+ParticipantRegistry -->> RegistrationService : participant
+deactivate ParticipantRegistry
+
+RegistrationService ->> RegistrationService : create Dataspace Authority\nmembership VC
+RegistrationService ->> DataspaceAuthorityVault : fetch participant self-signed token
+activate DataspaceAuthorityVault
+DataspaceAuthorityVault -->> RegistrationService : self-signed token
+deactivate DataspaceAuthorityVault
+
+
+RegistrationService ->> ParticipantDid : fetch DID document
+activate ParticipantDid
+ParticipantDid -->> RegistrationService : DID document
+deactivate ParticipantDid
+RegistrationService ->> RegistrationService : resolve identity hub issuance url\nfrom DID Document
+
+RegistrationService ->> ParticipantIdentityHub : push membership VC (use token for auth)
+activate ParticipantIdentityHub
+ParticipantIdentityHub ->> ParticipantVcStore : store VC
+activate ParticipantVcStore
+ParticipantVcStore -->> ParticipantIdentityHub : acknowledge
+deactivate ParticipantVcStore
+ParticipantIdentityHub -->> RegistrationService : acknowledge
+deactivate ParticipantIdentityHub
+
+RegistrationService ->> ParticipantRegistry : set participant status\nas ONBOARDED status
+activate ParticipantRegistry
+ParticipantRegistry -->> RegistrationService : acknowledge
+deactivate ParticipantRegistry
+
+@enduml

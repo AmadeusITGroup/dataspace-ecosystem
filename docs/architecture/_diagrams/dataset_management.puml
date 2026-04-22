@@ -1,0 +1,44 @@
+@startuml
+
+skinParam NoteBackgroundColor WhiteSmoke
+skinParam NoteFontColor Black
+skinParam ParticipantBackgroundColor WhiteSmoke
+skinParam ActorBackgroundColor WhiteSmoke
+skinParam AgentBackgroundColor White
+skinParam AgentBorderColor SkyBlue
+skinparam shadowing false
+skinparam BoxPadding 10
+
+!define ParticipantAColor f8f2ff
+!define ParticipantBColor d9edff
+!define VCIssuersColor D5F5E3
+!define DataspaceAuthorityColor FCF3CF
+!define WarningColor Business
+!define LeadColor Technology
+
+autonumber
+
+actor Participant as "Participant"
+
+box "Participant ecosystem" #ParticipantAColor
+    database ParticipantADatabase as "Database"
+    database ParticipantAVault as "Vault"
+    participant ParticipantAIdentityHub as "Identity Hub" #Business
+    participant ParticipantAControlPlane as "Control Plane" #Business
+    participant ParticipantADataPlane as "Data Plane" #Business
+end box
+
+autonumber 1
+
+Participant ->> ParticipantAControlPlane : define dataset and policies
+activate Participant
+activate ParticipantAControlPlane
+ParticipantAControlPlane ->> ParticipantADatabase : store dataset metadata
+activate ParticipantADatabase
+ParticipantAControlPlane ->> ParticipantAVault : store dataset
+activate ParticipantAVault
+ParticipantAControlPlane -->> Participant : acknowledge
+
+@enduml
+
+

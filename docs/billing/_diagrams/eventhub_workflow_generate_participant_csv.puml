@@ -1,0 +1,68 @@
+@startuml
+
+skinParam NoteBackgroundColor WhiteSmoke
+skinParam NoteFontColor Black
+skinParam ParticipantBackgroundColor WhiteSmoke
+skinParam ActorBackgroundColor WhiteSmoke
+skinParam AgentBackgroundColor White
+skinParam AgentBorderColor SkyBlue
+skinparam shadowing false
+skinparam BoxPadding 10
+
+!define ParticipantAColor f8f2ff
+!define ParticipantBColor d9edff
+!define VCIssuersColor D5F5E3
+!define DataspaceAuthorityColor FCF3CF
+!define WarningColor Business
+!define LeadColor Technology
+
+box "Participant Connector" #ParticipantAColor
+    participant ParticipantTelemetryAgent as "Telemetry\nAgent" #Business
+end box
+
+box "Dataspace Authority" #DataspaceAuthorityColor
+    participant Broker as "Broker"
+    participant BrokerDataPusher as "BrokerDataPusher" #Business
+    participant DXPPortaUI as "DXP Portal UI" #Business
+    participant EndpointStorageService as "Telemetry\nStorage\nService" #Business
+    participant TelemetryCSVManager as "Telemetry\nCSV\nManager" #Business
+    database DB as "DB"
+    participant Storage as "Storage"
+end box
+
+== Part 1: Publish and Store Records ==
+autonumber 1
+
+ParticipantTelemetryAgent ->> Broker : publish record (auth with token)
+activate Broker
+Broker -->> ParticipantTelemetryAgent : acknowledge
+BrokerDataPusher --> Broker : Read Record
+deactivate Broker
+activate BrokerDataPusher
+BrokerDataPusher -->> EndpointStorageService : Send Record (REST API)
+deactivate BrokerDataPusher
+activate EndpointStorageService
+EndpointStorageService -->> DB : Store Record
+deactivate EndpointStorageService
+
+== Part 2: CSV Generation ==
+autonumber 1
+
+TelemetryCSVManager --> "DB" : Read Records (of the month)
+
+
+activate TelemetryCSVManager
+TelemetryCSVManager -->> Storage : Create CSV per participant
+deactivate TelemetryCSVManager
+
+== Part 3: CSV Retrieval ==
+autonumber 1
+
+DXPPortaUI --> TelemetryCSVManager : Ask for the CSV File (month)
+
+activate DXPPortaUI
+TelemetryCSVManager --> "Storage" : Read CSV
+TelemetryCSVManager --> DXPPortaUI : Get CSV
+deactivate DXPPortaUI
+
+@enduml
