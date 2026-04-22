@@ -7,6 +7,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import java.security.SecureRandom;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -18,6 +19,8 @@ import static org.eclipse.edc.spi.result.StoreFailure.Reason.NOT_FOUND;
 
 public abstract class TelemetryEventStoreTestBase {
 
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+
     protected abstract TelemetryEventStore getStore();
 
     protected TelemetryEvent getAttestation() {
@@ -28,7 +31,7 @@ public abstract class TelemetryEventStoreTestBase {
         return new TelemetryEvent(
                 id,
                 UUID.randomUUID().toString(), // contractId
-                new java.util.Random().nextBoolean() ? "participant1" : "participant2", // participantId
+                SECURE_RANDOM.nextBoolean() ? "participant1" : "participant2", // participantId
                 200, // responseStatusCode (example value)
                 1024, // msgSize (example value)
                 null, // csvId (nullable field)
