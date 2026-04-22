@@ -53,7 +53,7 @@ resource "helm_release" "kafkaproxy" {
 
           # Kubernetes configuration
           "namespace" : "default"
-          "proxyImage" : "grepplabs/kafka-proxy:0.4.2"
+          "proxyImage" : "grepplabs/kafka-proxy:0.4.3-all"
           "sharedDir" : "/shared"
           "checkInterval" : 5 # Reduced for faster test execution
           "enableLock" : true

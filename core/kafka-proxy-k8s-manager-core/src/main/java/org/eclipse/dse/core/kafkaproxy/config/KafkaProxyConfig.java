@@ -60,7 +60,7 @@ public class KafkaProxyConfig {
     public static final String DEFAULT_CHECK_INTERVAL = "15";
     public static final String DEFAULT_SHARED_DIR = "/shared";
     public static final String DEFAULT_PROXY_NAMESPACE = "default";
-    public static final String DEFAULT_PROXY_IMAGE = "grepplabs/kafka-proxy:0.4.2";
+    public static final String DEFAULT_PROXY_IMAGE = "grepplabs/kafka-proxy:0.4.3-all";
     public static final String DEFAULT_AUTH_IMAGE = "kafka-proxy-entra-auth:latest";
     public static final String DEFAULT_AUTH_MECHANISM = "PLAIN";  // PLAIN (JWT-over-PLAIN) or OAUTHBEARER (proper OAuth2)
     public static final String DEFAULT_BASE_PROXY_PORT = "30001";

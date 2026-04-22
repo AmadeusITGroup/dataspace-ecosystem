@@ -69,7 +69,7 @@ kafkaProxy:
         path: "/vault-ca/tls.crt"
     vaultFolder: ""
     namespace: "default"
-    proxyImage: "grepplabs/kafka-proxy:0.4.2"
+    proxyImage: "grepplabs/kafka-proxy:0.4.3-all"
     sharedDir: "/shared"
     certDir: "/certificates"
     checkInterval: 15
