@@ -124,7 +124,7 @@ public abstract class TelemetryEventStoreTestBase {
         @DisplayName("Delete a record that exists")
         void exists() {
             var attestation = getAttestation();
-            var saveResult = getStore().save(attestation);
+            getStore().save(attestation);
 
             var attestationDeleted = getStore().deleteById(attestation.id());
 
