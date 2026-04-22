@@ -146,8 +146,6 @@ public class VaultService {
         
         String bootstrapServers = getPropertyValue(properties, dataAddress, 
                 "https://w3id.org/edc/v0.0.1/ns/kafka.bootstrap.servers", "kafka.bootstrap.servers");
-        String topic = getPropertyValue(properties, dataAddress, 
-                "https://w3id.org/edc/v0.0.1/ns/topic", "topic");
         String securityProtocol = getPropertyValue(properties, dataAddress, 
                 "https://w3id.org/edc/v0.0.1/ns/security.protocol", "security.protocol");
         String saslMechanism = getPropertyValue(properties, dataAddress, 
