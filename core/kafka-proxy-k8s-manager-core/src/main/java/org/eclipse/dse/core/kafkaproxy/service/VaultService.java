@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
@@ -76,6 +77,14 @@ public class VaultService {
             LOGGER.severe(format("Failed to initialize Vault client: %s", e.getMessage()));
             throw new RuntimeException("Failed to initialize Vault client", e);
         }
+    }
+
+    /** Package-private constructor for unit testing, allowing injection of a mock VaultDiscoveryService. */
+    VaultService(VaultDiscoveryService discoveryService) {
+        this.vault = null;
+        this.objectMapper = new ObjectMapper();
+        this.vaultFolder = "";
+        this.discoveryService = Objects.requireNonNull(discoveryService, "discoveryService must not be null");
     }
     
     /**
@@ -443,15 +452,14 @@ public class VaultService {
         }
     }
     
+
     /**
-     * Check if a secret is tagged as deployed
+     * Checks whether a secret has already been processed and tagged for deployment in vault metadata.
      */
-    public boolean isSecretTaggedAsDeployed(String edrKey) {
+    public boolean isEdrTaggedForDeployment(String edrKey) {
         try {
-            // For now, return false - implementation depends on vault metadata setup
-            LOGGER.fine(format("Checking deployment tag for %s", edrKey));
-            return false;
-            
+            LOGGER.fine(() -> format("Checking processed/deployment tag for %s", edrKey));
+            return isEdrAlreadyProcessed(edrKey);
         } catch (Exception e) {
             LOGGER.warning(format("Failed to check deployment tag for %s: %s", edrKey, e.getMessage()));
             return false;
