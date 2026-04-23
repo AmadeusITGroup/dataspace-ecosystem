@@ -40,13 +40,7 @@ kafkaProxy:
         image: '{{ .Values.kafkaProxy.manager.certInstallerImage }}'
 
     # Resource limits and requests
-    resources:
-      limits:
-        cpu: 500m
-        memory: 512Mi
-      requests:
-        cpu: 250m
-        memory: 256Mi
+    resources: {}
     
     # Kafka Proxy Configuration
     vaultAddr: "http://vault:8200"
