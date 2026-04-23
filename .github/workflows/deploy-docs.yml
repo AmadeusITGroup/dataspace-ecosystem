@@ -1,12 +1,13 @@
 # GitHub Actions workflow to deploy MkDocs documentation to GitHub Pages
-# Triggered on push to master branch or manual dispatch
+# Triggered on push to master/main branches or manual dispatch
 
 name: Deploy Documentation
 
 on:
   push:
     branches:
-      - master 
+      - master
+      - main
     paths:
       - 'docs/**'
       - 'mkdocs.yml'
@@ -42,7 +43,7 @@ jobs:
         run: pip install -r requirements-docs.txt
 
       - name: Build documentation
-        run: mkdocs build # add --strict when files are ready to be merged to master
+        run: mkdocs build --strict # Fail on warnings (broken links, missing refs) to enforce documentation quality
 
       - name: Upload artifact
         if: github.event_name != 'pull_request'
@@ -50,9 +51,8 @@ jobs:
         with:
           path: site/
 
-  # Deployment job (only on push to master)
+  # Deployment job
   deploy:
-    if: github.event_name != 'pull_request'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
