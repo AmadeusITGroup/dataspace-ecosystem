@@ -47,6 +47,7 @@ public class VaultDiscoveryService {
     private static final Logger LOGGER = Logger.getLogger(VaultDiscoveryService.class.getName());
     private static final String EDR_PREFIX = "edr--";
     private static final String KAFKA_TYPE = "Kafka";
+    private static final String SECRET_BASE_PATH = "secret/";
     
     private final Vault vault;
     private final String vaultAddress;
@@ -77,14 +78,14 @@ public class VaultDiscoveryService {
      * Get the vault path for listing secrets (with folder support)
      */
     private String getSecretListPath() {
-        return vaultFolder.isEmpty() ? "secret/" : "secret/" + vaultFolder + "/";
+        return vaultFolder.isEmpty() ? SECRET_BASE_PATH : (SECRET_BASE_PATH + vaultFolder + "/");
     }
     
     /**
      * Get the vault path for reading a secret (with folder support)
      */
     private String getSecretPath(String edrKey) {
-        return vaultFolder.isEmpty() ? "secret/" + edrKey : "secret/" + vaultFolder + "/" + edrKey;
+        return vaultFolder.isEmpty() ? (SECRET_BASE_PATH + edrKey) : (SECRET_BASE_PATH + vaultFolder + "/" + edrKey);
     }
     
     /**
@@ -92,8 +93,8 @@ public class VaultDiscoveryService {
      */
     private String getMetadataApiPath(String edrKey) {
         return vaultFolder.isEmpty()
-                ? "/v1/secret/metadata/" + edrKey
-                : "/v1/secret/metadata/" + vaultFolder + "/" + edrKey;
+                ? ("/v1/secret/metadata/" + edrKey)
+                : ("/v1/secret/metadata/" + vaultFolder + "/" + edrKey);
     }
     
     /**

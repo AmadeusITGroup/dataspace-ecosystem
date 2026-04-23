@@ -118,7 +118,7 @@ public class TelemetryServiceCredentialManager {
                 }
             } else {
                 int failureCount = consecutiveFailures.updateAndGet(current ->
-                        current < Integer.MAX_VALUE ? current + 1 : Integer.MAX_VALUE);
+                        current < Integer.MAX_VALUE ? (current + 1) : Integer.MAX_VALUE);
                 monitor.warning(format("Failed to fetch credential from Telemetry Service (attempt #%d): %s",
                         failureCount, result.getFailureDetail()));
                 delay = computeBackoffDelay(failureCount);
@@ -132,7 +132,7 @@ public class TelemetryServiceCredentialManager {
             monitor.severe(format("Credential manager [%s] unrecoverable error", name), e);
         } catch (Throwable e) {
             int failureCount = consecutiveFailures.updateAndGet(current ->
-                    current < Integer.MAX_VALUE ? current + 1 : Integer.MAX_VALUE);
+                    current < Integer.MAX_VALUE ? (current + 1) : Integer.MAX_VALUE);
             monitor.severe(format("Credential manager [%s] error caught (attempt #%d)", name, failureCount), e);
             long backoffDelay = computeBackoffDelay(failureCount);
             scheduleNextIterationIn(backoffDelay);

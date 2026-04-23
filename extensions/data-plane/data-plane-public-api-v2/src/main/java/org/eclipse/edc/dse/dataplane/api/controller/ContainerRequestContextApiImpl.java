@@ -102,7 +102,7 @@ public class ContainerRequestContextApiImpl implements ContainerRequestContextAp
 
         @Override
         public String toString() {
-            return valid ? key + "=" + values : "";
+            return valid ? (key + "=" + values) : "";
         }
     }
 }
