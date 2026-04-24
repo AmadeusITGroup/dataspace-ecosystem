@@ -86,6 +86,7 @@ public class TelemetryServiceCredentialManager {
             try {
                 return executor.awaitTermination(shutdownTimeout, SECONDS);
             } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
                 monitor.severe(format("TelemetryCredentialsManager [%s] await termination failed", name), e);
                 return false;
             }
@@ -140,7 +141,7 @@ public class TelemetryServiceCredentialManager {
     }
 
     long computeBackoffDelay(int failureCount) {
-        double exponent = failureCount - 1;
+        double exponent = (double) failureCount - 1;
         double delayDouble = initialRetryDelaySeconds * Math.pow(backoffMultiplier, exponent);
 
         long delay = (delayDouble >= maxRetryDelaySeconds) ? maxRetryDelaySeconds : (long) delayDouble;

@@ -16,6 +16,6 @@ public enum TelemetryRecordTypes {
     }
 
     public static TelemetryRecordTypes from(String type) {
-        return Arrays.stream(values()).filter(tps -> tps.type == type).findFirst().orElse(null);
+        return Arrays.stream(values()).filter(tps -> tps.type.equals(type)).findFirst().orElse(null);
     }
 }

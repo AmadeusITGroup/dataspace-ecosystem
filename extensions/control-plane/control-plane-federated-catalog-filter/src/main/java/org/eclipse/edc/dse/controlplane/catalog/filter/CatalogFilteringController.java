@@ -16,6 +16,7 @@ import org.eclipse.edc.spi.monitor.Monitor;
 import org.eclipse.edc.spi.query.QuerySpec;
 import org.eclipse.edc.spi.result.Result;
 import org.eclipse.edc.transform.spi.TypeTransformerRegistry;
+import org.eclipse.edc.spi.EdcException;
 import org.eclipse.edc.web.spi.exception.InvalidRequestException;
 
 import java.io.IOException;
@@ -80,7 +81,7 @@ public class CatalogFilteringController implements FederatedCatalogFilteringApiV
     public Response fetchCatalog(JsonObject catalogQuery) {
         Result<String> catalogFilterUrlResult = authorityCatalogDidResolver.fetchCatalogFilterUrl();
         if (catalogFilterUrlResult.failed()) {
-            throw new RuntimeException("Could not resolve authority catalog filter url: " +
+            throw new EdcException("Could not resolve authority catalog filter url: " +
                     catalogFilterUrlResult.getFailureMessages());
         }
         QuerySpec querySpec = transformToQuerySpec(catalogQuery);
@@ -111,8 +112,11 @@ public class CatalogFilteringController implements FederatedCatalogFilteringApiV
                         .build();
                 HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
                 filteredCatalog = response.body();
-            } catch (IOException | InterruptedException e) {
-                throw new RuntimeException(e);
+            } catch (IOException e) {
+                throw new EdcException(e.getMessage(), e);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new EdcException(e.getMessage(), e);
             }
         }
         if (filteredCatalog != null && !filteredCatalog.isEmpty()) {
