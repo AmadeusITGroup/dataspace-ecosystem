@@ -20,7 +20,7 @@ paths:
             schema:
               $ref: "#/components/schemas/MembershipAttestationDto"
       responses:
-        "201":
+        "204":
           description: The membership attestation was added successfully.
         "400":
           content:
@@ -192,6 +192,10 @@ components:
           type: string
         name:
           type: string
+        properties:
+          type: object
+          additionalProperties: true
+          description: "Extensible key-value properties (e.g., companySegment)"
     MembershipAttestationDto:
       type: object
       properties:
@@ -203,6 +207,10 @@ components:
           type: string
         name:
           type: string
+        properties:
+          type: object
+          additionalProperties: true
+          description: "Extensible key-value properties (e.g., companySegment)"
     QuerySpec:
       type: object
       properties:

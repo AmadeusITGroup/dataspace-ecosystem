@@ -34,6 +34,7 @@ include(":extensions:control-plane:control-plane-federated-catalog-filter")
 
 include(":extensions:issuer-service:membership-attestation-api")
 include(":extensions:issuer-service:membership-attestation-store-sql")
+include(":extensions:issuer-service:json-database-attestation")
 
 include(":extensions:issuer-service:domain-attestation-api")
 include(":extensions:issuer-service:domain-attestation-store-sql")

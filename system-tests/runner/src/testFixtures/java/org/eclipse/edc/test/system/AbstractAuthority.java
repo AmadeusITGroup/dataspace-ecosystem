@@ -97,10 +97,11 @@ abstract class AbstractAuthority extends AbstractEntity {
     private String createMembershipCredentialAttestation() {
         var dto = new AttestationDefinitionRequest(
                 "membership-attestation-def-1",
-                "database",
+                "json-database",
                 Map.of(
                         "dataSourceName", "membership",
-                        "tableName", "membership_attestation"
+                        "tableName", "membership_attestation",
+                        "propertiesColumn", "properties"
                 )
         );
 
@@ -149,6 +150,7 @@ abstract class AbstractAuthority extends AbstractEntity {
                 .mapping(new MappingDefinition("name", "credentialSubject.name", true))
                 .mapping(new MappingDefinition("membership_type", "credentialSubject.membership.membershipType", true))
                 .mapping(new MappingDefinition("membership_start_date", "credentialSubject.membership.since", true))
+                .mapping(new MappingDefinition("companySegment", "credentialSubject.companySegment", false))
                 .build();
 
         given()
@@ -198,7 +200,7 @@ abstract class AbstractAuthority extends AbstractEntity {
     }
 
     private void createParticipantMembershipAttestation(String name, String did) {
-        var dto = new MembershipAttestationDto(did, name, did, "FullMember");
+        var dto = new MembershipAttestationDto(did, name, did, "FullMember", Map.of("companySegment", "Airlines"));
         given()
                 .baseUri(issuerServiceAdminUrl())
                 .body(dto)

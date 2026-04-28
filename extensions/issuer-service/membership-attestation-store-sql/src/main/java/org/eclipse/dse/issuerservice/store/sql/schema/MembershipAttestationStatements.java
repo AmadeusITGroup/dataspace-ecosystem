@@ -31,6 +31,10 @@ public interface MembershipAttestationStatements extends SqlStatements {
         return "membership_start_date";
     }
 
+    default String getPropertiesColumn() {
+        return "properties";
+    }
+
     String getDeleteByIdTemplate();
 
     String getFindByTemplate();

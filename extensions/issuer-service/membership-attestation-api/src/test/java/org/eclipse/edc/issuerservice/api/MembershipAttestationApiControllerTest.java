@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Stream;
 
@@ -50,7 +51,8 @@ class MembershipAttestationApiControllerTest extends RestControllerTestBase {
                 UUID.randomUUID().toString(),
                 UUID.randomUUID().toString(),
                 UUID.randomUUID().toString(),
-                Instant.now());
+                Instant.now(),
+                Map.of("companySegment", "Airlines"));
     }
 
     @Nested
@@ -128,6 +130,23 @@ class MembershipAttestationApiControllerTest extends RestControllerTestBase {
         }
 
         @Test
+        void success_withNullProperties() {
+            var dto = new MembershipAttestationDto(UUID.randomUUID().toString(), "Test", "holder-1", "FullMember", null);
+            when(store.save(assertArg(a -> {
+                assertThat(a.id()).isEqualTo(dto.id());
+                assertThat(a.properties()).isEmpty();
+            }))).thenReturn(StoreResult.success());
+
+            baseRequest()
+                    .contentType(JSON)
+                    .body(dto)
+                    .post()
+                    .then()
+                    .log().ifError()
+                    .statusCode(204);
+        }
+
+        @Test
         void conflict() {
             var attestation = getAttestation();
             when(store.save(assertArg(a -> assertThat(a.id()).isEqualTo(attestation.id()))))
@@ -152,7 +171,11 @@ class MembershipAttestationApiControllerTest extends RestControllerTestBase {
         @Test
         void success() {
             var attestation = getAttestation();
-            when(store.update(assertArg(a -> assertThat(a.id()).isEqualTo(attestation.id())))).thenReturn(StoreResult.success());
+            when(store.findById(attestation.id())).thenReturn(attestation);
+            when(store.update(assertArg(a -> {
+                assertThat(a.id()).isEqualTo(attestation.id());
+                assertThat(a.membershipStartDate()).isEqualTo(attestation.membershipStartDate());
+            }))).thenReturn(StoreResult.success());
 
             baseRequest()
                     .contentType(JSON)
@@ -163,6 +186,25 @@ class MembershipAttestationApiControllerTest extends RestControllerTestBase {
                     .statusCode(204);
 
             verify(store).update(assertArg(a -> assertThat(a.id()).isEqualTo(attestation.id())));
+        }
+
+        @Test
+        void success_whenNotFoundSetsNewStartDate() {
+            var dto = new MembershipAttestationDto(UUID.randomUUID().toString(), "Test", "holder-1", "FullMember", Map.of("key", "val"));
+            when(store.findById(dto.id())).thenReturn(null);
+            when(store.update(assertArg(a -> {
+                assertThat(a.id()).isEqualTo(dto.id());
+                assertThat(a.membershipStartDate()).isNotNull();
+                assertThat(a.properties()).containsEntry("key", "val");
+            }))).thenReturn(StoreResult.success());
+
+            baseRequest()
+                    .contentType(JSON)
+                    .body(dto)
+                    .put()
+                    .then()
+                    .log().ifError()
+                    .statusCode(204);
         }
     }
 

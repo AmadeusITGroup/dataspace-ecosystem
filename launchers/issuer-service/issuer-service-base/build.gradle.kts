@@ -8,6 +8,7 @@ dependencies {
     runtimeOnly(project(":extensions:issuer-service:domain-attestation-api"))
 
     runtimeOnly(libs.edc.issuerservice.db.attestations)
+    runtimeOnly(project(":extensions:issuer-service:json-database-attestation"))
     runtimeOnly(libs.edc.issuerservice.bom) {
         exclude(group = "org.eclipse.edc", module = "issuer-admin-api-authentication")
         exclude(group = "org.eclipse.edc", module = "identityhub-api-authorization")

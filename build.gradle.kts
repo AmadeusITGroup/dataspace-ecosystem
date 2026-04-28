@@ -34,6 +34,7 @@ allprojects {
 
     apply(plugin = "${group}.edc-build")
     apply(plugin = "org.eclipse.edc.autodoc")
+    apply(plugin = "jacoco")
 
     // configure which version of the annotation processor to use. defaults to the same version as the plugin
     configure<org.eclipse.edc.plugins.autodoc.AutodocExtension> {
@@ -57,6 +58,16 @@ allprojects {
         isIgnoreFailures = true
         configFile = rootProject.file("resources/checkstyle-config.xml")
         configDirectory.set(rootProject.file("resources"))
+    }
+
+    tasks.withType<Test> {
+        finalizedBy(tasks.withType<JacocoReport>())
+    }
+
+    tasks.withType<JacocoReport> {
+        reports {
+            xml.required.set(true)
+        }
     }
 
     // Force secure Netty version to fix vulnerable component: netty-codec-http2

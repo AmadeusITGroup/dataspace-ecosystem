@@ -15,6 +15,7 @@
 package org.eclipse.dse.issuerservice.store.sql.postgres;
 
 import org.eclipse.dse.issuerservice.store.sql.schema.MembershipAttestationStatements;
+import org.eclipse.edc.sql.translation.JsonFieldTranslator;
 import org.eclipse.edc.sql.translation.TranslationMapping;
 
 public class MembershipAttestationMapping extends TranslationMapping {
@@ -24,5 +25,6 @@ public class MembershipAttestationMapping extends TranslationMapping {
         add("membershipType", statements.getMembershipTypeColumn());
         add("membershipStartDate", statements.getMembershipStartDateColumn());
         add("name", statements.getNameColumn());
+        add("properties", new JsonFieldTranslator(statements.getPropertiesColumn()));
     }
 }

@@ -14,6 +14,7 @@ import org.eclipse.edc.spi.query.QuerySpec;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 
 import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.eclipse.edc.spi.result.ServiceResult.from;
@@ -43,14 +44,15 @@ public class MembershipAttestationApiController implements MembershipAttestation
     @POST
     @Override
     public void createMembershipAttestation(@PathParam("participantContextId") String participantContextId, MembershipAttestationDto dto) {
-        var attestation = toAttestation(dto);
+        var attestation = toAttestation(dto, Instant.now());
         from(store.save(attestation)).orElseThrow(exceptionMapper(MembershipAttestation.class));
     }
 
     @PUT
     @Override
     public void updateMembershipAttestation(@PathParam("participantContextId") String participantContextId, MembershipAttestationDto dto) {
-        var attestation = toAttestation(dto);
+        var existing = store.findById(dto.id());
+        var attestation = toAttestation(dto, existing != null ? existing.membershipStartDate() : Instant.now());
         from(store.update(attestation)).orElseThrow(exceptionMapper(MembershipAttestation.class));
     }
 
@@ -61,7 +63,8 @@ public class MembershipAttestationApiController implements MembershipAttestation
         from(store.deleteById(id)).orElseThrow(exceptionMapper(MembershipAttestation.class, id));
     }
 
-    private MembershipAttestation toAttestation(MembershipAttestationDto dto) {
-        return new MembershipAttestation(dto.id(), dto.holderId(), dto.name(), dto.membershipType(), Instant.now());
+    private MembershipAttestation toAttestation(MembershipAttestationDto dto, Instant membershipStartDate) {
+        return new MembershipAttestation(dto.id(), dto.holderId(), dto.name(), dto.membershipType(), membershipStartDate,
+                dto.properties() != null ? dto.properties() : Map.of());
     }
 }

@@ -77,6 +77,19 @@ public class AbstractEndToEndTests {
                     String type = types.getString(j);
                     if (type.equals("MembershipCredential")) {
                         hasMembershipCredential = true;
+                        // Verify that extensible properties from the JSON properties column
+                        // are correctly flattened into the credentialSubject
+                        var subjectValue = credential.get("credentialSubject");
+                        assertThat(subjectValue).isNotNull();
+                        // credentialSubject can be a JsonObject or a JsonArray (JSON-LD)
+                        JsonObject credentialSubject;
+                        if (subjectValue instanceof JsonArray subjectArray) {
+                            credentialSubject = subjectArray.getJsonObject(0);
+                        } else {
+                            credentialSubject = (JsonObject) subjectValue;
+                        }
+                        assertThat(credentialSubject).containsKey("companySegment");
+                        assertThat(credentialSubject.getString("companySegment", null)).isEqualTo("Airlines");
                     }
                     if (type.equals("DomainCredential")) {
                         hasDomainCredential = true;

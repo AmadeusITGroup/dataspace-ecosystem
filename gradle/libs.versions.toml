@@ -145,6 +145,7 @@ edc-issuerservice-bom = { module = "org.eclipse.edc:issuerservice-bom", version.
 edc-issuerservice-bom-sql = { module = "org.eclipse.edc:issuerservice-feature-sql-bom", version.ref = "edc" }
 edc-issuerservice-spi-holder = { module = "org.eclipse.edc:issuerservice-holder-spi", version.ref = "edc" }
 edc-issuerservice-db-attestations = { module = "org.eclipse.edc:issuerservice-database-attestations", version.ref = "edc" }
+edc-issuerservice-issuance-spi = { module = "org.eclipse.edc:issuerservice-issuance-spi", version.ref = "edc" }
 edc-issuerservice-holder-store-sql = { module = "org.eclipse.edc:issuerservice-holder-store-sql", version.ref = "edc" }
 edc-issuerservice-api-credentialdefinition = { module = "org.eclipse.edc:credential-definition-api", version.ref = "edc" }
 edc-issuerservice-api-attestation = { module = "org.eclipse.edc:attestation-api", version.ref = "edc" }

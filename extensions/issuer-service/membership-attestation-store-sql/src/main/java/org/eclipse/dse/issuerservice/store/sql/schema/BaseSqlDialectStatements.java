@@ -33,6 +33,7 @@ public class BaseSqlDialectStatements implements MembershipAttestationStatements
                 .column(getMembershipTypeColumn())
                 .column(getHolderIdColumn())
                 .column(getMembershipStartDateColumn())
+                .jsonColumn(getPropertiesColumn())
                 .insertInto(getMembershipAttestationTable());
     }
 
@@ -52,6 +53,7 @@ public class BaseSqlDialectStatements implements MembershipAttestationStatements
                 .column(getMembershipTypeColumn())
                 .column(getHolderIdColumn())
                 .column(getMembershipStartDateColumn())
+                .jsonColumn(getPropertiesColumn())
                 .update(getMembershipAttestationTable(), getIdColumn());
 
     }

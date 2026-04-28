@@ -1,6 +1,7 @@
 package org.eclipse.dse.issuerservice.store.sql;
 
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.eclipse.dse.issuerservice.store.sql.schema.MembershipAttestationStatements;
 import org.eclipse.dse.spi.issuerservice.MembershipAttestation;
@@ -18,12 +19,16 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Stream;
 
 import static java.lang.String.format;
 
 public class SqlMembershipAttestationStore extends AbstractSqlStore implements MembershipAttestationStore {
+
+    private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {
+    };
 
     private final MembershipAttestationStatements statements;
 
@@ -115,12 +120,14 @@ public class SqlMembershipAttestationStore extends AbstractSqlStore implements M
     }
 
     private MembershipAttestation mapResultSet(ResultSet resultSet) throws Exception {
+        var propertiesJson = resultSet.getString(statements.getPropertiesColumn());
         return new MembershipAttestation(
                 resultSet.getString(statements.getIdColumn()),
                 resultSet.getString(statements.getHolderIdColumn()),
                 resultSet.getString(statements.getNameColumn()),
                 resultSet.getString(statements.getMembershipTypeColumn()),
-                resultSet.getTimestamp(statements.getMembershipStartDateColumn()).toInstant()
+                resultSet.getTimestamp(statements.getMembershipStartDateColumn()).toInstant(),
+                propertiesJson == null ? Map.of() : fromJson(propertiesJson, MAP_TYPE)
         );
     }
 
@@ -131,7 +138,8 @@ public class SqlMembershipAttestationStore extends AbstractSqlStore implements M
                     attestation.name(),
                     attestation.membershipType(),
                     attestation.holderId(),
-                    Timestamp.from(attestation.membershipStartDate())
+                    Timestamp.from(attestation.membershipStartDate()),
+                    toJson(attestation.properties())
             );
         });
     }
@@ -144,6 +152,7 @@ public class SqlMembershipAttestationStore extends AbstractSqlStore implements M
                 attestation.membershipType(),
                 attestation.holderId(),
                 Timestamp.from(attestation.membershipStartDate()),
+                toJson(attestation.properties()),
                 attestation.id());
     }
 
