@@ -51,3 +51,10 @@ Chart.lock
 
 # Python virtual environment
 venv/
+
+# Bruno local environment files (to prevent committing real credentials)
+bruno-collection/**/environments/*local*.json
+bruno-collection/**/environments/*dev*.json
+bruno-collection/**/environments/*local*.bru
+bruno-collection/**/environments/*dev*.bru
+!bruno-collection/**/environments/environment_vars.json
