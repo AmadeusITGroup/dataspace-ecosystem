@@ -51,6 +51,10 @@ spec:
           httpGet:
             path: {{.Values.telemetrystorage.endpoints.default.path}}/check/liveness
             port: {{.Values.telemetrystorage.endpoints.default.port}}
+            scheme: HTTPS
+            httpHeaders:
+              - name: Host
+                value: {{include "dse.fullname" .}}
           initialDelaySeconds: {{.Values.telemetrystorage.livenessProbe.initialDelaySeconds}}
           periodSeconds: {{.Values.telemetrystorage.livenessProbe.periodSeconds}}
           timeoutSeconds: {{.Values.telemetrystorage.livenessProbe.timeoutSeconds}}
@@ -62,6 +66,10 @@ spec:
           httpGet:
             path: {{.Values.telemetrystorage.endpoints.default.path}}/check/liveness
             port: {{.Values.telemetrystorage.endpoints.default.port}}
+            scheme: HTTPS
+            httpHeaders:
+              - name: Host
+                value: {{include "dse.fullname" .}}
           periodSeconds: {{.Values.telemetrystorage.startupProbe.periodSeconds}}
           failureThreshold: {{.Values.telemetrystorage.startupProbe.failureThreshold}}
           timeoutSeconds: {{.Values.telemetrystorage.startupProbe.timeoutSeconds}}
@@ -72,6 +80,10 @@ spec:
           httpGet:
             path: {{.Values.telemetrystorage.endpoints.default.path}}/check/readiness
             port: {{.Values.telemetrystorage.endpoints.default.port}}
+            scheme: HTTPS
+            httpHeaders:
+              - name: Host
+                value: {{include "dse.fullname" .}}
           initialDelaySeconds: {{.Values.telemetrystorage.readinessProbe.initialDelaySeconds}}
           periodSeconds: {{.Values.telemetrystorage.readinessProbe.periodSeconds}}
           timeoutSeconds: {{.Values.telemetrystorage.readinessProbe.timeoutSeconds}}
@@ -184,6 +196,11 @@ spec:
         - name: config
           mountPath: /app/config.properties
           subPath: config.properties
+        - name: shared-volume
+          readOnly: true
+          mountPath: /shared
+        - name: internal-tls-volume
+          mountPath: /internal-certs
       volumes:
       - name: config
         configMap:
@@ -195,6 +212,11 @@ spec:
             path: opentelemetry.properties
           - key: config.properties
             path: config.properties
+      - name: shared-volume
+        emptyDir: { }
+      - name: internal-tls-volume
+        secret:
+          secretName: {{ .Values.telemetrystorage.internalTls.secretName }}
 
       {{- with .Values.telemetrystorage.nodeSelector}}
       nodeSelector:

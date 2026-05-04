@@ -49,16 +49,17 @@ abstract class AbstractParticipant extends AbstractEntity {
 
     @Override
     protected String identityHubIdentityUrl() {
-        return "http://%s/%s/ih/identity".formatted(CLUSTER_HOSTNAME, name());
+        return "https://%s/%s/ih/identity".formatted(CLUSTER_HOSTNAME, name());
     }
 
     @Override
     protected String vaultUrl() {
-        return "http://%s/%s/vault".formatted(CLUSTER_HOSTNAME, name());
+        String httpHost = CLUSTER_HOSTNAME.replaceFirst(":\\d+$", ":80");
+        return "http://%s/%s/vault".formatted(httpHost, name());
     }
 
     private String controlPlaneProtocolBaseUrl() {
-        return "http://%s-controlplane:%s/api/dsp".formatted(name(), CONTROL_PLANE_DSP_PORT);
+        return "https://%s-controlplane:%s/api/dsp".formatted(name(), CONTROL_PLANE_DSP_PORT);
     }
 
     protected String controlPlaneProtocolUrl() {
@@ -70,15 +71,15 @@ abstract class AbstractParticipant extends AbstractEntity {
     }
 
     protected String controlPlaneManagementUrl() {
-        return "http://%s/%s/cp/management".formatted(CLUSTER_HOSTNAME, name());
+        return "https://%s/%s/cp/management".formatted(CLUSTER_HOSTNAME, name());
     }
 
     protected String dataPlaneDataUrl() {
-        return "http://%s/%s/dp/data".formatted(CLUSTER_HOSTNAME, name());
+        return "https://%s/%s/dp/data".formatted(CLUSTER_HOSTNAME, name());
     }
 
     protected String controlPlaneCatalogFilterUrl() {
-        return "http://%s/%s/cp/management/v1alpha/catalog/query".formatted(CLUSTER_HOSTNAME, name());
+        return "https://%s/%s/cp/management/v1alpha/catalog/query".formatted(CLUSTER_HOSTNAME, name());
     }
 
     protected void createEntry(String assetId, String name, String description, Map<String, Object> dataAddressProps, JsonObject... additionalConstraints) {

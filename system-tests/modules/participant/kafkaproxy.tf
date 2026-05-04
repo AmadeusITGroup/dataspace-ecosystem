@@ -39,7 +39,6 @@ resource "helm_release" "kafkaproxy" {
             "pullPolicy" : local.image_pull_policy
             "tag" : "latest"
           }
-          "initContainers" : []
           # Vault configuration
           "vaultAddr" : module.vault.vault_url
           "vaultTokenSecret" : {
@@ -50,6 +49,8 @@ resource "helm_release" "kafkaproxy" {
           "vaultTls" : {
             "enabled" : false
           }
+          "extraConfig" : <<-EOT
+EOT
 
           # Kubernetes configuration
           "namespace" : "default"
@@ -142,9 +143,9 @@ resource "helm_release" "kafkaproxy" {
         }
       },
 
-      # Health checks - Temporarily disabled to debug endpoint
+      # Health checks
       "healthCheck" : {
-        "enabled" : false
+        "enabled" : true
       }
     })
   ]

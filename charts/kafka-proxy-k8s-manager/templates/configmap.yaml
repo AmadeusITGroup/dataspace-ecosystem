@@ -12,6 +12,9 @@ data:
     web.http.path=/api
     web.http.management.port=8081
     web.http.management.path=/management
+    {{- if .Values.kafkaProxy.manager.extraConfig }}
+    {{ .Values.kafkaProxy.manager.extraConfig | nindent 4 }}
+    {{- end }}
     
     # Kafka Proxy Configuration
     kafka.proxy.vault.addr={{ .Values.kafkaProxy.manager.vaultAddr }}

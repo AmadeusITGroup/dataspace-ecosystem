@@ -56,6 +56,10 @@ spec:
             httpGet:
               path: {{ .Values.federatedcatalogfilter.endpoints.default.path }}/check/liveness
               port: {{ .Values.federatedcatalogfilter.endpoints.default.port }}
+              scheme: HTTPS
+              httpHeaders:
+                - name: Host
+                  value: {{include "dse.fullname" .}}
             initialDelaySeconds: {{ .Values.federatedcatalogfilter.livenessProbe.initialDelaySeconds }}
             periodSeconds: {{ .Values.federatedcatalogfilter.livenessProbe.periodSeconds }}
             timeoutSeconds: {{ .Values.federatedcatalogfilter.livenessProbe.timeoutSeconds }}
@@ -67,6 +71,10 @@ spec:
             httpGet:
               path: {{ .Values.federatedcatalogfilter.endpoints.default.path }}/check/liveness
               port: {{ .Values.federatedcatalogfilter.endpoints.default.port }}
+              scheme: HTTPS
+              httpHeaders:
+                - name: Host
+                  value: {{include "dse.fullname" .}}
             initialDelaySeconds: {{ .Values.federatedcatalogfilter.startupProbe.initialDelaySeconds }}
             periodSeconds: {{ .Values.federatedcatalogfilter.startupProbe.periodSeconds }}
             failureThreshold: {{ .Values.federatedcatalogfilter.startupProbe.failureThreshold }}
@@ -78,6 +86,10 @@ spec:
             httpGet:
               path: {{ .Values.federatedcatalogfilter.endpoints.default.path }}/check/readiness
               port: {{ .Values.federatedcatalogfilter.endpoints.default.port }}
+              scheme: HTTPS
+              httpHeaders:
+                - name: Host
+                  value: {{include "dse.fullname" .}}
             initialDelaySeconds: {{ .Values.federatedcatalogfilter.readinessProbe.initialDelaySeconds }}
             periodSeconds: {{ .Values.federatedcatalogfilter.readinessProbe.periodSeconds }}
             timeoutSeconds: {{ .Values.federatedcatalogfilter.readinessProbe.timeoutSeconds }}
@@ -87,8 +99,6 @@ spec:
           resources:
             {{- toYaml .Values.federatedcatalogfilter.resources | nindent 12 }}
           env:
-          - name: "JAVA_TOOL_OPTIONS"
-            value: "-Djavax.net.ssl.trustStore={{ .Values.federatedcatalogfilter.vault.hashicorp.cert.tlsPath }}/cacerts -Djavax.net.ssl.trustStorePassword=changeit"
           ######################
           ## FS CONFIGURATION ##
           ######################
@@ -214,6 +224,8 @@ spec:
             - name: shared-volume
               readOnly: true
               mountPath: /shared
+            - name: internal-tls-volume
+              mountPath: /internal-certs
       volumes:
         - name: config
           configMap:
@@ -227,9 +239,9 @@ spec:
                 path: config.properties
         - name: shared-volume
           emptyDir: { }
-        - name: cert-volume
+        - name: internal-tls-volume
           secret:
-            secretName: {{  required ".Values.federatedcatalogfilter.vault.hashicorp.cert.secretName is required" .Values.federatedcatalogfilter.vault.hashicorp.cert.secretName }}
+            secretName: {{ required ".Values.federatedcatalogfilter.internalTls.secretName is required" .Values.federatedcatalogfilter.internalTls.secretName }}
 
       {{- with .Values.federatedcatalogfilter.nodeSelector }}
       nodeSelector:

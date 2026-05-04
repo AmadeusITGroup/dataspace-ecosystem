@@ -56,11 +56,13 @@ resource "kubernetes_ingress_v1" "vault-ingress" {
     annotations = {
       "nginx.ingress.kubernetes.io/rewrite-target" = "/$2"
       "nginx.ingress.kubernetes.io/use-regex"      = "true"
+      "nginx.ingress.kubernetes.io/ssl-redirect"   = "false"
     }
   }
   spec {
     ingress_class_name = "nginx"
     rule {
+      host = "localhost"
       http {
         path {
           path = "/${var.participant_name}/vault(/|$)(.*)"

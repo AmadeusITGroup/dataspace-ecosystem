@@ -4,7 +4,7 @@ FROM ${REGISTRY_URL}/${BASE_IMAGE}
 # Set INSTALL_JAVA=false only if the base image already includes a JRE (e.g. eclipse-temurin).
 ARG INSTALL_JAVA=true
 RUN if [ "$INSTALL_JAVA" = "true" ]; then yum update -y && yum clean all; fi
-RUN if [ "$INSTALL_JAVA" = "true" ]; then yum install java-21-openjdk -y && yum clean all; fi
+RUN if [ "$INSTALL_JAVA" = "true" ]; then yum install java-21-openjdk openssl -y && yum clean all; fi
 # Optional JVM arguments, such as memory settings
 ARG JVM_ARGS=""
 ARG JAR

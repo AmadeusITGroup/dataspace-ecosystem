@@ -52,6 +52,10 @@ spec:
             httpGet:
               path: {{ .Values.federatedcatalog.endpoints.default.path }}/check/liveness
               port: {{ .Values.federatedcatalog.endpoints.default.port }}
+              scheme: HTTPS
+              httpHeaders:
+                - name: Host
+                  value: {{include "dse.fullname" .}}
             initialDelaySeconds: {{ .Values.federatedcatalog.livenessProbe.initialDelaySeconds }}
             periodSeconds: {{ .Values.federatedcatalog.livenessProbe.periodSeconds }}
             timeoutSeconds: {{ .Values.federatedcatalog.livenessProbe.timeoutSeconds }}
@@ -63,6 +67,10 @@ spec:
             httpGet:
               path: {{ .Values.federatedcatalog.endpoints.default.path }}/check/liveness
               port: {{ .Values.federatedcatalog.endpoints.default.port }}
+              scheme: HTTPS
+              httpHeaders:
+                - name: Host
+                  value: {{include "dse.fullname" .}}
             initialDelaySeconds: {{ .Values.federatedcatalog.startupProbe.initialDelaySeconds }}
             periodSeconds: {{ .Values.federatedcatalog.startupProbe.periodSeconds }}
             failureThreshold: {{ .Values.federatedcatalog.startupProbe.failureThreshold }}
@@ -74,6 +82,10 @@ spec:
             httpGet:
               path: {{ .Values.federatedcatalog.endpoints.default.path }}/check/readiness
               port: {{ .Values.federatedcatalog.endpoints.default.port }}
+              scheme: HTTPS
+              httpHeaders:
+                - name: Host
+                  value: {{include "dse.fullname" .}}
             initialDelaySeconds: {{ .Values.federatedcatalog.readinessProbe.initialDelaySeconds }}
             periodSeconds: {{ .Values.federatedcatalog.readinessProbe.periodSeconds }}
             timeoutSeconds: {{ .Values.federatedcatalog.readinessProbe.timeoutSeconds }}
@@ -83,9 +95,6 @@ spec:
           resources:
             {{- toYaml .Values.federatedcatalog.resources | nindent 12 }}
           env:
-          - name: "JAVA_TOOL_OPTIONS"
-            value: "-Djavax.net.ssl.trustStore={{ .Values.federatedcatalog.vault.hashicorp.cert.tlsPath }}/cacerts -Djavax.net.ssl.trustStorePassword=changeit"
-
           ######################
           ## FS CONFIGURATION ##
           ######################
@@ -233,6 +242,8 @@ spec:
             - name: shared-volume
               readOnly: true
               mountPath: /shared
+            - name: internal-tls-volume
+              mountPath: /internal-certs
       volumes:
         - name: config
           configMap:
@@ -246,9 +257,9 @@ spec:
                 path: config.properties
         - name: shared-volume
           emptyDir: { }
-        - name: cert-volume
+        - name: internal-tls-volume
           secret:
-            secretName: {{  required ".Values.federatedcatalog.vault.hashicorp.cert.secretName is required" .Values.federatedcatalog.vault.hashicorp.cert.secretName }}
+            secretName: {{ required ".Values.federatedcatalog.internalTls.secretName is required" .Values.federatedcatalog.internalTls.secretName }}
 
       {{- with .Values.federatedcatalog.nodeSelector }}
       nodeSelector:

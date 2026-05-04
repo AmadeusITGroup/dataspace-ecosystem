@@ -157,6 +157,8 @@ telemetrystorage:
       issuer: ""
       # -- If preset enables certificate generation via cert-manager cluster-wide issuer
       clusterIssuer: ""
+  internalTls:
+    secretName: "internal-service-tls"
   # -- declare where to mount [volumes](https://kubernetes.io/docs/concepts/storage/volumes/) into the container
   volumeMounts: []
   # -- [volume](https://kubernetes.io/docs/concepts/storage/volumes/) directories

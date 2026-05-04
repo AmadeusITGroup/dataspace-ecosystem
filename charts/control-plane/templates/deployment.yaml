@@ -51,6 +51,10 @@ spec:
             httpGet:
               path: {{.Values.controlplane.endpoints.default.path}}/check/liveness
               port: {{.Values.controlplane.endpoints.default.port}}
+              scheme: HTTPS
+              httpHeaders:
+                - name: Host
+                  value: {{include "dse.fullname" .}}
             initialDelaySeconds: {{.Values.controlplane.livenessProbe.initialDelaySeconds}}
             periodSeconds: {{.Values.controlplane.livenessProbe.periodSeconds}}
             timeoutSeconds: {{.Values.controlplane.livenessProbe.timeoutSeconds}}
@@ -62,6 +66,10 @@ spec:
             httpGet:
               path: {{.Values.controlplane.endpoints.default.path}}/check/liveness
               port: {{.Values.controlplane.endpoints.default.port}}
+              scheme: HTTPS
+              httpHeaders:
+                - name: Host
+                  value: {{include "dse.fullname" .}}
             initialDelaySeconds: {{.Values.controlplane.startupProbe.initialDelaySeconds}}
             periodSeconds: {{.Values.controlplane.startupProbe.periodSeconds}}
             failureThreshold: {{.Values.controlplane.startupProbe.failureThreshold}}
@@ -73,6 +81,10 @@ spec:
             httpGet:
               path: {{.Values.controlplane.endpoints.default.path}}/check/readiness
               port: {{.Values.controlplane.endpoints.default.port}}
+              scheme: HTTPS
+              httpHeaders:
+                - name: Host
+                  value: {{include "dse.fullname" .}}
             initialDelaySeconds: {{.Values.controlplane.readinessProbe.initialDelaySeconds}}
             periodSeconds: {{.Values.controlplane.readinessProbe.periodSeconds}}
             timeoutSeconds: {{.Values.controlplane.readinessProbe.timeoutSeconds}}
@@ -82,9 +94,6 @@ spec:
           resources:
           {{- toYaml .Values.controlplane.resources | nindent 12}}
           env:
-          - name: "JAVA_TOOL_OPTIONS"
-            value: "-Djavax.net.ssl.trustStore={{ .Values.controlplane.vault.hashicorp.cert.tlsPath }}/cacerts -Djavax.net.ssl.trustStorePassword=changeit"
-
           ######################
           ## FS CONFIGURATION ##
           ######################
@@ -229,6 +238,8 @@ spec:
             - name: shared-volume
               readOnly: true
               mountPath: /shared
+            - name: internal-tls-volume
+              mountPath: /internal-certs
       volumes:
         - name: config
           configMap:
@@ -242,9 +253,9 @@ spec:
                 path: config.properties
         - name: shared-volume
           emptyDir: { }
-        - name: cert-volume
+        - name: internal-tls-volume
           secret:
-            secretName: {{  required ".Values.controlplane.vault.hashicorp.cert.secretName is required" .Values.controlplane.vault.hashicorp.cert.secretName }}
+            secretName: {{ required ".Values.controlplane.internalTls.secretName is required" .Values.controlplane.internalTls.secretName }}
 
       {{- with .Values.controlplane.nodeSelector }}
       nodeSelector:

@@ -5,9 +5,9 @@ public interface ParticipantConstants {
     int IDENTITY_HUB_DID_PORT = 8383;
     int CONTROL_PLANE_DSP_PORT = 8282;
     
-    // Configurable hostname for the cluster ingress
-    String CLUSTER_HOSTNAME = System.getProperty("cluster.hostname", System.getenv().getOrDefault("CLUSTER_HOSTNAME", "localhost:80"));
-    
+    // Configurable hostname for the cluster HTTPS ingress (port 443)
+    String CLUSTER_HOSTNAME = System.getProperty("cluster.hostname", System.getenv().getOrDefault("CLUSTER_HOSTNAME", "localhost:443"));
+
     // Configurable kubectl context for accessing the Kubernetes cluster
     String KUBECTL_CONTEXT = System.getProperty("kubectl.context", System.getenv().getOrDefault("KUBECTL_CONTEXT", "kind-dse-cluster"));
     

@@ -52,6 +52,10 @@ spec:
             httpGet:
               path: {{ .Values.telemetryagent.endpoints.default.path }}/check/liveness
               port: {{ .Values.telemetryagent.endpoints.default.port }}
+              scheme: HTTPS
+              httpHeaders:
+                - name: Host
+                  value: {{include "dse.fullname" .}}
             initialDelaySeconds: {{ .Values.telemetryagent.livenessProbe.initialDelaySeconds }}
             periodSeconds: {{ .Values.telemetryagent.livenessProbe.periodSeconds }}
             timeoutSeconds: {{ .Values.telemetryagent.livenessProbe.timeoutSeconds }}
@@ -63,6 +67,10 @@ spec:
             httpGet:
               path: {{ .Values.telemetryagent.endpoints.default.path }}/check/liveness
               port: {{ .Values.telemetryagent.endpoints.default.port }}
+              scheme: HTTPS
+              httpHeaders:
+                - name: Host
+                  value: {{include "dse.fullname" .}}
             periodSeconds: {{ .Values.telemetryagent.startupProbe.periodSeconds }}
             failureThreshold: {{ .Values.telemetryagent.startupProbe.failureThreshold }}
             timeoutSeconds: {{ .Values.telemetryagent.startupProbe.timeoutSeconds }}
@@ -73,6 +81,10 @@ spec:
             httpGet:
               path: {{ .Values.telemetryagent.endpoints.default.path }}/check/readiness
               port: {{ .Values.telemetryagent.endpoints.default.port }}
+              scheme: HTTPS
+              httpHeaders:
+                - name: Host
+                  value: {{include "dse.fullname" .}}
             initialDelaySeconds: {{ .Values.telemetryagent.readinessProbe.initialDelaySeconds }}
             periodSeconds: {{ .Values.telemetryagent.readinessProbe.periodSeconds }}
             timeoutSeconds: {{ .Values.telemetryagent.readinessProbe.timeoutSeconds }}
@@ -82,9 +94,6 @@ spec:
           resources:
             {{- toYaml .Values.telemetryagent.resources | nindent 12 }}
           env:
-            - name: "JAVA_TOOL_OPTIONS"
-              value: "-Djavax.net.ssl.trustStore={{ .Values.telemetryagent.vault.hashicorp.cert.tlsPath }}/cacerts -Djavax.net.ssl.trustStorePassword=changeit"
-              
             ######################
             ## FS CONFIGURATION ##
             ######################
@@ -237,6 +246,8 @@ spec:
             - name: shared-volume
               readOnly: true
               mountPath: /shared
+            - name: internal-tls-volume
+              mountPath: /internal-certs
       volumes:
         - name: config
           configMap:
@@ -250,9 +261,9 @@ spec:
               path: config.properties
         - name: shared-volume
           emptyDir: { }
-        - name: cert-volume
+        - name: internal-tls-volume
           secret:
-            secretName: {{  required ".Values.telemetryagent.vault.hashicorp.cert.secretName is required" .Values.telemetryagent.vault.hashicorp.cert.secretName }}
+            secretName: {{ .Values.telemetryagent.internalTls.secretName }}
       {{- with .Values.telemetryagent.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

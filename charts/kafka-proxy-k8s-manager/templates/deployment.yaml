@@ -52,8 +52,6 @@ spec:
               protocol: TCP
           env:
             {{- include "kafka-proxy.env" . | nindent 12 }}
-            - name: "JAVA_TOOL_OPTIONS"
-              value: "-Djavax.net.ssl.trustStore={{ .Values.kafkaProxy.manager.certDir }}/cacerts -Djavax.net.ssl.trustStorePassword=changeit"
             - name: POD_NAME
               valueFrom:
                 fieldRef:
@@ -68,8 +66,6 @@ spec:
           {{- end }}
           volumeMounts:
             {{- include "kafka-proxy.volumeMounts" . | nindent 12 }}
-            - name: cacerts-volume
-              mountPath: {{ .Values.kafkaProxy.manager.certDir }}
           {{- if .Values.healthCheck.enabled }}
           livenessProbe:
             {{- toYaml .Values.healthCheck.livenessProbe | nindent 12 }}
@@ -85,11 +81,6 @@ spec:
         {{- end }}
       volumes:
         {{- include "kafka-proxy.volumes" . | nindent 8 }}
-        - name: cacerts-volume
-          emptyDir: {}
-        - name: cert-volume
-          secret:
-            secretName: {{ required ".Values.kafkaProxy.manager.vaultTls.caCert.secret is required" .Values.kafkaProxy.manager.vaultTls.caCert.secret }}
       {{- with .Values.pod.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

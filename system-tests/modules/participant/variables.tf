@@ -138,6 +138,24 @@ variable "charts_path" {
   default     = "../../../charts"
 }
 
+variable "internal_tls_secret_name" {
+  description = "Name of the Kubernetes secret containing the shared internal TLS certificate (tls.crt, tls.key, ca.crt) used for pod-to-pod HTTPS."
+  type        = string
+  default     = "internal-service-tls"
+}
+
+variable "ingress_tls_secret_name" {
+  description = "Name of the Kubernetes secret (type kubernetes.io/tls) used by the nginx ingress controller for TLS termination."
+  type        = string
+  default     = "internal-service-tls"
+}
+
+variable "ingress_proxy_ssl_ca_secret_name" {
+  description = "Name of the Kubernetes secret containing the internal CA certificate (ca.crt) used by nginx-ingress proxy-ssl-secret to verify upstream backend TLS."
+  type        = string
+  default     = "nginx-proxy-ssl-ca"
+}
+
 # Self-hosted-specific Configuration
 
 variable "selfhosted_did_url" {

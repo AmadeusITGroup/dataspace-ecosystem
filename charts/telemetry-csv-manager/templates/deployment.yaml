@@ -51,6 +51,10 @@ spec:
             httpGet:
               path: {{.Values.telemetrycsvmanager.endpoints.default.path}}/check/liveness
               port: {{.Values.telemetrycsvmanager.endpoints.default.port}}
+              scheme: HTTPS
+              httpHeaders:
+                - name: Host
+                  value: {{include "dse.fullname" .}}
             initialDelaySeconds: {{.Values.telemetrycsvmanager.livenessProbe.initialDelaySeconds}}
             periodSeconds: {{.Values.telemetrycsvmanager.livenessProbe.periodSeconds}}
             timeoutSeconds: {{.Values.telemetrycsvmanager.livenessProbe.timeoutSeconds}}
@@ -62,6 +66,10 @@ spec:
             httpGet:
               path: {{.Values.telemetrycsvmanager.endpoints.default.path}}/check/liveness
               port: {{.Values.telemetrycsvmanager.endpoints.default.port}}
+              scheme: HTTPS
+              httpHeaders:
+                - name: Host
+                  value: {{include "dse.fullname" .}}
             periodSeconds: {{.Values.telemetrycsvmanager.startupProbe.periodSeconds}}
             failureThreshold: {{.Values.telemetrycsvmanager.startupProbe.failureThreshold}}
             timeoutSeconds: {{.Values.telemetrycsvmanager.startupProbe.timeoutSeconds}}
@@ -72,6 +80,10 @@ spec:
             httpGet:
               path: {{.Values.telemetrycsvmanager.endpoints.default.path}}/check/readiness
               port: {{.Values.telemetrycsvmanager.endpoints.default.port}}
+              scheme: HTTPS
+              httpHeaders:
+                - name: Host
+                  value: {{include "dse.fullname" .}}
             initialDelaySeconds: {{.Values.telemetrycsvmanager.readinessProbe.initialDelaySeconds}}
             periodSeconds: {{.Values.telemetrycsvmanager.readinessProbe.periodSeconds}}
             timeoutSeconds: {{.Values.telemetrycsvmanager.readinessProbe.timeoutSeconds}}
@@ -210,6 +222,11 @@ spec:
             - name: config
               mountPath: /app/config.properties
               subPath: config.properties
+            - name: shared-volume
+              readOnly: true
+              mountPath: /shared
+            - name: internal-tls-volume
+              mountPath: /internal-certs
       volumes:
         - name: config
           configMap:
@@ -221,6 +238,11 @@ spec:
                 path: opentelemetry.properties
               - key: config.properties
                 path: config.properties
+        - name: shared-volume
+          emptyDir: { }
+        - name: internal-tls-volume
+          secret:
+            secretName: {{ .Values.telemetrycsvmanager.internalTls.secretName }}
 
       {{- with .Values.telemetrycsvmanager.nodeSelector}}
       nodeSelector:

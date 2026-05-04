@@ -37,28 +37,29 @@ abstract class AbstractAuthority extends AbstractEntity {
 
     @Override
     protected String vaultUrl() {
-        return "http://%s/%s/vault".formatted(CLUSTER_HOSTNAME, name());
+        String httpHost = CLUSTER_HOSTNAME.replaceFirst(":\\d+$", ":80");
+        return "http://%s/%s/vault".formatted(httpHost, name());
     }
 
     protected String telemetryUrl() {
-        return "http://%s/%s/telemetry-events".formatted(CLUSTER_HOSTNAME, name());
+        return "https://%s/%s/telemetry-events".formatted(CLUSTER_HOSTNAME, name());
     }
 
     protected String csvManagerUrl() {
-        return "http://%s/%s/billing-reports".formatted(CLUSTER_HOSTNAME, name());
+        return "https://%s/%s/billing-reports".formatted(CLUSTER_HOSTNAME, name());
     }
 
     @Override
     protected String identityHubIdentityUrl() {
-        return "http://%s/%s/ih/identity".formatted(CLUSTER_HOSTNAME, name());
+        return "https://%s/%s/ih/identity".formatted(CLUSTER_HOSTNAME, name());
     }
 
     protected String catalogUrl() {
-        return "http://%s/%s/catalog".formatted(CLUSTER_HOSTNAME, name());
+        return "https://%s/%s/catalog".formatted(CLUSTER_HOSTNAME, name());
     }
 
     protected String issuerServiceAdminUrl() {
-        return "http://%s/%s/is/issueradmin".formatted(CLUSTER_HOSTNAME, name());
+        return "https://%s/%s/is/issueradmin".formatted(CLUSTER_HOSTNAME, name());
     }
 
     public void defineMembershipCredential() {

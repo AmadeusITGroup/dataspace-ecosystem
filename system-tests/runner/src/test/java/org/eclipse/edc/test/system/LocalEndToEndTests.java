@@ -7,8 +7,10 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
+import io.restassured.RestAssured;
+import io.restassured.config.RestAssuredConfig;
+import io.restassured.config.SSLConfig;
 import io.restassured.http.ContentType;
 import io.restassured.response.Response;
 import jakarta.json.Json;
@@ -30,7 +32,11 @@ import org.junit.jupiter.params.provider.ArgumentsSource;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.security.Key;
+import java.security.cert.X509Certificate;
+import javax.crypto.SecretKey;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -58,7 +64,6 @@ import static org.eclipse.edc.connector.controlplane.transfer.spi.types.Transfer
 import static org.eclipse.edc.connector.controlplane.transfer.spi.types.TransferProcessStates.TERMINATED;
 import static org.eclipse.edc.jsonld.spi.JsonLdKeywords.ID;
 import static org.eclipse.edc.spi.constants.CoreConstants.EDC_NAMESPACE;
-import static org.eclipse.edc.spi.core.CoreConstants.DSE_POLICY_PREFIX;
 import static org.eclipse.edc.test.system.AbstractAuthority.DOMAIN_ROUTE;
 import static org.eclipse.edc.test.system.AbstractAuthority.DOMAIN_TRAVEL;
 import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_AZURE_BLOB;
@@ -92,6 +97,8 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
 
     public static final String KAFKA_BROKER_PULL = "KafkaBroker-PULL";
     public static final String AZURE_STORAGE_PUSH = "AzureStorage-PUSH";
+    // Default DSE policy prefix — the hardcoded default of the configurable DseNamespaceConfig.
+    private static final String DSE_POLICY_PREFIX = "dse-policy";
     // TEST-ONLY SECRET: This hardcoded secret is used exclusively for JWT generation in tests.
     public static final String SECRET = "a-string-secret-at-least-256-bits-long";
     public static String dummyJwt;
@@ -112,9 +119,47 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final List<String> USED_CONTRACT_ID = new ArrayList<>();
+    private static SSLContext previousDefaultSslContext;
     private static EventHubConsumerAsyncClient consumer;
 
     private static String kafkacatPod = null;
+    
+    private static SSLConfig buildInternalCaSslConfig() {
+        try {
+            TrustManager[] trustAll = new TrustManager[]{
+                    new X509TrustManager() {
+                        @Override
+                        public void checkClientTrusted(X509Certificate[] chain, String authType) {}
+
+                        @Override
+                        public void checkServerTrusted(X509Certificate[] chain, String authType) {}
+
+                        @Override
+                        public X509Certificate[] getAcceptedIssuers() {
+                            return new X509Certificate[0];
+                        }
+                    }
+            };
+
+            SSLContext sslContext = SSLContext.getInstance("TLS");
+            sslContext.init(null, trustAll, null);
+
+            // Install as the JVM-wide default so Groovy HTTP Builder (used internally by
+            // RestAssured) also picks it up. Restored in @AfterAll.
+            previousDefaultSslContext = SSLContext.getDefault();
+            SSLContext.setDefault(sslContext);
+
+            return SSLConfig.sslConfig()
+                    .sslSocketFactory(
+                            new org.apache.http.conn.ssl.SSLSocketFactory(
+                                    sslContext,
+                                    org.apache.http.conn.ssl.SSLSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER
+                            )
+                    );
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to configure SSL context", e);
+        }
+    }
 
     public static void initializeParticipant(AbstractEntity participant) {
         AUTHORITY.createParticipant(participant.name(), participant.did());
@@ -126,6 +171,11 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
     static void beforeAll() {
         // Print test configuration for debugging
         printConfiguration();
+
+        // Configure RestAssured to trust the internal CA used for pod-to-pod TLS.
+        // The CA cert is fetched from the cluster secret so certificate and hostname
+        // verification remain active — TLS misconfigurations are not masked.
+        RestAssured.config = RestAssuredConfig.config().sslConfig(buildInternalCaSslConfig());
 
         consumer = new EventHubClientBuilder()
                 .fullyQualifiedNamespace(EVENT_HUB_NAMESPACE)
@@ -146,7 +196,7 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
         // seed provider data
         seedData();
 
-        Key key = Keys.hmacShaKeyFor(SECRET.getBytes());
+        SecretKey key = Keys.hmacShaKeyFor(SECRET.getBytes());
 
         dummyJwt = Jwts.builder()
                 .header()
@@ -154,7 +204,7 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
                 .add("typ", "JWT")
                 .and()
                 .claims(Map.of("roles", List.of("Participant.consumer")))
-                .signWith(key, SignatureAlgorithm.HS256)
+                .signWith(key, Jwts.SIG.HS256)
                 .compact();
 
         dummyJwtWithMultipleRoles = Jwts.builder()
@@ -163,7 +213,7 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
                 .add("typ", "JWT")
                 .and()
                 .claims(Map.of("roles", List.of("Read.consumer", "Participant.consumer")))
-                .signWith(key, SignatureAlgorithm.HS256)
+                .signWith(key, Jwts.SIG.HS256)
                 .compact();
 
         dummyJwtNonExistentParticipant = Jwts.builder()
@@ -172,7 +222,7 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
                 .add("typ", "JWT")
                 .and()
                 .claims(Map.of("roles", List.of("Participant.doesnotexist")))
-                .signWith(key, SignatureAlgorithm.HS256)
+                .signWith(key, Jwts.SIG.HS256)
                 .compact();
 
     }
@@ -180,6 +230,12 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
 
     @AfterAll
     public static void afterAll() {
+        // Restore the JVM-wide default SSL context to its previous state to prevent
+        // side effects on other test classes running in the same JVM.
+        if (previousDefaultSslContext != null) {
+            SSLContext.setDefault(previousDefaultSslContext);
+        }
+
         consumer.receive(true)
                 .takeUntil(event -> {
                     String contractId;

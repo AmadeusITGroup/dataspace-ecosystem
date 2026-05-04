@@ -1,7 +1,7 @@
 locals {
   dataplane_release_name = "${var.participant_name}-dataplane"
 
-  dpf_selector_url = "http://${local.controlplane_release_name}:8383/api/control/v1/dataplanes"
+  dpf_selector_url = "https://${local.controlplane_release_name}:8383/api/control/v1/dataplanes"
 
 
   ##################
@@ -13,7 +13,7 @@ locals {
   # reproduce in prod-grade deployment as all connectors of a dataspace will not be deployed
   # in the same Kubernetes cluster in the real life
   ############################################################################################
-  public_url = "http://${local.dataplane_release_name}:8181/api/public/"
+  public_url = "https://${local.dataplane_release_name}:8181/api/public/"
   data_plane_image = (
     var.environment == "local" ? "localhost/data-plane-postgresql-hashicorpvault" :
     var.environment == "devbox" ? "${var.devbox-registry}/data-plane-postgresql-hashicorpvault" :
@@ -39,7 +39,21 @@ resource "helm_release" "dataplane" {
         }
       ] : []
       "dataplane" : {
-        "initContainers" : [],
+        "initContainers" : [
+          {
+            "name" : "keystore-setup",
+            "image" : "${local.data_plane_image}:latest",
+            "imagePullPolicy" : local.image_pull_policy,
+            "command" : ["/bin/sh", "-c"],
+            "args" : [
+              "cp /etc/pki/ca-trust/extracted/java/cacerts /opt/ca/cacerts && chmod 666 /opt/ca/cacerts && keytool -import -trustcacerts -keystore /opt/ca/cacerts -storepass changeit -noprompt -alias internalCa -file /certs/ca.crt && openssl pkcs12 -export -in /certs/tls.crt -inkey /certs/tls.key -out /opt/ca/keystore.p12 -passout pass:changeit -name service"
+            ],
+            "volumeMounts" : [
+              { "name" : "internal-tls-volume", "mountPath" : "/certs" },
+              { "name" : "shared-volume", "mountPath" : "/opt/ca" }
+            ]
+          }
+        ],
         "image" : {
           "repository" : local.data_plane_image
           "pullPolicy" : local.image_pull_policy
@@ -48,7 +62,7 @@ resource "helm_release" "dataplane" {
         "did" : {
           "web" : {
             "url" : local.did_url,
-            "useHttps" : false
+            "useHttps" : true
           }
         },
         "keys" : {
@@ -72,7 +86,14 @@ resource "helm_release" "dataplane" {
 edc.vault.hashicorp.token.scheduled-renew-enabled=false
 edc.dataplane.state-machine.iteration-wait-millis=${var.data_plane_state_machine_wait_millis}
 edc.blobstore.endpoint.template=http://azurite-blobstorage:10000/%s
+edc.web.https.keystore.path=/shared/keystore.p12
+edc.web.https.keystore.type=PKCS12
+edc.web.https.keystore.password=changeit
+edc.web.https.keymanager.password=changeit
         EOT
+        "env" : {
+          "JAVA_TOOL_OPTIONS" : "-Djavax.net.ssl.trustStore=/shared/cacerts -Djavax.net.ssl.trustStorePassword=changeit"
+        }
         "ingress" : {
           "enabled" : true
           "className" : "nginx"
@@ -80,7 +101,13 @@ edc.blobstore.endpoint.template=http://azurite-blobstorage:10000/%s
             "nginx.ingress.kubernetes.io/ssl-redirect" : "false"
             "nginx.ingress.kubernetes.io/use-regex" : "true"
             "nginx.ingress.kubernetes.io/rewrite-target" : "/api/$1$2"
+            "nginx.ingress.kubernetes.io/backend-protocol" : "HTTPS"
+            "nginx.ingress.kubernetes.io/proxy-ssl-verify" : "on"
+            "nginx.ingress.kubernetes.io/proxy-ssl-secret" : "default/${var.ingress_proxy_ssl_ca_secret_name}"
+            "nginx.ingress.kubernetes.io/proxy-ssl-name" : "${local.dataplane_release_name}.default.svc.cluster.local"
+            "nginx.ingress.kubernetes.io/proxy-ssl-server-name" : "on"
           },
+
           "endpoints" : [
             {
               "port" : 8181,
@@ -93,6 +120,11 @@ edc.blobstore.endpoint.template=http://azurite-blobstorage:10000/%s
               "pathType" : "ImplementationSpecific"
             }
           ]
+          "hostname" : "localhost"
+          "tls" : {
+            "enabled" : true
+            "secretName" : var.ingress_tls_secret_name
+          }
         },
 
         "selector" : {
@@ -110,6 +142,10 @@ edc.blobstore.endpoint.template=http://azurite-blobstorage:10000/%s
             }
           }
         },
+        "internalTls" : {
+          "secretName" : var.internal_tls_secret_name
+        }
+
         "vault" : {
           "hashicorp" : {
             "url" : module.vault.vault_url
@@ -121,6 +157,7 @@ edc.blobstore.endpoint.template=http://azurite-blobstorage:10000/%s
             }
           }
         }
+
       }
     })
   ]

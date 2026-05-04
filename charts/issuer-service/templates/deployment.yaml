@@ -51,6 +51,10 @@ spec:
           httpGet:
             path: {{.Values.issuerservice.endpoints.default.path}}/check/liveness
             port: {{.Values.issuerservice.endpoints.default.port}}
+            scheme: HTTPS
+            httpHeaders:
+              - name: Host
+                value: {{include "dse.fullname" .}}
           initialDelaySeconds: {{.Values.issuerservice.livenessProbe.initialDelaySeconds}}
           periodSeconds: {{.Values.issuerservice.livenessProbe.periodSeconds}}
           timeoutSeconds: {{.Values.issuerservice.livenessProbe.timeoutSeconds}}
@@ -62,6 +66,10 @@ spec:
           httpGet:
             path: {{.Values.issuerservice.endpoints.default.path}}/check/liveness
             port: {{.Values.issuerservice.endpoints.default.port}}
+            scheme: HTTPS
+            httpHeaders:
+              - name: Host
+                value: {{include "dse.fullname" .}}
           initialDelaySeconds: {{.Values.issuerservice.startupProbe.initialDelaySeconds}}
           periodSeconds: {{.Values.issuerservice.startupProbe.periodSeconds}}
           failureThreshold: {{.Values.issuerservice.startupProbe.failureThreshold}}
@@ -73,6 +81,10 @@ spec:
           httpGet:
             path: {{.Values.issuerservice.endpoints.default.path}}/check/readiness
             port: {{.Values.issuerservice.endpoints.default.port}}
+            scheme: HTTPS
+            httpHeaders:
+              - name: Host
+                value: {{include "dse.fullname" .}}
           initialDelaySeconds: {{.Values.issuerservice.readinessProbe.initialDelaySeconds}}
           periodSeconds: {{.Values.issuerservice.readinessProbe.periodSeconds}}
           timeoutSeconds: {{.Values.issuerservice.readinessProbe.timeoutSeconds}}
@@ -84,8 +96,6 @@ spec:
 
 
         env:
-        - name: "JAVA_TOOL_OPTIONS"
-          value: "-Djavax.net.ssl.trustStore={{ .Values.issuerservice.vault.hashicorp.cert.tlsPath }}/cacerts -Djavax.net.ssl.trustStorePassword=changeit"
 
         ##############
         ## HOSTNAME ##
@@ -241,6 +251,8 @@ spec:
         - name: shared-volume
           readOnly: true
           mountPath: /shared
+        - name: internal-tls-volume
+          mountPath: /internal-certs
       volumes:
       - name: config
         configMap:
@@ -254,9 +266,9 @@ spec:
             path: config.properties
       - name: shared-volume
         emptyDir: { }
-      - name: cert-volume
+      - name: internal-tls-volume
         secret:
-          secretName: {{  required ".Values.issuerservice.vault.hashicorp.cert.secretName is required" .Values.issuerservice.vault.hashicorp.cert.secretName }}
+          secretName: {{ required ".Values.issuerservice.internalTls.secretName is required" .Values.issuerservice.internalTls.secretName }}
 
       {{- with .Values.issuerservice.nodeSelector}}
       nodeSelector:
