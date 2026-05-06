@@ -62,5 +62,7 @@ resource "kubernetes_secret" "billing-db-user-credentials" {
 module "vault" {
   source = "../vault"
 
-  participant_name = var.authority_name
+  participant_name         = var.authority_name
+  internal_tls_secret_name = var.internal_tls_secret_name
+  ingress_tls_secret_name  = var.ingress_tls_secret_name
 }

@@ -67,6 +67,10 @@ resource "tls_cert_request" "internal_service" {
     "${var.provider_name}-telemetryagent",
     "${var.provider_name}-controlplane",
     "${var.provider_name}-dataplane",
+    # Vault bare hostnames (used by init job and nginx proxy)
+    "${var.authority_name}-vault",
+    "${var.consumer_name}-vault",
+    "${var.provider_name}-vault",
   ]
 }
 
@@ -97,7 +101,7 @@ resource "kubernetes_secret" "internal_service_tls" {
   type = "kubernetes.io/tls"
 
   data = {
-    "tls.crt" = tls_locally_signed_cert.internal_service.cert_pem
+    "tls.crt" = "${tls_locally_signed_cert.internal_service.cert_pem}"
     "tls.key" = tls_private_key.internal_service.private_key_pem
     "ca.crt"  = tls_self_signed_cert.internal_ca.cert_pem
   }

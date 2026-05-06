@@ -54,8 +54,7 @@ abstract class AbstractParticipant extends AbstractEntity {
 
     @Override
     protected String vaultUrl() {
-        String httpHost = CLUSTER_HOSTNAME.replaceFirst(":\\d+$", ":80");
-        return "http://%s/%s/vault".formatted(httpHost, name());
+        return "https://%s/%s/vault".formatted(CLUSTER_HOSTNAME, name());
     }
 
     private String controlPlaneProtocolBaseUrl() {

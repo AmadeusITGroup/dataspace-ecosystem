@@ -47,7 +47,12 @@ resource "helm_release" "kafkaproxy" {
           }
           "vaultFolder" : var.vault_folder
           "vaultTls" : {
-            "enabled" : false
+            "enabled" : true
+            "caCert" : {
+              "secret" : var.internal_tls_secret_name
+              "key" : "ca.crt"
+              "path" : "/vault-ca/ca.crt"
+            }
           }
           "extraConfig" : <<-EOT
 EOT

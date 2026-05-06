@@ -37,5 +37,8 @@ resource "kubernetes_secret" "db-user-credentials" {
 module "vault" {
   source = "../vault"
 
-  participant_name = var.participant_name
+  participant_name                 = var.participant_name
+  internal_tls_secret_name         = var.internal_tls_secret_name
+  ingress_tls_secret_name          = var.ingress_tls_secret_name
+  ingress_proxy_ssl_ca_secret_name = var.ingress_proxy_ssl_ca_secret_name
 }
