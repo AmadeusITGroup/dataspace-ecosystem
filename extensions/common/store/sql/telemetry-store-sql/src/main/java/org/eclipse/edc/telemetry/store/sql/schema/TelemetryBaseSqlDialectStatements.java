@@ -88,30 +88,23 @@ public class TelemetryBaseSqlDialectStatements implements TelemetryRecordStateme
     }
 
     @Override
-    public String getDeleteLeaseTemplate() {
-        return executeStatement().delete(getLeaseTableName(), getLeaseIdColumn());
+    public SqlQueryStatement createNextNotLeaseQuery(QuerySpec query, long currentTimeMillis) {
+        var queryTemplate = format("%s LEFT JOIN %s l ON a.%s = l.%s AND l.%s = '%s'",
+                getSelectTelemetryRecordTemplate(),
+                getLeaseTableName(),
+                getRecordIdColumn(),
+                getResourceIdColumn(),
+                getResourceKindColumn(),
+                getTelemetryRecordTable());
+        return new SqlQueryStatement(queryTemplate, query, new SqlTelemetryRecordMapping(this), operatorTranslator)
+                .addWhereClause(getNotLeasedFilter(), currentTimeMillis, getTelemetryRecordTable());
     }
 
-    @Override
-    public String getInsertLeaseTemplate() {
-        return executeStatement()
-                .column(getLeaseIdColumn())
-                .column(getLeasedByColumn())
-                .column(getLeasedAtColumn())
-                .column(getLeaseDurationColumn())
-                .insertInto(getLeaseTableName());
-    }
-
-    @Override
-    public String getUpdateLeaseTemplate() {
-        return executeStatement()
-                .column(getLeaseIdColumn())
-                .update(getTelemetryRecordTable(), getIdColumn());
-    }
-
-    @Override
-    public String getFindLeaseByEntityTemplate() {
-        return format("SELECT * FROM %s  WHERE %s = (SELECT lease_id FROM %s WHERE %s=? )",
-                getLeaseTableName(), getLeaseIdColumn(), getTelemetryRecordTable(), getIdColumn());
+    private String getNotLeasedFilter() {
+        return format("(l.%s IS NULL OR (? > (l.%s + l.%s) AND ? = l.%s))",
+                getResourceIdColumn(),
+                getLeasedAtColumn(),
+                getLeaseDurationColumn(),
+                getResourceKindColumn());
     }
 }

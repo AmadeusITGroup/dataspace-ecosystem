@@ -7,7 +7,7 @@ This module provides a temporary patch for the Eclipse Dataspace Components (EDC
 The revocation service in EDC is currently not stable. This extension provides a no-operation implementation of the revocation service that allows verifiable credentials to pass revocation checks without actually validating against revocation lists. This is a temporary workaround to enable testing and development while the proper revocation infrastructure is being finalized.
 
 ## Unstable Revocation Service
-This development is a temporary workaround since current EDC version (0.14.0) VC revocation is still unstable and not compatible with the architecture of DSE. Newer versions of EDC (0.15.0) will include a new implementation of the revocation service that will be compatible with DSE architecture and will allow us to remove this patch and use the proper revocation service implementation.
+This development is a temporary workaround since the EDC VC revocation service is still unstable and not compatible with the architecture of DSE. A future EDC version will include a new implementation of the revocation service that will be compatible with DSE architecture and will allow us to remove this patch and use the proper revocation service implementation.
 
 ## Components
 
@@ -44,7 +44,7 @@ A minimal implementation of `RevocationListService` that:
    - The registered `NoopRevocationListService` is invoked
    - All revocation checks immediately return success
    - No network calls are made to revocation lists
-   - No actual validation occurs (to be replaced later in EDC 0.15.0)
+   - No actual validation occurs (to be replaced when revocation service stabilizes)
 
 ## Dependencies
 

@@ -4,6 +4,7 @@ plugins {
 
 dependencies {
     runtimeOnly(project(":core:telemetry-service-core"))
+    runtimeOnly(project(":extensions:common:participant-context-config-seed"))
     runtimeOnly(project(":extensions:common:vc-revocation-patch"))
     runtimeOnly(project(":extensions:telemetry-service:telemetry-service-credential-api"))
     runtimeOnly(project(":extensions:common:policies"))
@@ -15,6 +16,9 @@ dependencies {
     runtimeOnly(libs.edc.sql.jti.store)
     runtimeOnly(libs.edc.oauth2.oauth2client)
     runtimeOnly(libs.edc.dsp)
+    runtimeOnly(libs.edc.controlplane.bom) {
+        exclude(group = "org.eclipse.edc", module = "dsp")
+    }
 }
 
 edcBuild {

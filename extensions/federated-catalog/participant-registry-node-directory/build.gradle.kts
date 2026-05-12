@@ -9,4 +9,5 @@ dependencies {
     api(libs.edc.federatedcatalog.spi.core)
     api(libs.edc.spi.identity.did)
     api(libs.edc.spi.dsp.http)
+    api(libs.edc.dsp.spi.v2025)
 }

@@ -62,7 +62,7 @@ public class ParticipantContextSeedExtension implements ServiceExtension {
 
     @Override
     public void initialize(ServiceExtensionContext context) {
-        participantId = context.getParticipantId();
+        participantId = context.getSetting("edc.participant.id", "default-participant");
     }
 
     @Override
@@ -88,7 +88,7 @@ public class ParticipantContextSeedExtension implements ServiceExtension {
         var tr = new TypeReference<List<Service>>() {
         };
         var builder = ParticipantManifest.Builder.newInstance()
-                .participantId(participantId)
+                .participantContextId(participantId)
                 .did(participantId)
                 .active(true)
                 .key(KeyDescriptor.Builder.newInstance()

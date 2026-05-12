@@ -35,18 +35,11 @@ import org.eclipse.edc.web.spi.configuration.PortMappingRegistry;
 import java.net.http.HttpClient;
 import java.util.Map;
 
-import static org.eclipse.edc.jsonld.spi.JsonLdKeywords.VOCAB;
-import static org.eclipse.edc.jsonld.spi.Namespaces.DCAT_PREFIX;
-import static org.eclipse.edc.jsonld.spi.Namespaces.DCAT_SCHEMA;
-import static org.eclipse.edc.jsonld.spi.Namespaces.DCT_PREFIX;
-import static org.eclipse.edc.jsonld.spi.Namespaces.DCT_SCHEMA;
-import static org.eclipse.edc.jsonld.spi.Namespaces.DSPACE_PREFIX;
-import static org.eclipse.edc.jsonld.spi.Namespaces.DSPACE_SCHEMA;
-import static org.eclipse.edc.policy.model.OdrlNamespace.ODRL_PREFIX;
-import static org.eclipse.edc.policy.model.OdrlNamespace.ODRL_SCHEMA;
-import static org.eclipse.edc.spi.constants.CoreConstants.EDC_NAMESPACE;
-import static org.eclipse.edc.spi.constants.CoreConstants.EDC_PREFIX;
-import static org.eclipse.edc.spi.constants.CoreConstants.JSON_LD;
+import org.eclipse.edc.jsonld.spi.JsonLdKeywords;
+import org.eclipse.edc.jsonld.spi.Namespaces;
+import org.eclipse.edc.policy.model.OdrlNamespace;
+import org.eclipse.edc.protocol.dsp.spi.type.Dsp2025Constants;
+import org.eclipse.edc.spi.constants.CoreConstants;
 
 
 @Extension("VC-based Catalogue Filter Extension")
@@ -104,22 +97,22 @@ public class VcCatalogFilterExtension implements ServiceExtension {
         webService.registerResource(CATALOG_QUERY, controller);
         webService.registerResource(
                 CATALOG_QUERY,
-                new ObjectMapperProvider(typeManager, JSON_LD)
+                new ObjectMapperProvider(typeManager, CoreConstants.JSON_LD)
         );
         webService.registerResource(
                 CATALOG_QUERY,
-                new JerseyJsonLdInterceptor(jsonLd, typeManager, JSON_LD, CATALOG_FILTER_SCOPE)
+                new JerseyJsonLdInterceptor(jsonLd, typeManager, CoreConstants.JSON_LD, CATALOG_FILTER_SCOPE)
         );
         monitor.info("Registered Federated Catalog Filter");
     }
 
     private void registerNameSpaces() {
-        jsonLd.registerNamespace(VOCAB, EDC_NAMESPACE, CATALOG_FILTER_SCOPE);
-        jsonLd.registerNamespace(EDC_PREFIX, EDC_NAMESPACE, CATALOG_FILTER_SCOPE);
-        jsonLd.registerNamespace(ODRL_PREFIX, ODRL_SCHEMA, CATALOG_FILTER_SCOPE);
-        jsonLd.registerNamespace(DCAT_PREFIX, DCAT_SCHEMA, CATALOG_FILTER_SCOPE);
-        jsonLd.registerNamespace(DCT_PREFIX, DCT_SCHEMA, CATALOG_FILTER_SCOPE);
-        jsonLd.registerNamespace(DSPACE_PREFIX, DSPACE_SCHEMA, CATALOG_FILTER_SCOPE);
+        jsonLd.registerNamespace(JsonLdKeywords.VOCAB, CoreConstants.EDC_NAMESPACE, CATALOG_FILTER_SCOPE);
+        jsonLd.registerNamespace(CoreConstants.EDC_PREFIX, CoreConstants.EDC_NAMESPACE, CATALOG_FILTER_SCOPE);
+        jsonLd.registerNamespace(OdrlNamespace.ODRL_PREFIX, OdrlNamespace.ODRL_SCHEMA, CATALOG_FILTER_SCOPE);
+        jsonLd.registerNamespace(Namespaces.DCAT_PREFIX, Namespaces.DCAT_SCHEMA, CATALOG_FILTER_SCOPE);
+        jsonLd.registerNamespace(Namespaces.DCT_PREFIX, Namespaces.DCT_SCHEMA, CATALOG_FILTER_SCOPE);
+        jsonLd.registerNamespace(Namespaces.DSPACE_PREFIX, Dsp2025Constants.DSPACE_SCHEMA_2025_1, CATALOG_FILTER_SCOPE);
     }
 
     private void registerTransformers() {
@@ -129,7 +122,7 @@ public class VcCatalogFilterExtension implements ServiceExtension {
         transformerRegistry.register(new JsonObjectToConstraintTransformer());
         transformerRegistry.register(new JsonObjectToOperatorTransformer());
         transformerRegistry.register(new JsonObjectFromQuerySpecTransformer(factory));
-        transformerRegistry.register(new JsonObjectFromCriterionTransformer(factory, typeManager, JSON_LD));
+        transformerRegistry.register(new JsonObjectFromCriterionTransformer(factory, typeManager, CoreConstants.JSON_LD));
         transformerRegistry.register(new JsonObjectToProhibitionTransformer());
         transformerRegistry.register(new JsonObjectToDutyTransformer());
     }

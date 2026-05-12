@@ -4,6 +4,7 @@ plugins {
 
 dependencies {
     runtimeOnly(project(":extensions:federated-catalog:filter"))
+    runtimeOnly(project(":extensions:common:participant-context-config-seed"))
     runtimeOnly(project(":extensions:common:vc-revocation-patch"))
     runtimeOnly(project(":extensions:common:policies"))
     runtimeOnly(project(":extensions:agreements"))
@@ -16,7 +17,10 @@ dependencies {
     api(libs.edc.spi.identity.did)
     runtimeOnly(libs.edc.controlplane.api.secrets)
     runtimeOnly(libs.bundles.connector)
-    runtimeOnly(libs.edc.controlplane.bom)
+    runtimeOnly(libs.edc.controlplane.bom) {
+        exclude(group = "org.eclipse.edc", module = "dsp")
+    }
+    runtimeOnly(libs.edc.dsp)
 }
 
 edcBuild {

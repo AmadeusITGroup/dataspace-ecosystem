@@ -10,7 +10,7 @@ dependencies {
     // Azure Blob Storage support
     runtimeOnly(libs.edc.ext.azure.blob.core)
     runtimeOnly(libs.edc.ext.azure.data.plane.storage)
-    runtimeOnly(project(":extensions:data-plane:data-plane-provision-blob"))
+    runtimeOnly(libs.edc.ext.azure.data.plane.provision.blob)
 
     runtimeOnly(libs.edc.ext.dpf.kafka)
     runtimeOnly(libs.edc.core.edr.store)

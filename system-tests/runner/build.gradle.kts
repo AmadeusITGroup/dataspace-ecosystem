@@ -15,6 +15,9 @@ tasks.test {
 
 dependencies {
     testImplementation(libs.edc.spi.identity.did)
+    testImplementation(libs.edc.dsp.spi.v2025)
+    testImplementation(libs.edc.ext.jsonld)
+    testImplementation(libs.edc.junit)
     testImplementation(libs.awaitility)
     testImplementation(libs.edc.spi.dpf)
     testImplementation(libs.jakarta.rsApi)

@@ -45,6 +45,8 @@ public class TelemetryServiceCoreExtension implements ServiceExtension {
     @Inject
     private TelemetryPolicy telemetryPolicy;
 
+    private ServiceExtensionContext context;
+
 
     @Override
     public String name() {
@@ -53,6 +55,7 @@ public class TelemetryServiceCoreExtension implements ServiceExtension {
 
     @Override
     public void initialize(ServiceExtensionContext context) {
+        this.context = context;
         policyEngine.registerScope(TELEMETRY_REQUEST_SCOPE, RequestTelemetryPolicyContext.class);
         policyEngine.registerScope(TELEMETRY_SCOPE, TelemetryPolicyContext.class);
     }
@@ -66,7 +69,10 @@ public class TelemetryServiceCoreExtension implements ServiceExtension {
     @Provider
     public TelemetryServiceTokenValidator telemetryServiceTokenValidator() {
         if (telemetryServiceTokenValidator == null) {
-            telemetryServiceTokenValidator = new TelemetryServiceTokenValidatorImpl(identityService, policyEngine, monitor, participantAgentService, dataspaceProfileContextRegistry);
+            var participantId = context.getSetting("edc.participant.id", "default-participant");
+            telemetryServiceTokenValidator = new TelemetryServiceTokenValidatorImpl(
+                    identityService, policyEngine, monitor,
+                    participantAgentService, dataspaceProfileContextRegistry, participantId);
         }
         return telemetryServiceTokenValidator;
     }

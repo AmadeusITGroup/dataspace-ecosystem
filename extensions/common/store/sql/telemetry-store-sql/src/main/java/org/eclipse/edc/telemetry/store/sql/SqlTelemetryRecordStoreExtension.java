@@ -20,10 +20,10 @@ import org.eclipse.edc.runtime.metamodel.annotation.Provider;
 import org.eclipse.edc.runtime.metamodel.annotation.Provides;
 import org.eclipse.edc.runtime.metamodel.annotation.Setting;
 import org.eclipse.edc.spi.system.ServiceExtension;
-import org.eclipse.edc.spi.system.ServiceExtensionContext;
 import org.eclipse.edc.spi.types.TypeManager;
 import org.eclipse.edc.sql.QueryExecutor;
 import org.eclipse.edc.sql.bootstrapper.SqlSchemaBootstrapper;
+import org.eclipse.edc.sql.lease.spi.SqlLeaseContextBuilderProvider;
 import org.eclipse.edc.telemetry.store.sql.schema.TelemetryRecordStatements;
 import org.eclipse.edc.telemetry.store.sql.schema.postgres.PostgresTelemetryRecordStatements;
 import org.eclipse.edc.transaction.datasource.spi.DataSourceRegistry;
@@ -61,23 +61,27 @@ public class SqlTelemetryRecordStoreExtension implements ServiceExtension {
     @Inject
     private Clock clock;
 
+    @Inject
+    private SqlLeaseContextBuilderProvider leaseContextBuilderProvider;
+
     @Override
     public String name() {
         return EXTENSION_NAME;
     }
 
     @Provider
-    public TelemetryRecordStore telemetryRecordStore(ServiceExtensionContext context) {
+    public TelemetryRecordStore telemetryRecordStore() {
         sqlSchemaBootstrapper.addStatementFromResource(dataSourceName, "telemetry-record-schema.sql");
+        var leaseContextBuilder = leaseContextBuilderProvider.createContextBuilder(getDialect().getTelemetryRecordTable());
         return new SqlTelemetryRecordStore(
                 dataSourceRegistry,
                 dataSourceName,
                 transactionContext,
                 typeManager.getMapper(),
                 getDialect(),
+                leaseContextBuilder,
                 queryExecutor,
-                clock,
-                context.getRuntimeId());
+                clock);
     }
 
     private TelemetryRecordStatements getDialect() {

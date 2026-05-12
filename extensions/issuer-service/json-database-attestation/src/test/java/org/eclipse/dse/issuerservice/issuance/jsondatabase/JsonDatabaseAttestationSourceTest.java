@@ -118,7 +118,7 @@ class JsonDatabaseAttestationSourceTest {
 
     private AttestationContext mockContext(String participantId) {
         var context = mock(AttestationContext.class);
-        when(context.participantId()).thenReturn(participantId);
+        when(context.participantContextId()).thenReturn(participantId);
         return context;
     }
 }

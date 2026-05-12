@@ -6,7 +6,6 @@ import org.eclipse.dse.edc.spi.telemetryagent.TelemetryServiceClient;
 import org.eclipse.dse.spi.telemetry.RequestTelemetryPolicyContext;
 import org.eclipse.dse.spi.telemetry.TelemetryPolicy;
 import org.eclipse.edc.http.spi.EdcHttpClient;
-import org.eclipse.edc.http.spi.FallbackFactories;
 import org.eclipse.edc.iam.did.spi.document.DidDocument;
 import org.eclipse.edc.iam.did.spi.document.Service;
 import org.eclipse.edc.iam.did.spi.resolution.DidResolverRegistry;
@@ -114,11 +113,12 @@ public class TelemetryServiceClientImpl implements TelemetryServiceClient {
         // Build final token parameters and enforce the audience claim (following EDC pattern)
         var tokenParameters = tokenParametersBuilder
                 .claims(AUDIENCE, authorityDid)
+                .claims("participant_context_id", ownDid)
                 .build();
 
-        return identityService.obtainClientCredentials(tokenParameters)
+        return identityService.obtainClientCredentials(ownDid, tokenParameters)
                 .map(tokenRepresentation -> createRequest(url + SAS_TOKEN_PATH, tokenRepresentation.getToken()))
-                .compose(request -> httpClient.execute(request, List.of(FallbackFactories.retryWhenStatusIsNotIn(200, 204)), this::handleResponse));
+                .compose(request -> httpClient.execute(request, List.of(), this::handleResponse));
     }
 
     private Result<String> credentialUrl(DidDocument document) {
@@ -142,6 +142,11 @@ public class TelemetryServiceClientImpl implements TelemetryServiceClient {
     }
 
     private Result<TokenRepresentation> handleResponse(Response response) {
+        if (!response.isSuccessful()) {
+            var code = response.code();
+            response.close();
+            return Result.failure("Server response was not successful: " + code);
+        }
         return getStringBody(response)
                 .compose(it -> {
                     try {

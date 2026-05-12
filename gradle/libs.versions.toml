@@ -2,8 +2,9 @@
 format.version = "1.1"
 
 [versions]
-edc = "0.14.0"
-edc-build = "1.1.0"
+edc = "0.15.1"
+edc-build = "1.1.2"
+wiremock = "3.0.1"
 
 assertj = "3.27.3"
 azure-identity = "1.18.1"
@@ -43,7 +44,7 @@ edc-spi-controlplane = { module = "org.eclipse.edc:control-plane-spi", version.r
 edc-spi-transaction = { module = "org.eclipse.edc:transaction-spi", version.ref = "edc" }
 edc-spi-transaction-datasource = { module = "org.eclipse.edc:transaction-datasource-spi", version.ref = "edc" }
 edc-spi-identity-did = { module = "org.eclipse.edc:identity-did-spi", version.ref = "edc" }
-edc-spi-identitytrust = { module = "org.eclipse.edc:identity-trust-spi", version.ref = "edc" }
+edc-spi-identitytrust = { module = "org.eclipse.edc:decentralized-claims-spi", version.ref = "edc" }
 edc-spi-jsonld = { module = "org.eclipse.edc:json-ld-spi", version.ref = "edc" }
 edc-spi-jwt = { module = "org.eclipse.edc:jwt-spi", version.ref = "edc" }
 edc-spi-vc = { module = "org.eclipse.edc:verifiable-credential-spi", version.ref = "edc" }
@@ -102,6 +103,8 @@ edc-ext-dpf-kafka = { module = "org.eclipse.edc:data-plane-kafka", version.ref =
 edc-ext-dpf-util = { module = "org.eclipse.edc:data-plane-util", version.ref = "edc" }
 edc-ext-dpf-core = { module = "org.eclipse.edc:data-plane-core", version.ref = "edc" }
 edc-sql-lease = { module = "org.eclipse.edc:sql-lease", version.ref = "edc" }
+edc-sql-lease-spi = { module = "org.eclipse.edc:sql-lease-spi", version.ref = "edc" }
+edc-sql-lease-core = { module = "org.eclipse.edc:sql-lease-core", version.ref = "edc" }
 edc-sql-test-fixtures = { module = "org.eclipse.edc:sql-test-fixtures", version.ref = "edc" }
 edc-sql-bootstrapper = { module = "org.eclipse.edc:sql-bootstrapper", version.ref = "edc" }
 edc-ext-sql-pool-apache-commons = { module = "org.eclipse.edc:sql-pool-apache-commons", version.ref = "edc" }
@@ -111,15 +114,28 @@ edc-ext-sql-edrindex = { module = "org.eclipse.edc:edr-index-sql", version.ref =
 edc-ext-azure-vault = { module = "org.eclipse.edc.azure:vault-azure", version.ref = "edc" }
 edc-ext-azure-blob-core = { module = "org.eclipse.edc.azure:azure-blob-core", version.ref = "edc" }
 edc-ext-azure-data-plane-storage = { module = "org.eclipse.edc.azure:data-plane-azure-storage", version.ref = "edc" }
+edc-ext-azure-data-plane-provision-blob = { module = "org.eclipse.edc.azure:data-plane-provision-blob", version.ref = "edc" }
 edc-ext-azure-test = { module = "org.eclipse.edc.azure:azure-test", version.ref = "edc" }
-edc-identitytrust-core = { module = "org.eclipse.edc:identity-trust-core", version.ref = "edc" }
-edc-identitytrust-issuersconfiguration = { module = "org.eclipse.edc:identity-trust-issuers-configuration", version.ref = "edc" }
+edc-identitytrust-core = { module = "org.eclipse.edc:decentralized-claims", version.ref = "edc" }
+edc-identitytrust-issuersconfiguration = { module = "org.eclipse.edc:decentralized-claims-issuers-configuration", version.ref = "edc" }
 edc-identity-did-core = { module = "org.eclipse.edc:identity-did-core", version.ref = "edc" }
 edc-identity-did-web = { module = "org.eclipse.edc:identity-did-web", version.ref = "edc" }
 edc-oauth2-oauth2client = {module = "org.eclipse.edc:oauth2-client", version.ref = "edc" }
 edc-sql-jti-store = { module = "org.eclipse.edc:jti-validation-store-sql", version.ref = "edc" }
 edc-dsp = { module = "org.eclipse.edc:dsp", version.ref = "edc" }
 edc-dsp-spi-v2025 = { module = "org.eclipse.edc:dsp-spi-2025", version.ref = "edc" }
+
+# Participant Context (new in 0.15.1)
+edc-spi-connector-participantcontext = { module = "org.eclipse.edc:connector-participant-context-spi", version.ref = "edc" }
+edc-spi-participantcontext-config = { module = "org.eclipse.edc:participant-context-config-spi", version.ref = "edc" }
+edc-core-participantcontext-single = { module = "org.eclipse.edc:participant-context-single-core", version.ref = "edc" }
+edc-core-participantcontext-config = { module = "org.eclipse.edc:participant-context-config-core", version.ref = "edc" }
+
+# Control Plane Aggregate Services (new in 0.15.1)
+edc-controlplane-aggregate-services = { module = "org.eclipse.edc:control-plane-aggregate-services", version.ref = "edc" }
+
+# Wiremock (new)
+wiremock = { module = "org.wiremock:wiremock", version.ref = "wiremock" }
 
 # Control Plane
 edc-controlplane-api-secrets = { module = "org.eclipse.edc:secrets-api", version.ref = "edc" }

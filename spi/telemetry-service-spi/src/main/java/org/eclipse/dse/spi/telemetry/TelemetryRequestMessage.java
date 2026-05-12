@@ -5,23 +5,10 @@ import org.eclipse.edc.spi.types.domain.message.RemoteMessage;
 
 import java.util.Objects;
 
-public class TelemetryRequestMessage implements RemoteMessage {
+public class TelemetryRequestMessage extends RemoteMessage {
 
-    private String protocol;
-    private String counterPartyAddress;
     private String counterPartyId;
 
-    @Override
-    public String getProtocol() {
-        return protocol;
-    }
-
-    @Override
-    public String getCounterPartyAddress() {
-        return counterPartyAddress;
-    }
-
-    @Override
     public String getCounterPartyId() {
         return counterPartyId;
     }

@@ -4,9 +4,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.json.JsonArray;
 import jakarta.json.JsonObject;
 import jakarta.json.JsonValue;
-import org.eclipse.edc.jsonld.TitaniumJsonLd;
+import org.eclipse.edc.jsonld.JsonLdExtension;
 import org.eclipse.edc.jsonld.spi.JsonLd;
 import org.eclipse.edc.jsonld.util.JacksonJsonLd;
+import org.eclipse.edc.junit.extensions.TestServiceExtensionContext;
 import org.eclipse.edc.spi.monitor.ConsoleMonitor;
 import org.eclipse.edc.spi.monitor.Monitor;
 
@@ -22,13 +23,14 @@ import static org.eclipse.edc.connector.controlplane.transfer.spi.types.Transfer
 import static org.eclipse.edc.jsonld.spi.JsonLdKeywords.VALUE;
 import static org.eclipse.edc.jsonld.spi.Namespaces.DSPACE_SCHEMA;
 import static org.eclipse.edc.jsonld.spi.PropertyAndTypeNames.DCAT_DATASET_ATTRIBUTE;
+import static org.eclipse.edc.protocol.dsp.spi.type.Dsp2025Constants.DSPACE_SCHEMA_2025_1;
 
 public class AbstractEndToEndTests {
 
     protected static final ObjectMapper MAPPER = JacksonJsonLd.createObjectMapper();
     protected static final Duration TEST_TIMEOUT = Duration.ofSeconds(60);
     private static final Monitor MONITOR = new ConsoleMonitor();
-    private static final JsonLd JSON_LD = new TitaniumJsonLd(MONITOR);
+    private static final JsonLd JSON_LD = new JsonLdExtension().createJsonLdService(TestServiceExtensionContext.testServiceExtensionContext());
     private static final Duration TEST_POLL_INTERVAL = Duration.ofMillis(500);
     public static final String HTTP_DATA_PULL = "HttpData-PULL";
 
@@ -64,47 +66,65 @@ public class AbstractEndToEndTests {
         return transferProcessId;
     }
 
-    protected static void getCredentials(AbstractEntity participant)  {
-        await().atMost(TEST_TIMEOUT).untilAsserted(() -> {
-            boolean hasMembershipCredential = false;
-            boolean hasDomainCredential = false;
-            List<JsonObject> verifiableCredentials = participant.getCredentials(MAPPER);
-            for (JsonObject verifiableCredential : verifiableCredentials) {
-                JsonObject vc = verifiableCredential.getJsonObject("verifiableCredential");
-                JsonObject credential = vc.getJsonObject("credential");
-                JsonArray types = credential.getJsonArray("type");
-                for (int j = 0; j < types.size(); j++) {
-                    String type = types.getString(j);
-                    if (type.equals("MembershipCredential")) {
-                        hasMembershipCredential = true;
-                        // Verify that extensible properties from the JSON properties column
-                        // are correctly flattened into the credentialSubject
-                        var subjectValue = credential.get("credentialSubject");
-                        assertThat(subjectValue).isNotNull();
-                        // credentialSubject can be a JsonObject or a JsonArray (JSON-LD)
-                        JsonObject credentialSubject;
-                        if (subjectValue instanceof JsonArray subjectArray) {
-                            credentialSubject = subjectArray.getJsonObject(0);
-                        } else {
-                            credentialSubject = (JsonObject) subjectValue;
-                        }
-                        assertThat(credentialSubject).containsKey("companySegment");
-                        assertThat(credentialSubject.getString("companySegment", null)).isEqualTo("Airlines");
-                    }
-                    if (type.equals("DomainCredential")) {
-                        hasDomainCredential = true;
-                    }
+    protected static void getCredentials(AbstractEntity participant) {
+        await().atMost(TEST_TIMEOUT).untilAsserted(() -> assertCredentialsPresent(participant));
+    }
+
+    private static void assertCredentialsPresent(AbstractEntity participant) throws Exception {
+        boolean hasMembershipCredential = false;
+        boolean hasDomainCredential = false;
+        List<JsonObject> verifiableCredentials = participant.getCredentials(MAPPER);
+        for (JsonObject verifiableCredential : verifiableCredentials) {
+            JsonObject vc = verifiableCredential.getJsonObject("verifiableCredential");
+            JsonObject credential = vc.getJsonObject("credential");
+            JsonArray types = credential.getJsonArray("type");
+            for (int j = 0; j < types.size(); j++) {
+                String type = types.getString(j);
+                if (type.equals("MembershipCredential")) {
+                    hasMembershipCredential = true;
+                    assertMembershipCredentialSubject(credential);
+                }
+                if (type.equals("DomainCredential")) {
+                    hasDomainCredential = true;
                 }
             }
-            assert hasMembershipCredential : "Missing MembershipCredential type";
-            assert hasDomainCredential : "Missing DomainCredential type";
-        });
+        }
+        assert hasMembershipCredential : "Missing MembershipCredential type";
+        assert hasDomainCredential : "Missing DomainCredential type";
+    }
+
+    private static void assertMembershipCredentialSubject(JsonObject credential) {
+        var subjectValue = credential.get("credentialSubject");
+        assertThat(subjectValue).isNotNull();
+        JsonObject credentialSubject;
+        if (subjectValue instanceof JsonArray subjectArray) {
+            credentialSubject = subjectArray.getJsonObject(0);
+        } else {
+            credentialSubject = (JsonObject) subjectValue;
+        }
+        assertThat(credentialSubject).containsKey("companySegment");
+        assertThat(credentialSubject.getString("companySegment", null)).isEqualTo("Airlines");
     }
 
     private static Predicate<JsonObject> isCatalogOf(String did) {
-        return catalog -> catalog.getJsonArray(DSPACE_SCHEMA + "participantId")
-                .stream()
-                .allMatch(jsonValue -> did.equals(jsonValue.asJsonObject().getString(VALUE)));
+        return catalog -> {
+            // Support both DSP v0.8 and DSP 2025/1 namespace for participantId
+            var v08Key = DSPACE_SCHEMA + "participantId";
+            var v2025Key = DSPACE_SCHEMA_2025_1 + "participantId";
+            var key = catalog.containsKey(v2025Key) ? v2025Key : v08Key;
+            var values = catalog.getJsonArray(key);
+            if (values == null) {
+                return false;
+            }
+            return values.stream().allMatch(jsonValue -> {
+                var obj = jsonValue.asJsonObject();
+                // value may be a literal @value or a plain @id
+                if (obj.containsKey(VALUE)) {
+                    return did.equals(obj.getString(VALUE));
+                }
+                return did.equals(obj.getString("@id", null));
+            });
+        };
     }
 
 

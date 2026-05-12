@@ -1,5 +1,8 @@
 package org.eclipse.dse.core.telemetry;
 
+import okhttp3.mockwebserver.MockResponse;
+import okhttp3.mockwebserver.MockWebServer;
+import okhttp3.mockwebserver.RecordedRequest;
 import org.eclipse.dse.spi.telemetry.TelemetryPolicy;
 import org.eclipse.edc.iam.did.spi.document.DidDocument;
 import org.eclipse.edc.iam.did.spi.document.Service;
@@ -8,6 +11,7 @@ import org.eclipse.edc.json.JacksonTypeManager;
 import org.eclipse.edc.policy.engine.spi.PolicyEngine;
 import org.eclipse.edc.policy.model.Policy;
 import org.eclipse.edc.spi.iam.IdentityService;
+import org.eclipse.edc.spi.iam.TokenParameters;
 import org.eclipse.edc.spi.iam.TokenRepresentation;
 import org.eclipse.edc.spi.result.Result;
 import org.eclipse.edc.spi.types.TypeManager;
@@ -16,19 +20,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import org.mockserver.integration.ClientAndServer;
-import org.mockserver.model.HttpRequest;
-import org.mockserver.model.HttpResponse;
-import org.mockserver.model.MediaType;
 
+import java.io.IOException;
 import java.time.Clock;
 import java.util.List;
 import java.util.UUID;
 
-import static jakarta.ws.rs.core.HttpHeaders.AUTHORIZATION;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.eclipse.edc.http.client.testfixtures.HttpTestUtils.testHttpClient;
-import static org.eclipse.edc.util.io.Ports.getFreePort;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -38,38 +37,35 @@ class DefaultTelemetryServiceClientTest {
     private static final String AUTHORITY_DID = "authorityDid";
     private static final String OWN_DID = "ownDid";
 
-    private int port;
-    private ClientAndServer server;
+    private MockWebServer server;
+    private String serverUrl;
     private final TypeManager typeManager = new JacksonTypeManager();
     private final DidResolverRegistry didResolverRegistry = mock();
     private final IdentityService identityService = mock();
     private final PolicyEngine policyEngine = mock();
     private final TelemetryPolicy telemetryPolicy = mock();
     private TelemetryServiceClientImpl client;
-    // Use a fixed clock to make tests predictable
     private final Clock clock = Clock.systemUTC();
 
     @BeforeEach
-    public void setUp() {
-        port = getFreePort();
-        server = ClientAndServer.startClientAndServer(port);
-        
-        // Mock policy and policy engine
+    public void setUp() throws IOException {
+        server = new MockWebServer();
+        server.start();
+        serverUrl = "http://" + server.getHostName() + ":" + server.getPort();
+
         when(telemetryPolicy.get()).thenReturn(Policy.Builder.newInstance().build());
         when(policyEngine.evaluate(any(), any())).thenReturn(Result.success());
-        
-        client = new TelemetryServiceClientImpl(testHttpClient(), typeManager, didResolverRegistry, 
-                                               AUTHORITY_DID, identityService, policyEngine, telemetryPolicy, OWN_DID, clock);
+
+        client = new TelemetryServiceClientImpl(testHttpClient(), typeManager, didResolverRegistry,
+                AUTHORITY_DID, identityService, policyEngine, telemetryPolicy, OWN_DID, clock);
     }
 
     @AfterEach
-    public void tearDown() {
-        if (server != null) {
-            server.stop();
-        }
+    public void tearDown() throws IOException {
+        server.shutdown();
     }
 
-    private static DidDocument createDidDocument(Service... services) {
+    private DidDocument createDidDocument(Service... services) {
         return DidDocument.Builder.newInstance()
                 .service(List.of(services))
                 .build();
@@ -85,31 +81,34 @@ class DefaultTelemetryServiceClientTest {
     class FetchCredential {
 
         @Test
-        void success() {
-            var service = new Service("test", "TelemetryServiceCredential", "http://localhost:" + port);
-            var didDocument = createDidDocument(service);
-            when(didResolverRegistry.resolve(AUTHORITY_DID)).thenReturn(Result.success(didDocument));
+        void success() throws Exception {
+            var service = new Service("test", "TelemetryServiceCredential", serverUrl);
+            when(didResolverRegistry.resolve(AUTHORITY_DID)).thenReturn(Result.success(createDidDocument(service)));
 
             var accessToken = createToken();
             var sasToken = createToken();
 
-            var expectedRequest = HttpRequest.request().withHeader(AUTHORIZATION, accessToken.getToken());
-            server.when(expectedRequest).respond(HttpResponse.response().withBody(typeManager.writeValueAsString(sasToken), MediaType.APPLICATION_JSON));
+            server.enqueue(new MockResponse()
+                    .setBody(typeManager.writeValueAsString(sasToken))
+                    .addHeader("Content-Type", "application/json"));
 
-            when(identityService.obtainClientCredentials(any()))
+            when(identityService.obtainClientCredentials(any(), any(TokenParameters.class)))
                     .thenReturn(Result.success(TokenRepresentation.Builder.newInstance().token(accessToken.getToken()).build()));
 
             var result = client.fetchCredential();
 
             assertThat(result.succeeded()).isTrue();
             assertThat(result.getContent().getToken()).isEqualTo(sasToken.getToken());
+
+            RecordedRequest request = server.takeRequest();
+            assertThat(request.getHeader("Authorization")).isEqualTo(accessToken.getToken());
         }
 
         @Test
         void didResolutionFails_shouldFail() {
             when(didResolverRegistry.resolve(AUTHORITY_DID)).thenReturn(Result.failure("DID resolution failed"));
 
-            Result<TokenRepresentation> result = client.fetchCredential();
+            var result = client.fetchCredential();
 
             assertThat(result.succeeded()).isFalse();
             assertThat(result.getFailureDetail()).isEqualTo("DID resolution failed");
@@ -117,9 +116,8 @@ class DefaultTelemetryServiceClientTest {
 
         @Test
         void didDocumentDoesNotContains_TelemetryServiceCredential_shouldFail() {
-            var service = new Service("test", "unknown", "http://localhost:" + port);
-            var didDocument = createDidDocument(service);
-            when(didResolverRegistry.resolve(AUTHORITY_DID)).thenReturn(Result.success(didDocument));
+            var service = new Service("test", "unknown", serverUrl);
+            when(didResolverRegistry.resolve(AUTHORITY_DID)).thenReturn(Result.success(createDidDocument(service)));
 
             var result = client.fetchCredential();
 
@@ -129,17 +127,13 @@ class DefaultTelemetryServiceClientTest {
 
         @Test
         void httpCallFails_shouldReturnError() {
-            var service = new Service("test", "TelemetryServiceCredential", "http://localhost:" + port);
-            var didDocument = createDidDocument(service);
-            when(didResolverRegistry.resolve(AUTHORITY_DID)).thenReturn(Result.success(didDocument));
+            var service = new Service("test", "TelemetryServiceCredential", serverUrl);
+            when(didResolverRegistry.resolve(AUTHORITY_DID)).thenReturn(Result.success(createDidDocument(service)));
 
-            var accessToken = createToken();
+            server.enqueue(new MockResponse().setResponseCode(400));
 
-            var expectedRequest = HttpRequest.request().withHeader(AUTHORIZATION, accessToken.getToken());
-            server.when(expectedRequest).respond(HttpResponse.response().withStatusCode(400));
-
-            when(identityService.obtainClientCredentials(any()))
-                    .thenReturn(Result.success(TokenRepresentation.Builder.newInstance().token(accessToken.getToken()).build()));
+            when(identityService.obtainClientCredentials(any(), any(TokenParameters.class)))
+                    .thenReturn(Result.success(TokenRepresentation.Builder.newInstance().token("token").build()));
 
             var result = client.fetchCredential();
 
@@ -149,11 +143,10 @@ class DefaultTelemetryServiceClientTest {
 
         @Test
         void obtainClientCredentialsFails_shouldPropagateFailure() {
-            var service = new Service("test", "TelemetryServiceCredential", "http://localhost:" + port);
-            var didDocument = createDidDocument(service);
-            when(didResolverRegistry.resolve(AUTHORITY_DID)).thenReturn(Result.success(didDocument));
+            var service = new Service("test", "TelemetryServiceCredential", serverUrl);
+            when(didResolverRegistry.resolve(AUTHORITY_DID)).thenReturn(Result.success(createDidDocument(service)));
 
-            when(identityService.obtainClientCredentials(any()))
+            when(identityService.obtainClientCredentials(any(), any(TokenParameters.class)))
                     .thenReturn(Result.failure("identity service failure"));
 
             var result = client.fetchCredential();
@@ -164,16 +157,13 @@ class DefaultTelemetryServiceClientTest {
 
         @Test
         void serverReturnsEmptyBody_shouldFail() {
-            var service = new Service("test", "TelemetryServiceCredential", "http://localhost:" + port);
-            var didDocument = createDidDocument(service);
-            when(didResolverRegistry.resolve(AUTHORITY_DID)).thenReturn(Result.success(didDocument));
+            var service = new Service("test", "TelemetryServiceCredential", serverUrl);
+            when(didResolverRegistry.resolve(AUTHORITY_DID)).thenReturn(Result.success(createDidDocument(service)));
 
-            var accessToken = createToken();
-            when(identityService.obtainClientCredentials(any()))
-                    .thenReturn(Result.success(TokenRepresentation.Builder.newInstance().token(accessToken.getToken()).build()));
+            server.enqueue(new MockResponse().setResponseCode(200));
 
-            var expectedRequest = HttpRequest.request().withHeader(AUTHORIZATION, accessToken.getToken());
-            server.when(expectedRequest).respond(HttpResponse.response().withStatusCode(200));
+            when(identityService.obtainClientCredentials(any(), any(TokenParameters.class)))
+                    .thenReturn(Result.success(TokenRepresentation.Builder.newInstance().token("token").build()));
 
             var result = client.fetchCredential();
 
@@ -182,41 +172,36 @@ class DefaultTelemetryServiceClientTest {
         }
 
         @Test
-        void audienceAndScopeAreSetOnTokenRequest() {
-            var service = new Service("test", "TelemetryServiceCredential", "http://localhost:" + port);
-            var didDocument = createDidDocument(service);
-            when(didResolverRegistry.resolve(AUTHORITY_DID)).thenReturn(Result.success(didDocument));
+        void audienceAndScopeAreSetOnTokenRequest() throws Exception {
+            var service = new Service("test", "TelemetryServiceCredential", serverUrl);
+            when(didResolverRegistry.resolve(AUTHORITY_DID)).thenReturn(Result.success(createDidDocument(service)));
 
             var accessToken = createToken();
             var sasToken = createToken();
 
-            ArgumentCaptor<org.eclipse.edc.spi.iam.TokenParameters> captor = ArgumentCaptor.forClass(org.eclipse.edc.spi.iam.TokenParameters.class);
-            when(identityService.obtainClientCredentials(captor.capture()))
-                    .thenReturn(Result.success(TokenRepresentation.Builder.newInstance().token(accessToken.getToken()).build()));
+            server.enqueue(new MockResponse()
+                    .setBody(typeManager.writeValueAsString(sasToken))
+                    .addHeader("Content-Type", "application/json"));
 
-            var expectedRequest = HttpRequest.request().withHeader(AUTHORIZATION, accessToken.getToken());
-            server.when(expectedRequest).respond(HttpResponse.response().withBody(typeManager.writeValueAsString(sasToken), MediaType.APPLICATION_JSON));
+            ArgumentCaptor<TokenParameters> captor = ArgumentCaptor.forClass(TokenParameters.class);
+            when(identityService.obtainClientCredentials(any(), captor.capture()))
+                    .thenReturn(Result.success(TokenRepresentation.Builder.newInstance().token(accessToken.getToken()).build()));
 
             var result = client.fetchCredential();
 
             assertThat(result.succeeded()).isTrue();
-
-            var params = captor.getValue();
-            assertThat(params.getStringClaim("aud")).isEqualTo(AUTHORITY_DID);
+            assertThat(captor.getValue().getStringClaim("aud")).isEqualTo(AUTHORITY_DID);
         }
 
         @Test
         void serverReturnsMalformedJson_shouldFail() {
-            var service = new Service("test", "TelemetryServiceCredential", "http://localhost:" + port);
-            var didDocument = createDidDocument(service);
-            when(didResolverRegistry.resolve(AUTHORITY_DID)).thenReturn(Result.success(didDocument));
+            var service = new Service("test", "TelemetryServiceCredential", serverUrl);
+            when(didResolverRegistry.resolve(AUTHORITY_DID)).thenReturn(Result.success(createDidDocument(service)));
 
-            var accessToken = createToken();
-            when(identityService.obtainClientCredentials(any()))
-                    .thenReturn(Result.success(TokenRepresentation.Builder.newInstance().token(accessToken.getToken()).build()));
+            server.enqueue(new MockResponse().setBody("not-json").addHeader("Content-Type", "text/plain"));
 
-            var expectedRequest = HttpRequest.request().withHeader(AUTHORIZATION, accessToken.getToken());
-            server.when(expectedRequest).respond(HttpResponse.response().withBody("not-json", MediaType.PLAIN_TEXT_UTF_8));
+            when(identityService.obtainClientCredentials(any(), any(TokenParameters.class)))
+                    .thenReturn(Result.success(TokenRepresentation.Builder.newInstance().token("token").build()));
 
             var result = client.fetchCredential();
 
@@ -225,16 +210,13 @@ class DefaultTelemetryServiceClientTest {
 
         @Test
         void serverReturnsNotFound_shouldFail() {
-            var service = new Service("test", "TelemetryServiceCredential", "http://localhost:" + port);
-            var didDocument = createDidDocument(service);
-            when(didResolverRegistry.resolve(AUTHORITY_DID)).thenReturn(Result.success(didDocument));
+            var service = new Service("test", "TelemetryServiceCredential", serverUrl);
+            when(didResolverRegistry.resolve(AUTHORITY_DID)).thenReturn(Result.success(createDidDocument(service)));
 
-            var accessToken = createToken();
-            when(identityService.obtainClientCredentials(any()))
-                    .thenReturn(Result.success(TokenRepresentation.Builder.newInstance().token(accessToken.getToken()).build()));
+            server.enqueue(new MockResponse().setResponseCode(404));
 
-            var expectedRequest = HttpRequest.request().withHeader(AUTHORIZATION, accessToken.getToken());
-            server.when(expectedRequest).respond(HttpResponse.response().withStatusCode(404));
+            when(identityService.obtainClientCredentials(any(), any(TokenParameters.class)))
+                    .thenReturn(Result.success(TokenRepresentation.Builder.newInstance().token("token").build()));
 
             var result = client.fetchCredential();
 
@@ -244,16 +226,13 @@ class DefaultTelemetryServiceClientTest {
 
         @Test
         void serverReturnsInternalServerError_shouldFail() {
-            var service = new Service("test", "TelemetryServiceCredential", "http://localhost:" + port);
-            var didDocument = createDidDocument(service);
-            when(didResolverRegistry.resolve(AUTHORITY_DID)).thenReturn(Result.success(didDocument));
+            var service = new Service("test", "TelemetryServiceCredential", serverUrl);
+            when(didResolverRegistry.resolve(AUTHORITY_DID)).thenReturn(Result.success(createDidDocument(service)));
 
-            var accessToken = createToken();
-            when(identityService.obtainClientCredentials(any()))
-                    .thenReturn(Result.success(TokenRepresentation.Builder.newInstance().token(accessToken.getToken()).build()));
+            server.enqueue(new MockResponse().setResponseCode(500));
 
-            var expectedRequest = HttpRequest.request().withHeader(AUTHORIZATION, accessToken.getToken());
-            server.when(expectedRequest).respond(HttpResponse.response().withStatusCode(500));
+            when(identityService.obtainClientCredentials(any(), any(TokenParameters.class)))
+                    .thenReturn(Result.success(TokenRepresentation.Builder.newInstance().token("token").build()));
 
             var result = client.fetchCredential();
 
@@ -262,44 +241,45 @@ class DefaultTelemetryServiceClientTest {
         }
 
         @Test
-        void correctUrlIsUsed_shouldAppendSasTokenPath() {
-            var service = new Service("test", "TelemetryServiceCredential", "http://localhost:" + port);
-            var didDocument = createDidDocument(service);
-            when(didResolverRegistry.resolve(AUTHORITY_DID)).thenReturn(Result.success(didDocument));
+        void correctUrlIsUsed_shouldAppendSasTokenPath() throws Exception {
+            var service = new Service("test", "TelemetryServiceCredential", serverUrl);
+            when(didResolverRegistry.resolve(AUTHORITY_DID)).thenReturn(Result.success(createDidDocument(service)));
 
             var accessToken = createToken();
             var sasToken = createToken();
-            when(identityService.obtainClientCredentials(any()))
-                    .thenReturn(Result.success(TokenRepresentation.Builder.newInstance().token(accessToken.getToken()).build()));
 
-            // Verify the exact URL path is used
-            var expectedRequest = HttpRequest.request()
-                    .withPath("/v1alpha/sas-token")
-                    .withHeader(AUTHORIZATION, accessToken.getToken());
-            server.when(expectedRequest).respond(HttpResponse.response().withBody(typeManager.writeValueAsString(sasToken), MediaType.APPLICATION_JSON));
+            server.enqueue(new MockResponse()
+                    .setBody(typeManager.writeValueAsString(sasToken))
+                    .addHeader("Content-Type", "application/json"));
+
+            when(identityService.obtainClientCredentials(any(), any(TokenParameters.class)))
+                    .thenReturn(Result.success(TokenRepresentation.Builder.newInstance().token(accessToken.getToken()).build()));
 
             var result = client.fetchCredential();
 
             assertThat(result.succeeded()).isTrue();
-            assertThat(result.getContent().getToken()).isEqualTo(sasToken.getToken());
+            RecordedRequest request = server.takeRequest();
+            assertThat(request.getPath()).isEqualTo("/v1alpha/sas-token");
         }
 
         @Test
-        void didDocumentWithMultipleServices_shouldSelectCorrectOne() {
+        void didDocumentWithMultipleServices_shouldSelectCorrectOne() throws Exception {
             var wrongService = new Service("wrong", "WrongServiceType", "http://wrong.example.com");
-            var correctService = new Service("test", "TelemetryServiceCredential", "http://localhost:" + port);
+            var correctService = new Service("test", "TelemetryServiceCredential", serverUrl);
             var anotherWrongService = new Service("another", "AnotherType", "http://another.example.com");
-            
-            var didDocument = createDidDocument(wrongService, correctService, anotherWrongService);
-            when(didResolverRegistry.resolve(AUTHORITY_DID)).thenReturn(Result.success(didDocument));
+
+            when(didResolverRegistry.resolve(AUTHORITY_DID))
+                    .thenReturn(Result.success(createDidDocument(wrongService, correctService, anotherWrongService)));
 
             var accessToken = createToken();
             var sasToken = createToken();
-            when(identityService.obtainClientCredentials(any()))
-                    .thenReturn(Result.success(TokenRepresentation.Builder.newInstance().token(accessToken.getToken()).build()));
 
-            var expectedRequest = HttpRequest.request().withHeader(AUTHORIZATION, accessToken.getToken());
-            server.when(expectedRequest).respond(HttpResponse.response().withBody(typeManager.writeValueAsString(sasToken), MediaType.APPLICATION_JSON));
+            server.enqueue(new MockResponse()
+                    .setBody(typeManager.writeValueAsString(sasToken))
+                    .addHeader("Content-Type", "application/json"));
+
+            when(identityService.obtainClientCredentials(any(), any(TokenParameters.class)))
+                    .thenReturn(Result.success(TokenRepresentation.Builder.newInstance().token(accessToken.getToken()).build()));
 
             var result = client.fetchCredential();
 
@@ -309,8 +289,7 @@ class DefaultTelemetryServiceClientTest {
 
         @Test
         void emptyDidDocument_shouldFail() {
-            var didDocument = createDidDocument(); // No services
-            when(didResolverRegistry.resolve(AUTHORITY_DID)).thenReturn(Result.success(didDocument));
+            when(didResolverRegistry.resolve(AUTHORITY_DID)).thenReturn(Result.success(createDidDocument()));
 
             var result = client.fetchCredential();
 

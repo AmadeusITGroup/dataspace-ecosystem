@@ -47,8 +47,12 @@ public class FederatedCatalogFilteringExtension implements ServiceExtension {
     @Override
     public void initialize(ServiceExtensionContext context) {
         registerTransformers();
-        webService.registerResource(ApiContext.MANAGEMENT, new CatalogFilteringController(
-                new AuthorityCatalogDidResolver(didResolverRegistry, authorityDid), context.getMonitor(), identityService, context.getParticipantId(), clock, authorityDid, new ObjectMapper(), transformerRegistry));
+        var participantId = context.getSetting("edc.participant.id", "default-participant");
+        var didResolver = new AuthorityCatalogDidResolver(didResolverRegistry, authorityDid);
+        var controller = new CatalogFilteringController(
+                didResolver, context.getMonitor(), identityService,
+                participantId, clock, authorityDid, new ObjectMapper(), transformerRegistry);
+        webService.registerResource(ApiContext.MANAGEMENT, controller);
     }
 
     private void registerTransformers() {

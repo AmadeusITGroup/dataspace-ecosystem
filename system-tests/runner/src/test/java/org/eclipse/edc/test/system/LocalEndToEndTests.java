@@ -33,10 +33,6 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.security.cert.X509Certificate;
-import javax.crypto.SecretKey;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
 import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -49,6 +45,10 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.crypto.SecretKey;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 
 import static io.restassured.RestAssured.given;
 import static io.restassured.http.ContentType.JSON;
@@ -181,7 +181,7 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
                 .fullyQualifiedNamespace(EVENT_HUB_NAMESPACE)
                 .eventHubName(EVENT_HUB_NAME)
                 .connectionString(LOCAL_CONSUMER_EVENT_HUB_CONNECTION_STRING)
-                .consumerGroup("$default")
+                .consumerGroup("cg1")
                 .buildAsyncConsumerClient();
 
         // prepare authority
@@ -780,6 +780,30 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
                     .extract().body().jsonPath().getString("contractId");
         }
 
+        public static String getProviderContractIdFromTransferProcess(AbstractParticipant provider, String consumerTransferProcessId) {
+            var body = Map.of(
+                    "@context", Map.of(
+                            "@vocab", EDC_NAMESPACE
+                    ),
+                    "@type", "QuerySpec",
+                    "filterExpression", List.of(Map.of(
+                            "operandLeft", "correlationId",
+                            "operator", "=",
+                            "operandRight", consumerTransferProcessId
+                    ))
+            );
+
+            return await().atMost(TEST_TIMEOUT).until(() -> provider.participantClient().baseManagementRequest()
+                            .contentType(ContentType.JSON)
+                            .body(body)
+                            .when()
+                            .post("/v3/transferprocesses/request")
+                            .then()
+                            .statusCode(200)
+                            .extract().body().jsonPath().getString("[0].contractId"),
+                    contractId -> contractId != null && !contractId.isBlank());
+        }
+
         public static class TransferTestProvider implements ArgumentsProvider {
 
             @Override
@@ -858,6 +882,7 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
             // Negotiate and transfer
             var transferProcessId = negotiationContractAndStartTransfer(CONSUMER, PROVIDER, ASSET_ID_REST_API);
             var contractId = getContractIdFromTransferProcess(CONSUMER, transferProcessId);
+            var providerContractId = getProviderContractIdFromTransferProcess(PROVIDER, transferProcessId);
             USED_CONTRACT_ID.add(contractId);
             // Confirm data access works
             await().atMost(TEST_TIMEOUT).untilAsserted(() -> {
@@ -866,7 +891,7 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
             });
 
             // Retire the agreement
-            retireAgreement(PROVIDER, contractId, "Test retirement reason");
+            retireAgreement(PROVIDER, providerContractId, "Test retirement reason");
 
             // Confirm data access is blocked after retirement
             await().atMost(TEST_TIMEOUT).untilAsserted(() -> {
@@ -874,7 +899,7 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
                 assertThat(error.getErrors()).anyMatch(msg -> msg.contains("No EDR satisfying criterion"));
             });
             // Reactivate the agreement
-            reactivateAgreement(PROVIDER, contractId);
+            reactivateAgreement(PROVIDER, providerContractId);
             // Confirm data access is opened after reactivation
             transferProcess(CONSUMER, PROVIDER, contractId);
             await().atMost(TEST_TIMEOUT).untilAsserted(() -> {

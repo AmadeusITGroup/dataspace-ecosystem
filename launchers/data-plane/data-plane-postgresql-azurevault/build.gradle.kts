@@ -12,6 +12,7 @@ dependencies {
 
     runtimeOnly(project(":extensions:common:store:sql:telemetry-store-sql"))
     runtimeOnly(libs.edc.ext.sql.edrindex)
+    runtimeOnly(libs.edc.core.participantcontext.single)
     runtimeOnly(libs.edc.dataplane.sql.bom)
     runtimeOnly(libs.edc.ext.azure.vault)
 }

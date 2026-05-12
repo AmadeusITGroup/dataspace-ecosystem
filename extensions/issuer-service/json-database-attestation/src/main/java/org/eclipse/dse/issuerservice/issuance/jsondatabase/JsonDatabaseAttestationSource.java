@@ -52,7 +52,7 @@ public class JsonDatabaseAttestationSource extends AbstractSqlStore implements A
 
     @Override
     public Result<Map<String, Object>> execute(AttestationContext context) {
-        var participantId = context.participantId();
+        var participantId = context.participantContextId();
         return transactionContext.execute(() -> {
             try (var connection = getConnection()) {
                 var query = "SELECT * FROM %s WHERE %s = ?".formatted(tableName, idColumn);

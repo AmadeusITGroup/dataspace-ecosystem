@@ -23,6 +23,7 @@ public class TelemetryAgent extends AbstractStateEntityManager<TelemetryRecord, 
 
     private TelemetryRecordPublisherFactory publisherFactory;
     private TelemetryRecordPublisher currentPublisher;
+    private String lastCredentialToken;
     private TokenCache cache;
 
     private TelemetryAgent() {
@@ -49,27 +50,29 @@ public class TelemetryAgent extends AbstractStateEntityManager<TelemetryRecord, 
 
 
     private synchronized Optional<TelemetryRecordPublisher> createPublisher() {
-        // Close previous publisher if it exists
+        var credential = cache.get();
+        if (credential == null) {
+            monitor.warning("Failed to get credentials from cache");
+            return Optional.empty();
+        }
+
+        var token = credential.getToken();
+        if (currentPublisher != null && token.equals(lastCredentialToken)) {
+            return Optional.of(currentPublisher);
+        }
+
         if (currentPublisher != null) {
             try {
                 currentPublisher.close();
-                monitor.debug("Closed previous publisher");
             } catch (Exception e) {
                 monitor.warning("Failed to close previous publisher: " + e.getMessage());
             }
-            currentPublisher = null;
         }
-        
-        return Optional.ofNullable(cache.get())
-                .map(c -> {
-                    var publisher = publisherFactory.createClient(c);
-                    currentPublisher = publisher;
-                    return Optional.of(publisher);
-                })
-                .orElseGet(() -> {
-                    monitor.warning("Failed to get credentials from cache");
-                    return Optional.empty();
-                });
+
+        var publisher = publisherFactory.createClient(credential);
+        currentPublisher = publisher;
+        lastCredentialToken = token;
+        return Optional.of(publisher);
     }
 
     private Long sendRecords(TelemetryRecordPublisher publisher, Collection<TelemetryRecord> records) {

@@ -85,6 +85,8 @@ resource "helm_release" "telemetryagent" {
 
         "config" : <<EOT
 edc.vault.hashicorp.token.scheduled-renew-enabled=false
+edc.vault.hashicorp.allow.fallback=true
+edc.participant.id=${local.did_url}
 dse.namespace.prefix=${var.dse_namespace_prefix}
 dse.policy.prefix=${var.dse_policy_prefix}
 edc.web.https.keystore.path=/shared/keystore.p12

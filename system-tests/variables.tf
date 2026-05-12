@@ -21,7 +21,7 @@ variable "kube_config_path" {
 variable "environment" {
   description = "The environment (local, devbox or production)"
   type        = string
-  default     = "production" # Default to "production" if not defined
+  default     = "production"
 }
 
 variable "account_secret_azurite" {

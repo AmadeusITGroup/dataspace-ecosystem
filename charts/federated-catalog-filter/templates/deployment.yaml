@@ -159,6 +159,8 @@ spec:
             value: {{.Values.federatedcatalogfilter.vault.hashicorp.paths.folder | quote}}
           - name: "EDC_VAULT_HASHICORP_API_HEALTH_CHECK_PATH"
             value: {{ .Values.federatedcatalogfilter.vault.hashicorp.paths.health | quote }}
+          - name: "EDC_VAULT_HASHICORP_ALLOW_FALLBACK"
+            value: {{ .Values.federatedcatalogfilter.vault.hashicorp.allowFallback | quote }}
           {{- end }}
           #######
           # DID #

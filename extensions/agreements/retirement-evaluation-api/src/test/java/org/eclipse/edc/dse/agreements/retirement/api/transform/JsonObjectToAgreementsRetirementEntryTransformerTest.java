@@ -57,4 +57,22 @@ class JsonObjectToAgreementsRetirementEntryTransformerTest {
         assertThat(result.getAgreementRetirementDate()).isNotNull();
     }
 
+    @Test
+    void transform_compactedJsonLd() {
+
+        var context = mock(TransformerContext.class);
+        var jsonEntry = Json.createObjectBuilder()
+                .add("edc:agreementId", "agreementId")
+                .add("dse:reason", "reason")
+                .build();
+
+        var result = transformer.transform(jsonEntry, context);
+
+        assertThat(result).isNotNull();
+        assertThat(result).isInstanceOf(AgreementsRetirementEntry.class);
+        assertThat(result.getAgreementId()).isEqualTo("agreementId");
+        assertThat(result.getReason()).isEqualTo("reason");
+        assertThat(result.getAgreementRetirementDate()).isNotNull();
+    }
+
 }

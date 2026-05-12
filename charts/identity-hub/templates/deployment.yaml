@@ -139,6 +139,8 @@ spec:
               value: {{.Values.identityhub.vault.hashicorp.paths.folder | quote}}
             - name: "EDC_VAULT_HASHICORP_API_HEALTH_CHECK_PATH"
               value: {{ .Values.identityhub.vault.hashicorp.paths.health | quote }}
+            - name: "EDC_VAULT_HASHICORP_ALLOW_FALLBACK"
+              value: {{ .Values.identityhub.vault.hashicorp.allowFallback | quote }}
           {{- end }}
 
             ##############

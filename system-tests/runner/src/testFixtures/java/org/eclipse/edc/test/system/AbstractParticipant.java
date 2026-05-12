@@ -3,7 +3,7 @@ package org.eclipse.edc.test.system;
 import io.restassured.specification.RequestSpecification;
 import jakarta.json.JsonObject;
 import jakarta.json.JsonValue;
-import org.eclipse.edc.connector.controlplane.test.system.utils.LazySupplier;
+import org.eclipse.edc.junit.utils.LazySupplier;
 import org.eclipse.edc.connector.controlplane.test.system.utils.Participant;
 import org.eclipse.edc.connector.controlplane.test.system.utils.PolicyFixtures;
 import org.eclipse.edc.jsonld.JsonLdExtension;

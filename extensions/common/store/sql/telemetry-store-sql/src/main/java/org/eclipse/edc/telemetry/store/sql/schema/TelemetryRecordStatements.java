@@ -16,8 +16,8 @@ package org.eclipse.edc.telemetry.store.sql.schema;
 
 import org.eclipse.edc.runtime.metamodel.annotation.ExtensionPoint;
 import org.eclipse.edc.spi.query.QuerySpec;
-import org.eclipse.edc.sql.lease.LeaseStatements;
 import org.eclipse.edc.sql.lease.StatefulEntityStatements;
+import org.eclipse.edc.sql.lease.spi.LeaseStatements;
 import org.eclipse.edc.sql.statement.SqlStatements;
 import org.eclipse.edc.sql.translation.SqlQueryStatement;
 
@@ -88,6 +88,11 @@ public interface TelemetryRecordStatements extends SqlStatements, StatefulEntity
      * DELETE clause for Telemetry Records.
      */
     String getDeleteTelemetryRecordByIdTemplate();
+
+    /**
+     * Creates a query that filters out records that are currently leased.
+     */
+    SqlQueryStatement createNextNotLeaseQuery(QuerySpec query, long currentTimeMillis);
 
     /**
      * The COUNT variable used in SELECT COUNT queries.

@@ -39,6 +39,7 @@ class ParticipantContextSeedExtensionTest {
 
     private static final String PUBLIC_KEY_ALIAS = UUID.randomUUID().toString();
     private static final String PRIVATE_KEY_ALIAS = UUID.randomUUID().toString();
+    private static final String PARTICIPANT_ID = "test-participant-id";
 
     private final TypeManager typeManager = new JacksonTypeManager();
     private final List<Service> services = List.of(createService(), createService());
@@ -54,13 +55,14 @@ class ParticipantContextSeedExtensionTest {
         context.registerService(TypeManager.class, typeManager);
         when(context.getConfig()).thenReturn(ConfigFactory.fromMap(Map.of(PUBLIC_KEY_ALIAS_PROPERTY, PUBLIC_KEY_ALIAS,
                 PRIVATE_KEY_ALIAS_PROPERTY, PRIVATE_KEY_ALIAS,
-                SUPERUSER_SERVICES_PROPERTY, typeManager.writeValueAsString(services)))
+                SUPERUSER_SERVICES_PROPERTY, typeManager.writeValueAsString(services),
+                "edc.participant.id", PARTICIPANT_ID))
         );
     }
 
     @Test
     void superUserAlreadyExists_shouldDoNothing(ParticipantContextSeedExtension ext, ServiceExtensionContext context) {
-        when(participantContextService.getParticipantContext(context.getParticipantId()))
+        when(participantContextService.getParticipantContext(PARTICIPANT_ID))
                 .thenReturn(ServiceResult.success(mock()));
 
         ext.initialize(context);
@@ -73,10 +75,10 @@ class ParticipantContextSeedExtensionTest {
     @Test
     void createSuperUser(ParticipantContextSeedExtension ext, ServiceExtensionContext context) {
         var apiTokenAlias = UUID.randomUUID().toString();
-        when(participantContextService.getParticipantContext(context.getParticipantId()))
+        when(participantContextService.getParticipantContext(PARTICIPANT_ID))
                 .thenReturn(ServiceResult.notFound("not found"))
                 .thenReturn(ServiceResult.success(ParticipantContext.Builder.newInstance()
-                        .participantContextId(context.getParticipantId())
+                        .participantContextId(PARTICIPANT_ID)
                         .apiTokenAlias(apiTokenAlias)
                         .build()));
         var publicKeyPem = UUID.randomUUID().toString();
@@ -84,7 +86,7 @@ class ParticipantContextSeedExtensionTest {
         when(participantContextService.createParticipantContext(
                 assertArg(participantManifest -> {
                     assertThat(participantManifest.getServiceEndpoints()).usingRecursiveComparison().ignoringCollectionOrder().isEqualTo(services);
-                    assertThat(participantManifest.getKey().getPublicKeyPem()).isEqualTo(publicKeyPem);
+                    assertThat(participantManifest.getKeys().stream().findFirst().get().getPublicKeyPem()).isEqualTo(publicKeyPem);
                 }))
         ).thenReturn(ServiceResult.success(new CreateParticipantContextResponse("some-key", null, null)));
 
@@ -97,7 +99,7 @@ class ParticipantContextSeedExtensionTest {
 
     @Test
     void createParticipantFails_shouldThrow(ParticipantContextSeedExtension ext, ServiceExtensionContext context) {
-        when(participantContextService.getParticipantContext(context.getParticipantId()))
+        when(participantContextService.getParticipantContext(PARTICIPANT_ID))
                 .thenReturn(ServiceResult.notFound("not found"));
         var publicKeyPem = UUID.randomUUID().toString();
         when(vault.resolveSecret(PUBLIC_KEY_ALIAS)).thenReturn(publicKeyPem);

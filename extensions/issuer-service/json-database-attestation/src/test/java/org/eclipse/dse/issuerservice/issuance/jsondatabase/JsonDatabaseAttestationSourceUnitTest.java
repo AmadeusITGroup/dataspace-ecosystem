@@ -10,12 +10,12 @@ import org.eclipse.edc.transaction.spi.NoopTransactionContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.Map;
+import javax.sql.DataSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -195,7 +195,7 @@ class JsonDatabaseAttestationSourceUnitTest {
 
     private AttestationContext mockContext(String participantId) {
         var context = mock(AttestationContext.class);
-        when(context.participantId()).thenReturn(participantId);
+        when(context.participantContextId()).thenReturn(participantId);
         return context;
     }
 

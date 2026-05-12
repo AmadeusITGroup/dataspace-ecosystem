@@ -12,6 +12,7 @@ dependencies {
     runtimeOnly(project(":extensions:telemetry-storage:telemetry-storage-api"))
     runtimeOnly(project(":extensions:telemetry-storage:telemetry-storage-store-sql"))
     runtimeOnly(libs.bundles.connector)
+    runtimeOnly(libs.edc.identityhub.bom)
     runtimeOnly(libs.edc.core.sql)
     runtimeOnly(libs.edc.sql.bootstrapper)
     runtimeOnly(libs.edc.ext.sql.pool.apache.commons)

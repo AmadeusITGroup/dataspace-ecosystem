@@ -63,6 +63,10 @@ public class TelemetryAgentCoreExtension implements ServiceExtension {
     @Setting(description = "Vault alias of the private key used to sign access token for the telemetry service", key = "dse.credential-manager.private-key.alias", required = true)
     public String privateKeyAlias;
 
+    @Setting(description = "Participant ID for identity verification and token claims",
+            key = "edc.participant.id", defaultValue = "default-participant")
+    public String participantId;
+
     @Inject
     private TelemetryRecordPublisherFactory publisherFactory;
 
@@ -171,7 +175,7 @@ public class TelemetryAgentCoreExtension implements ServiceExtension {
     @Provider
     public TelemetryServiceClient defaultTelemetryServiceClient(ServiceExtensionContext context) {
         return new TelemetryServiceClientImpl(httpClient, typeManager, didResolverRegistry,
-                authorityDid, identityService, policyEngine, telemetryPolicy, context.getParticipantId(), clock);
+                authorityDid, identityService, policyEngine, telemetryPolicy, participantId, clock);
     }
 
     @NotNull

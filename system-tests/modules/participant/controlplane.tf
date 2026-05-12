@@ -10,7 +10,8 @@ locals {
   # reproduce in prod-grade deployment as all connectors of a dataspace will not be deployed
   # in the same Kubernetes cluster in the real life
   ############################################################################################
-  protocol_url = "https://${local.controlplane_release_name}:8282/api/dsp"
+  protocol_callback_url = "https://${local.controlplane_release_name}:8282/api/dsp"
+  protocol_url          = "${local.protocol_callback_url}/2025-1"
 
   control_plane_image = (
     var.environment == "local" ? "localhost/control-plane-postgresql-hashicorpvault" :
@@ -63,7 +64,7 @@ resource "helm_release" "controlplane" {
           "clientSecretAlias" : local.sts_client_secret_alias
         }
         "url" : {
-          "protocol" : local.protocol_url
+          "protocol" : local.protocol_callback_url
         }
         "did" : {
           "web" : {
@@ -89,6 +90,7 @@ resource "helm_release" "controlplane" {
         "config" : <<EOT
 edc.iam.trusted-issuer.authority.id=${local.authority_did}
 edc.vault.hashicorp.token.scheduled-renew-enabled=false
+edc.vault.hashicorp.allow.fallback=true
 edc.negotiation.state-machine.iteration-wait-millis=${var.negotiation_state_machine_wait_millis}
 edc.transfer.state-machine.iteration-wait-millis=${var.transfer_state_machine_wait_millis}
 edc.policy.monitor.state-machine.iteration-wait-millis=${var.policy_monitor_state_machine_wait_millis}

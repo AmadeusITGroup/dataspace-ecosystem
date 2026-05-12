@@ -11,6 +11,7 @@ dependencies {
     runtimeOnly(project(":extensions:telemetry-csv-manager:telemetry-csv-manager-api"))
 
     runtimeOnly(libs.bundles.connector)
+    runtimeOnly(libs.edc.identityhub.bom)
     runtimeOnly(libs.edc.core.sql)
     runtimeOnly(libs.edc.sql.bootstrapper)
     runtimeOnly(libs.edc.ext.sql.pool.apache.commons)

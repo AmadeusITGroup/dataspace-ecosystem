@@ -24,7 +24,6 @@ dependencies {
     implementation(libs.edc.lib.util)
     testImplementation(libs.edc.lib.json)
     testImplementation(testFixtures(project(":spi:telemetry-agent-spi")))
-    testImplementation(libs.mockserver.netty)
-    testImplementation(libs.mockserver.client)
+    testImplementation("com.squareup.okhttp3:mockwebserver:5.3.2")
     testImplementation(testFixtures(libs.edc.lib.http))
 }

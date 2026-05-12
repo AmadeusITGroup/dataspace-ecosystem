@@ -31,6 +31,9 @@ import static org.eclipse.edc.dse.agreements.retirement.spi.types.AgreementsReti
 
 public class JsonObjectToAgreementsRetirementEntryTransformer extends AbstractJsonLdTransformer<JsonObject, AgreementsRetirementEntry> {
 
+    private static final String COMPACTED_AGREEMENT_ID = "edc:agreementId";
+    private static final String COMPACTED_REASON = "dse:reason";
+
     private final AgreementConstants agreementConstants;
 
     public JsonObjectToAgreementsRetirementEntryTransformer(AgreementConstants agreementConstants) {
@@ -41,8 +44,10 @@ public class JsonObjectToAgreementsRetirementEntryTransformer extends AbstractJs
     @Override
     public @Nullable AgreementsRetirementEntry transform(@NotNull JsonObject jsonObject, @NotNull TransformerContext context) {
         var entryBuilder = AgreementsRetirementEntry.Builder.newInstance(agreementConstants);
-        entryBuilder.withAgreementId(transformString(jsonObject.get(AR_ENTRY_AGREEMENT_ID), context));
-        entryBuilder.withReason(transformString(jsonObject.get(agreementConstants.getArEntryReason()), context));
+        entryBuilder.withAgreementId(transformString(
+                jsonObject.getOrDefault(AR_ENTRY_AGREEMENT_ID, jsonObject.get(COMPACTED_AGREEMENT_ID)), context));
+        entryBuilder.withReason(transformString(
+                jsonObject.getOrDefault(agreementConstants.getArEntryReason(), jsonObject.get(COMPACTED_REASON)), context));
         return entryBuilder.build();
     }
 }

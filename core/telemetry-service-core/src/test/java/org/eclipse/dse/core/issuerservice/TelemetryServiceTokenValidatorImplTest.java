@@ -12,14 +12,15 @@ import org.eclipse.edc.spi.iam.IdentityService;
 import org.eclipse.edc.spi.iam.RequestContext;
 import org.eclipse.edc.spi.iam.RequestScope;
 import org.eclipse.edc.spi.iam.TokenRepresentation;
+import org.eclipse.edc.spi.iam.VerificationContext;
 import org.eclipse.edc.spi.result.Result;
 import org.eclipse.edc.spi.result.ServiceFailure;
 import org.eclipse.edc.spi.types.domain.message.RemoteMessage;
 import org.junit.jupiter.api.Test;
 
 import static java.util.Collections.emptyMap;
-import static org.eclipse.edc.protocol.dsp.spi.type.Dsp2025Constants.DATASPACE_PROTOCOL_HTTP_V_2025_1;
 import static org.eclipse.edc.junit.assertions.AbstractResultAssert.assertThat;
+import static org.eclipse.edc.protocol.dsp.spi.type.Dsp2025Constants.DATASPACE_PROTOCOL_HTTP_V_2025_1;
 import static org.eclipse.edc.spi.result.ServiceFailure.Reason.UNAUTHORIZED;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.same;
@@ -38,7 +39,8 @@ class TelemetryServiceTokenValidatorImplTest {
             policyEngine,
             mock(),
             agentService,
-            dataspaceProfileContextRegistry
+            dataspaceProfileContextRegistry,
+            "participantId"
     );
 
 
@@ -49,7 +51,7 @@ class TelemetryServiceTokenValidatorImplTest {
         var claimToken = ClaimToken.Builder.newInstance().build();
         var policy = Policy.Builder.newInstance().build();
         var tokenRepresentation = TokenRepresentation.Builder.newInstance().build();
-        when(identityService.verifyJwtToken(any(), any())).thenReturn(Result.success(claimToken));
+        when(identityService.verifyJwtToken(any(), any(), any(VerificationContext.class))).thenReturn(Result.success(claimToken));
         when(dataspaceProfileContextRegistry.getIdExtractionFunction(any())).thenReturn(ct -> participantId);
         when(agentService.createFor(any(), any())).thenReturn(participantAgent);
 
@@ -60,12 +62,12 @@ class TelemetryServiceTokenValidatorImplTest {
         // The implementation evaluates the provided policy instance passed to the validator
         verify(policyEngine).evaluate(same(policy), any(RequestPolicyContext.class));
         verify(dataspaceProfileContextRegistry).getIdExtractionFunction(DATASPACE_PROTOCOL_HTTP_V_2025_1);
-        verify(identityService).verifyJwtToken(same(tokenRepresentation), any());
+        verify(identityService).verifyJwtToken(any(), same(tokenRepresentation), any(VerificationContext.class));
     }
 
     @Test
     void shouldReturnUnauthorized_whenTokenIsNotValid() {
-        when(identityService.verifyJwtToken(any(), any())).thenReturn(Result.failure("failure"));
+        when(identityService.verifyJwtToken(any(), any(), any(VerificationContext.class))).thenReturn(Result.failure("failure"));
 
         var result = validator.verify(TokenRepresentation.Builder.newInstance().build(), TestRequestPolicyContext::new, Policy.Builder.newInstance().build());
 
@@ -79,21 +81,7 @@ class TelemetryServiceTokenValidatorImplTest {
         return new TestRequestPolicyContext(requestContext, requestScopeBuilder);
     }
 
-    static class TestMessage implements RemoteMessage {
-        @Override
-        public String getProtocol() {
-            return "protocol";
-        }
-
-        @Override
-        public String getCounterPartyAddress() {
-            return "http://connector";
-        }
-
-        @Override
-        public String getCounterPartyId() {
-            return null;
-        }
+    static class TestMessage extends RemoteMessage {
     }
 
     private static class TestRequestPolicyContext extends RequestPolicyContext {

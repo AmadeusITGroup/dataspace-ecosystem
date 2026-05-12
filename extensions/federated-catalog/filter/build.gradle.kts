@@ -32,6 +32,7 @@ dependencies {
     implementation(libs.edc.spi.transform)
     implementation(libs.edc.lib.transform)
     implementation(libs.edc.protocol.dsp.catalog)
+    implementation(libs.edc.dsp.spi.v2025)
     implementation(libs.edc.lib.jerseyproviders)
     implementation(libs.edc.spi.control.plane.transform)
     testImplementation(libs.edc.lib.jsonld)

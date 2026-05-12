@@ -12,7 +12,10 @@ dependencies {
 
     runtimeOnly(project(":extensions:common:store:sql:telemetry-store-sql"))
     runtimeOnly(libs.edc.ext.sql.edrindex)
-    runtimeOnly(libs.edc.dataplane.sql.bom)
+    runtimeOnly(libs.edc.ext.sql.pool.apache.commons)
+    runtimeOnly(libs.postgres)
+    runtimeOnly(libs.edc.core.participantcontext.single)
+    runtimeOnly(libs.edc.core.participantcontext.config)
     runtimeOnly(libs.edc.ext.vault.hashicorp)
 }
 

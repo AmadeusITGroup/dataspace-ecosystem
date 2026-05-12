@@ -35,7 +35,10 @@ public class ParticipantTargetNodeDirectoryExtension implements ServiceExtension
 
     @Provider
     public TargetNodeDirectory targetNodeDirectory(ServiceExtensionContext context) {
-        return new ParticipantTargetNodeDirectory(holderStore, transactionContext, new ParticipantToTargetNodeResolver(didResolverRegistry), context.getParticipantId(), monitor);
+        var participantId = context.getSetting("edc.participant.id", "default-participant");
+        var resolver = new ParticipantToTargetNodeResolver(didResolverRegistry);
+        return new ParticipantTargetNodeDirectory(
+                holderStore, transactionContext, resolver, participantId, monitor);
     }
 
 }

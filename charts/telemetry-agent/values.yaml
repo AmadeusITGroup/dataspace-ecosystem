@@ -113,6 +113,8 @@ telemetryagent:
         secret: /v1/secret
         folder: ""
         health: /v1/sys/health
+      # -- allow fallback to env-based vault token if participant-context token not available
+      allowFallback: false
 
       
   # -- Private/public keys information

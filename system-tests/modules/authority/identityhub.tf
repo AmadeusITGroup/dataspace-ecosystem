@@ -123,6 +123,7 @@ edc.web.https.keystore.path=/shared/keystore.p12
 edc.web.https.keystore.type=PKCS12
 edc.web.https.keystore.password=changeit
 edc.web.https.keymanager.password=changeit
+edc.vault.hashicorp.allow.fallback=true
         EOT
         "env" : {
           "JAVA_TOOL_OPTIONS" : "-Djavax.net.ssl.trustStore=/shared/cacerts -Djavax.net.ssl.trustStorePassword=changeit"

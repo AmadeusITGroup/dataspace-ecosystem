@@ -168,6 +168,8 @@ spec:
             value: {{.Values.federatedcatalog.vault.hashicorp.paths.folder | quote}}
           - name: "EDC_VAULT_HASHICORP_API_HEALTH_CHECK_PATH"
             value: {{ .Values.federatedcatalog.vault.hashicorp.paths.health | quote }}
+          - name: "EDC_VAULT_HASHICORP_ALLOW_FALLBACK"
+            value: {{ .Values.federatedcatalog.vault.hashicorp.allowFallback | quote }}
           {{- end }}
 
             #############################

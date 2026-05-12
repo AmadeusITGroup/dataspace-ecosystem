@@ -102,6 +102,9 @@ spec:
             - name: "EDC_IAM_DID_WEB_USE_HTTPS"
               value: {{ .Values.telemetryservice.did.web.useHttps | required ".Values.telemetryservice.did.web.useHttps is required" | quote }}
 
+            - name: "EDC_PARTICIPANT_ID"
+              value: {{.Values.telemetryservice.did.web.url | required ".Values.telemetryservice.did.web.url" | quote}}
+
 
 
             ######################
@@ -162,6 +165,8 @@ spec:
               value: {{.Values.telemetryservice.vault.hashicorp.paths.folder | quote}}
             - name: "EDC_VAULT_HASHICORP_API_HEALTH_CHECK_PATH"
               value: {{ .Values.telemetryservice.vault.hashicorp.paths.health | quote }}
+            - name: "EDC_VAULT_HASHICORP_ALLOW_FALLBACK"
+              value: {{ .Values.telemetryservice.vault.hashicorp.allowFallback | quote }}
           {{- end }}
 
             ############################
@@ -205,6 +210,8 @@ spec:
             #######
             # API #
             #######
+            - name: "WEB_HTTP_MANAGEMENT_PORT"
+              value: "8182"
             - name: "EDC_WEB_REST_CORS_ENABLED"
               value: {{ .Values.telemetryservice.api.cors.enabled | required ".Values.telemetryservice.api.cors.enabled is required" | quote }}
             - name: "EDC_WEB_REST_CORS_HEADERS"

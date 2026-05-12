@@ -157,7 +157,7 @@ class JsonDatabaseAttestationSourceValidatorTest {
     }
 
     @Test
-    void shouldFailWhenDataSourceNameIsNotAString() {
+    void shouldFailWhenDataSourceNameIsNotString() {
         var definition = mockDefinition("json-database", Map.of(
                 "dataSourceName", 42,
                 "tableName", "membership_attestation",
@@ -200,7 +200,7 @@ class JsonDatabaseAttestationSourceValidatorTest {
     }
 
     @Test
-    void shouldFailWhenIdColumnIsNotAString() {
+    void shouldFailWhenIdColumnIsNotString() {
         var definition = mockDefinition("json-database", Map.of(
                 "dataSourceName", "membership",
                 "tableName", "membership_attestation",

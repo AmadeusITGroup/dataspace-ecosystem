@@ -19,6 +19,7 @@ include(":extensions:common:policies")
 include(":extensions:common:odrl-policy-did-validation")
 include(":extensions:common:metrics:custom-micrometer")
 include(":extensions:common:store:sql:telemetry-store-sql")
+include(":extensions:common:participant-context-config-seed")
 
 include(":extensions:identity-hub:did-web-parser")
 include(":extensions:identity-hub:identity-hub-iatp")
@@ -26,7 +27,6 @@ include(":extensions:identity-hub:superuser-seed")
 
 include(":extensions:data-plane:data-plane-public-api-v2")
 include(":extensions:data-plane:data-plane-data-consumption-metrics")
-include(":extensions:data-plane:data-plane-provision-blob")
 
 include(":extensions:control-plane:asset-custom-property-subscriber")
 include(":extensions:control-plane:transfer-data-plane-signal-kafka")
