@@ -8,7 +8,7 @@ locals {
 
   authority_did = var.selfhosted_authority_did != "" ? var.selfhosted_authority_did : replace(local.did_url, var.participant_name, "authority")
 
-  image_pull_policy = var.environment == "local" || var.environment == "selfhosted" ? "Never" : "IfNotPresent"
+  image_pull_policy = var.environment == "local" || var.environment == "selfhosted" ? "Never" : var.environment == "devbox" ? "Always" : "IfNotPresent"
 }
 
 module "db" {

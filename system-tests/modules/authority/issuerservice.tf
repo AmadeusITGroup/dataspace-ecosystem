@@ -30,7 +30,7 @@ resource "helm_release" "issuerservice" {
           {
             "name" : "keystore-setup",
             "image" : "${local.issuerservice_image}:latest",
-            "imagePullPolicy" : var.environment == "local" ? "Never" : "IfNotPresent",
+            "imagePullPolicy" : local.image_pull_policy,
             "command" : ["/bin/sh", "-c"],
             "args" : [
               "cp /etc/pki/ca-trust/extracted/java/cacerts /opt/ca/cacerts && chmod 666 /opt/ca/cacerts && keytool -import -trustcacerts -keystore /opt/ca/cacerts -storepass changeit -noprompt -alias internalCa -file /certs/ca.crt && openssl pkcs12 -export -in /certs/tls.crt -inkey /certs/tls.key -out /opt/ca/keystore.p12 -passout pass:changeit -name service"
@@ -43,7 +43,7 @@ resource "helm_release" "issuerservice" {
         ],
         "image" : {
           "repository" : local.issuerservice_image
-          "pullPolicy" : var.environment == "local" ? "Never" : "IfNotPresent"
+          "pullPolicy" : local.image_pull_policy
           "tag" : "latest"
         },
         "keys" : {

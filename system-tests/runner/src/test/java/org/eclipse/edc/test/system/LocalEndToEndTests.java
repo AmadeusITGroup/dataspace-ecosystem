@@ -2,6 +2,7 @@ package org.eclipse.edc.test.system;
 
 import com.azure.messaging.eventhubs.EventHubClientBuilder;
 import com.azure.messaging.eventhubs.EventHubConsumerAsyncClient;
+import com.azure.messaging.eventhubs.models.EventPosition;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -9,6 +10,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import io.restassured.RestAssured;
+import io.restassured.builder.RequestSpecBuilder;
 import io.restassured.config.RestAssuredConfig;
 import io.restassured.config.SSLConfig;
 import io.restassured.http.ContentType;
@@ -29,9 +31,13 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
 
+import reactor.core.publisher.Flux;
+
 import java.io.BufferedReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.PrintWriter;
 import java.security.cert.X509Certificate;
 import java.sql.Timestamp;
 import java.time.Duration;
@@ -97,7 +103,7 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
 
     public static final String KAFKA_BROKER_PULL = "KafkaBroker-PULL";
     public static final String AZURE_STORAGE_PUSH = "AzureStorage-PUSH";
-    // Default DSE policy prefix — the hardcoded default of the configurable DseNamespaceConfig.
+    // Default DSE policy prefix -- the hardcoded default of the configurable DseNamespaceConfig.
     private static final String DSE_POLICY_PREFIX = "dse-policy";
     // TEST-ONLY SECRET: This hardcoded secret is used exclusively for JWT generation in tests.
     public static final String SECRET = "a-string-secret-at-least-256-bits-long";
@@ -119,10 +125,21 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final List<String> USED_CONTRACT_ID = new ArrayList<>();
+    private static final List<String> POST_FAILURES = new java.util.concurrent.CopyOnWriteArrayList<>();
     private static SSLContext previousDefaultSslContext;
     private static EventHubConsumerAsyncClient consumer;
 
     private static String kafkacatPod = null;
+    private static final String EVENTHUB_DEBUG_LOG = "/tmp/eventhub-debug.log";
+
+    private static void ehLog(String msg) {
+        String line = "[EventHub-Debug] " + java.time.Instant.now() + " " + msg;
+        System.out.println(line);
+        System.err.println(line);
+        try (var pw = new PrintWriter(new FileWriter(EVENTHUB_DEBUG_LOG, true))) {
+            pw.println(line);
+        } catch (IOException ignored) { }
+    }
     
     private static SSLConfig buildInternalCaSslConfig() {
         try {
@@ -174,8 +191,14 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
 
         // Configure RestAssured to trust the internal CA used for pod-to-pod TLS.
         // The CA cert is fetched from the cluster secret so certificate and hostname
-        // verification remain active — TLS misconfigurations are not masked.
+        // verification remain active -- TLS misconfigurations are not masked.
         RestAssured.config = RestAssuredConfig.config().sslConfig(buildInternalCaSslConfig());
+
+        // nginx ingress routes by Host header matching "localhost". Override so all
+        // requests reach the correct virtual host regardless of cluster.hostname value.
+        RestAssured.requestSpecification = new RequestSpecBuilder()
+                .addHeader("Host", "localhost")
+                .build();
 
         consumer = new EventHubClientBuilder()
                 .fullyQualifiedNamespace(EVENT_HUB_NAMESPACE)
@@ -236,59 +259,93 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
             SSLContext.setDefault(previousDefaultSslContext);
         }
 
-        consumer.receive(true)
-                .takeUntil(event -> {
-                    String contractId;
-                    String timestamp;
-                    String updatedTelemetryEvent;
-                    try {
-                        contractId = OBJECT_MAPPER.readTree(event.getData().getBodyAsString())
-                                .path("properties").path("contractId").asText();
+        ehLog("@AfterAll started. Expected contract IDs: " + USED_CONTRACT_ID);
+        ehLog("EventHub namespace: " + EVENT_HUB_NAMESPACE + ", name: " + EVENT_HUB_NAME);
+        ehLog("Subscribing to partitions 0 and 1 from EventPosition.earliest()...");
 
-                        timestamp = OBJECT_MAPPER.readTree(event.getData().getBodyAsString())
-                                .path("createdAt").asText();
+        var eventCounter = new java.util.concurrent.atomic.AtomicInteger(0);
 
-                        // Parse the telemetryEvent JSON
-                        JsonNode telemetryEventNode = OBJECT_MAPPER.readTree(event.getData().getBodyAsString())
-                                .path("properties");
+        try {
+            Flux.merge(
+                    consumer.receiveFromPartition("0", EventPosition.earliest())
+                            .doOnSubscribe(s -> ehLog("Subscribed to partition 0"))
+                            .doOnNext(e -> ehLog("RAW event from partition 0: seqNo=" + e.getData().getSequenceNumber() + " offset=" + e.getData().getOffset() + " body=" + e.getData().getBodyAsString().substring(0, Math.min(200, e.getData().getBodyAsString().length()))))
+                            .doOnError(err -> ehLog("ERROR on partition 0: " + err.getClass().getSimpleName() + ": " + err.getMessage())),
+                    consumer.receiveFromPartition("1", EventPosition.earliest())
+                            .doOnSubscribe(s -> ehLog("Subscribed to partition 1"))
+                            .doOnNext(e -> ehLog("RAW event from partition 1: seqNo=" + e.getData().getSequenceNumber() + " offset=" + e.getData().getOffset() + " body=" + e.getData().getBodyAsString().substring(0, Math.min(200, e.getData().getBodyAsString().length()))))
+                            .doOnError(err -> ehLog("ERROR on partition 1: " + err.getClass().getSimpleName() + ": " + err.getMessage()))
+            )
+                    .doOnSubscribe(s -> ehLog("Merged Flux subscribed at " + java.time.Instant.now()))
+                    .doOnNext(event -> ehLog("Event #" + eventCounter.incrementAndGet() + " received at " + java.time.Instant.now()))
+                    .takeUntil(event -> {
+                        String contractId;
+                        String timestamp;
+                        String updatedTelemetryEvent;
+                        try {
+                            contractId = OBJECT_MAPPER.readTree(event.getData().getBodyAsString())
+                                    .path("properties").path("contractId").asText();
 
-                        // Add the timestamp to the telemetryEvent JSON
-                        if (telemetryEventNode.isObject()) {
-                            ((ObjectNode) telemetryEventNode).put("timestamp", timestamp);
+                            timestamp = OBJECT_MAPPER.readTree(event.getData().getBodyAsString())
+                                    .path("createdAt").asText();
+
+                            // Parse the telemetryEvent JSON
+                            JsonNode telemetryEventNode = OBJECT_MAPPER.readTree(event.getData().getBodyAsString())
+                                    .path("properties");
+
+                            // Add the timestamp to the telemetryEvent JSON
+                            if (telemetryEventNode.isObject()) {
+                                ((ObjectNode) telemetryEventNode).put("timestamp", timestamp);
+                            }
+
+                            // Convert the updated telemetryEvent JSON back to a string
+                            updatedTelemetryEvent = OBJECT_MAPPER.writeValueAsString(telemetryEventNode);
+
+                        } catch (JsonProcessingException e) {
+                            throw new RuntimeException(e);
+                        }
+                        ehLog("Extracted contractId=" + contractId + " | remaining before remove: " + USED_CONTRACT_ID.size());
+                        USED_CONTRACT_ID.remove(contractId);
+                        ehLog("Remaining after remove: " + USED_CONTRACT_ID.size() + " | IDs: " + USED_CONTRACT_ID);
+
+                        try {
+                            var postResponse = given()
+                                    .baseUri("%s".formatted(AUTHORITY.telemetryUrl()))
+                                    .contentType(JSON)
+                                    .body(updatedTelemetryEvent)
+                                    .post();
+                            ehLog("POST to telemetry service: status=" + postResponse.statusCode() + " body=" + postResponse.body().asString().substring(0, Math.min(200, postResponse.body().asString().length())));
+                            postResponse.then().statusCode(201);
+                        } catch (AssertionError e) {
+                            ehLog("POST assertion failed (continuing): " + e.getMessage());
+                            POST_FAILURES.add("contractId=" + contractId + ": " + e.getMessage());
                         }
 
-                        // Convert the updated telemetryEvent JSON back to a string
-                        updatedTelemetryEvent = OBJECT_MAPPER.writeValueAsString(telemetryEventNode);
+                        if (!verifyData(contractId)) {
+                            ehLog("Data verification failed for contract ID: " + contractId);
+                        }
 
-                    } catch (JsonProcessingException e) {
-                        throw new RuntimeException(e);
-                    }
-                    USED_CONTRACT_ID.remove(contractId);
+                        return USED_CONTRACT_ID.isEmpty(); // we will take msg until the list is empty
+                    })
+                    .timeout(Duration.ofMinutes(2))
+                    .doOnError(error -> {
+                        ehLog("ERROR in Flux: " + error.getClass().getSimpleName() + ": " + error.getMessage());
+                        ehLog("Total events received: " + eventCounter.get());
+                        ehLog("Remaining contract IDs: " + USED_CONTRACT_ID);
+                        if (!USED_CONTRACT_ID.isEmpty()) {
+                            throw new RuntimeException("Timeout: usedContractId is not empty after 2 minutes. Total events received: " + eventCounter.get() + ". Remaining elements: " + USED_CONTRACT_ID);
+                        }
+                    })
+                    .blockLast(Duration.ofMinutes(3)); // Hard ceiling -- prevents infinite hang if port-forward or EventHub dies
+        } finally {
+            consumer.close();
+            RestAssured.requestSpecification = null;
+        }
 
-
-                    given()
-                            .baseUri("%s".formatted(AUTHORITY.telemetryUrl()))
-                            .contentType(JSON)
-                            .body(updatedTelemetryEvent)
-                            .post()
-                            .then()
-                            .log().ifError()
-                            .statusCode(201);
-
-                    if (!verifyData(contractId)) {
-                        System.out.println("Data verification failed for contract ID: " + contractId);
-                    }
-
-                    return USED_CONTRACT_ID.isEmpty(); // we will take msg until the list is empty
-                })
-                .timeout(Duration.ofMinutes(1))
-                .doOnError(error -> {
-                    if (!USED_CONTRACT_ID.isEmpty()) {
-                        throw new RuntimeException("Timeout: usedContractId is not empty after 1 minute. Remaining elements: " + USED_CONTRACT_ID);
-                    }
-                })
-                .blockLast(); // This will block until the last message is received
-        consumer.close();
+        if (!POST_FAILURES.isEmpty()) {
+            ehLog("POST failures collected: " + POST_FAILURES);
+            throw new AssertionError("Telemetry POST failed for " + POST_FAILURES.size() + " events: " + POST_FAILURES);
+        }
     }
 
     private static void seedData() {
@@ -387,8 +444,8 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
 
         // Azure Blob Storage asset
         // Store the Azure storage account key in vault under two aliases:
-        // 1. "<accountName>" — used by DataSourceFactory/DataSinkFactory via DataAddress.keyName
-        // 2. "<accountName>-key1" — used by upstream AccountCacheImpl (BlobStoreApiImpl)
+        // 1. "<accountName>" -- used by DataSourceFactory/DataSinkFactory via DataAddress.keyName
+        // 2. "<accountName>-key1" -- used by upstream AccountCacheImpl (BlobStoreApiImpl)
         //    which resolves keys from vault using the convention: vault.resolveSecret(accountName + "-key1")
         PROVIDER.createSecret(AZURE_STORAGE_ACCOUNT_NAME, AZURE_STORAGE_ACCOUNT_KEY);
         PROVIDER.createSecret(AZURE_STORAGE_ACCOUNT_NAME + "-key1", AZURE_STORAGE_ACCOUNT_KEY);

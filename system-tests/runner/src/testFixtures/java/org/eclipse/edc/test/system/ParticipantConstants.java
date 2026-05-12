@@ -13,13 +13,13 @@ public interface ParticipantConstants {
     
     // Print the configuration for debugging
     static void printConfiguration() {
-        System.out.println("🚀 =================================");
-        System.out.println("🚀 SYSTEM TEST CONFIGURATION");
-        System.out.println("🚀 =================================");
-        System.out.println("🚀 Cluster Hostname: " + CLUSTER_HOSTNAME);
-        System.out.println("🚀 Kubectl Context: " + KUBECTL_CONTEXT);
-        System.out.println("🚀 Identity Hub Port: " + IDENTITY_HUB_DID_PORT);
-        System.out.println("🚀 Control Plane DSP Port: " + CONTROL_PLANE_DSP_PORT);
-        System.out.println("🚀 =================================");
+        System.out.println("=================================");
+        System.out.println("SYSTEM TEST CONFIGURATION");
+        System.out.println("=================================");
+        System.out.println("Cluster Hostname: " + CLUSTER_HOSTNAME);
+        System.out.println("Kubectl Context: " + KUBECTL_CONTEXT);
+        System.out.println("Identity Hub Port: " + IDENTITY_HUB_DID_PORT);
+        System.out.println("Control Plane DSP Port: " + CONTROL_PLANE_DSP_PORT);
+        System.out.println("=================================");
     }
 }

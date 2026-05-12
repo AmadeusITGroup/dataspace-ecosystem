@@ -342,7 +342,7 @@ resource "kubernetes_deployment" "proxy_provider" {
         container {
           name              = "kafka-proxy-provider"
           image             = local.kafka_proxy_image
-          image_pull_policy = var.environment == "local" ? "Never" : "IfNotPresent"
+          image_pull_policy = var.environment == "local" || var.environment == "selfhosted" ? "Never" : var.environment == "devbox" ? "Always" : "IfNotPresent"
 
           port {
             container_port = 30001
@@ -582,7 +582,7 @@ resource "kubernetes_deployment" "proxy_provider_oauth2" {
         container {
           name              = "kafka-proxy-provider-oauth2"
           image             = local.kafka_proxy_image
-          image_pull_policy = var.environment == "local" ? "Never" : "IfNotPresent"
+          image_pull_policy = var.environment == "local" || var.environment == "selfhosted" ? "Never" : var.environment == "devbox" ? "Always" : "IfNotPresent"
 
           port {
             container_port = 30003

@@ -11,6 +11,11 @@ tasks.test {
             systemProperty(key.toString(), value.toString())
         }
     }
+    // Show test stdout/stderr in console output for debugging
+    testLogging {
+        showStandardStreams = true
+        events("passed", "skipped", "failed")
+    }
 }
 
 dependencies {

@@ -9,6 +9,8 @@ locals {
   db_user_password = "${var.authority_name}pwd"
 
   authority_did = local.did_url
+
+  image_pull_policy = var.environment == "local" || var.environment == "selfhosted" ? "Never" : var.environment == "devbox" ? "Always" : "IfNotPresent"
 }
 module "db" {
   source = "../db"

@@ -102,6 +102,10 @@ resource "kubernetes_job_v1" "db-init" {
     backoff_limit = 4
   }
   wait_for_completion = true
+
+  timeouts {
+    create = "5m"
+  }
 }
 
 

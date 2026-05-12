@@ -28,7 +28,7 @@ resource "helm_release" "telemetrystorage" {
           {
             "name" : "keystore-setup",
             "image" : "${local.telemetry_storage_image}:latest",
-            "imagePullPolicy" : var.environment == "local" ? "Never" : "IfNotPresent",
+            "imagePullPolicy" : local.image_pull_policy,
             "command" : ["/bin/sh", "-c"],
             "args" : [
               "cp /etc/pki/ca-trust/extracted/java/cacerts /opt/ca/cacerts && chmod 666 /opt/ca/cacerts && keytool -import -trustcacerts -keystore /opt/ca/cacerts -storepass changeit -noprompt -alias internalCa -file /certs/ca.crt && openssl pkcs12 -export -in /certs/tls.crt -inkey /certs/tls.key -out /opt/ca/keystore.p12 -passout pass:changeit -name service"
@@ -41,7 +41,7 @@ resource "helm_release" "telemetrystorage" {
         ],
         "image" : {
           "repository" : local.telemetry_storage_image
-          "pullPolicy" : var.environment == "local" ? "Never" : "IfNotPresent"
+          "pullPolicy" : local.image_pull_policy
           "tag" : "latest"
         },
         "did" : {
