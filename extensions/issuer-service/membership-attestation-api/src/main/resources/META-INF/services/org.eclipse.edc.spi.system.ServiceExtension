@@ -1,3 +1,2 @@
 org.eclipse.edc.issuerservice.IssuerServiceCoreExtension
 org.eclipse.edc.issuerservice.IssuerServiceDefaultServicesExtension
-org.eclipse.edc.issuerservice.FilteredCredentialStoreExtension

@@ -94,6 +94,7 @@ edc.vault.hashicorp.allow.fallback=true
 edc.negotiation.state-machine.iteration-wait-millis=${var.negotiation_state_machine_wait_millis}
 edc.transfer.state-machine.iteration-wait-millis=${var.transfer_state_machine_wait_millis}
 edc.policy.monitor.state-machine.iteration-wait-millis=${var.policy_monitor_state_machine_wait_millis}
+edc.data.plane.selector.state-machine.check.period=5
 dse.namespace.prefix=${var.dse_namespace_prefix}
 dse.policy.prefix=${var.dse_policy_prefix}
 edc.web.https.keystore.path=/shared/keystore.p12
@@ -104,6 +105,7 @@ edc.web.https.keymanager.password=changeit
 
         "env" : {
           "JAVA_TOOL_OPTIONS" : "-Djavax.net.ssl.trustStore=/shared/cacerts -Djavax.net.ssl.trustStorePassword=changeit"
+          "EDC_IAM_CREDENTIAL_REVOCATION_MIMETYPE" : "application/json"
         }
 
         "ingress" : {

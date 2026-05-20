@@ -3,7 +3,6 @@ plugins {
 }
 
 dependencies {
-    runtimeOnly(project(":extensions:common:vc-revocation-patch"))
     runtimeOnly(project(":extensions:identity-hub:did-web-parser"))
     runtimeOnly(project(":extensions:identity-hub:identity-hub-iatp"))
     runtimeOnly(project(":extensions:identity-hub:superuser-seed"))

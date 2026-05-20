@@ -82,6 +82,8 @@ edc.vault.hashicorp.allow.fallback=true
 
         "env" : {
           "JAVA_TOOL_OPTIONS" : "-Djavax.net.ssl.trustStore=/shared/cacerts -Djavax.net.ssl.trustStorePassword=changeit"
+          "EDC_STATUSLIST_CALLBACK_ADDRESS" : "https://${local.issuerservice_release_name}:9999/api/statuslist"
+          "EDC_IAM_CREDENTIAL_REVOCATION_MIMETYPE" : "application/json"
         }
 
         "ingress" : {

@@ -12,8 +12,6 @@ The Membership Attestation API provides administrative operations to manage thes
 
 ```
 Admin Client → Membership Attestation API → MembershipAttestationStore → Storage
-                           ↓
-                  Credential Store Filter 
 ```
 
 ## Components
@@ -69,29 +67,6 @@ Provides default service implementations:
 - Registers `InMemoryMembershipAttestationStore` as default store
 
 **Extension Name:** `"Issuer Service Default Services"`
-
-### Credential Store Filter
-
-#### `FilteringCredentialStore`
-A decorator/wrapper for the credential store that filters out credentials with empty raw VC data:
-- Implements `CredentialStore` interface
-- Delegates to underlying credential store
-- Filters credentials on create operation
-- Prevents storage of credentials without raw VC content
-- Workaround introduced to deal with EDC 0.13.2 revocation vcs.
-
-**Purpose:**
-- Avoids storing incomplete credential resources
-- Returns success for filtered credentials without actual storage
-- Does not store revocation credentials to avoid breaking the federated catalog crawler
-
-#### `FilteredCredentialStoreExtension`
-Extension that provides the filtering credential store:
-- Wraps the injected credential store with filtering logic
-- Marked with `isDefault = false` to override the default implementation
-- Integrates with EDC's service provider mechanism
-
-**Extension Name:** `"FilteredCredentialStore"`
 
 ## Data Model
 

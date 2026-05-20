@@ -127,6 +127,7 @@ edc.vault.hashicorp.allow.fallback=true
         EOT
         "env" : {
           "JAVA_TOOL_OPTIONS" : "-Djavax.net.ssl.trustStore=/shared/cacerts -Djavax.net.ssl.trustStorePassword=changeit"
+          "EDC_IAM_CREDENTIAL_REVOCATION_MIMETYPE" : "application/json"
         }
         "postgresql" : {
           "jdbcUrl" : "jdbc:postgresql://${var.db_server_fqdn}/${local.db_name}",

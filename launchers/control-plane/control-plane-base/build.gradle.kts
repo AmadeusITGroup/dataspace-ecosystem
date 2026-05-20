@@ -7,7 +7,6 @@ dependencies {
     implementation(libs.edc.lib.transform)
     implementation(libs.edc.spi.core)
     runtimeOnly(project(":extensions:common:participant-context-config-seed"))
-    runtimeOnly(project(":extensions:common:vc-revocation-patch"))
     runtimeOnly(project(":extensions:common:policies"))
     runtimeOnly(project(":extensions:common:odrl-policy-did-validation"))
     runtimeOnly(project(":extensions:agreements"))

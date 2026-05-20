@@ -5,7 +5,6 @@ plugins {
 dependencies {
     runtimeOnly(project(":extensions:federated-catalog:filter"))
     runtimeOnly(project(":extensions:common:participant-context-config-seed"))
-    runtimeOnly(project(":extensions:common:vc-revocation-patch"))
     runtimeOnly(project(":extensions:common:policies"))
     runtimeOnly(project(":extensions:agreements"))
     runtimeOnly(project(":extensions:common:metrics:custom-micrometer"))
