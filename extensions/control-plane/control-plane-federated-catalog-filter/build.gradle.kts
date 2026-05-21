@@ -15,3 +15,9 @@ dependencies {
     api(project(":spi:common-spi"))
     api(project(":spi:federated-catalog-filter-spi"))
 }
+
+edcBuild {
+    swagger {
+        apiGroup.set("control-plane")
+    }
+}

@@ -51,6 +51,7 @@ Chart.lock
 
 # Python virtual environment
 venv/
+__pycache__/
 
 # Bruno local environment files (to prevent committing real credentials)
 bruno-collection/**/environments/*local*.json
@@ -58,3 +59,6 @@ bruno-collection/**/environments/*dev*.json
 bruno-collection/**/environments/*local*.bru
 bruno-collection/**/environments/*dev*.bru
 !bruno-collection/**/environments/environment_vars.json
+
+# Generated OpenAPI specs (produced by ./gradlew resolve and the generate-openapi workflow)
+openapi-spec/

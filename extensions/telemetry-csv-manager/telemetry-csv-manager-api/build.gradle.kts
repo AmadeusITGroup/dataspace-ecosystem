@@ -28,3 +28,9 @@ dependencies {
     testImplementation("org.mockito:mockito-core:5.23.0")
     testImplementation("org.mockito:mockito-junit-jupiter:5.23.0")
 }
+
+edcBuild {
+    swagger {
+        apiGroup.set("telemetry-csv-manager-api")
+    }
+}

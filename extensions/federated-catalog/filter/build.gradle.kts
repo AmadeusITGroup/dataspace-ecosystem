@@ -42,3 +42,9 @@ dependencies {
 tasks.test {
     useJUnitPlatform()
 }
+
+edcBuild {
+    swagger {
+        apiGroup.set("federated-catalog")
+    }
+}
