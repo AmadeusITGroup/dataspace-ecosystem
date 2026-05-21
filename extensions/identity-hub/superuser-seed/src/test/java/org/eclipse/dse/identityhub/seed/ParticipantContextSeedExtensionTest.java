@@ -6,6 +6,7 @@ import org.eclipse.edc.identityhub.spi.participantcontext.model.CreateParticipan
 import org.eclipse.edc.identityhub.spi.participantcontext.model.ParticipantContext;
 import org.eclipse.edc.json.JacksonTypeManager;
 import org.eclipse.edc.junit.extensions.DependencyInjectionExtension;
+import org.eclipse.edc.participantcontext.spi.config.service.ParticipantContextConfigService;
 import org.eclipse.edc.spi.EdcException;
 import org.eclipse.edc.spi.monitor.Monitor;
 import org.eclipse.edc.spi.result.ServiceResult;
@@ -44,12 +45,14 @@ class ParticipantContextSeedExtensionTest {
     private final TypeManager typeManager = new JacksonTypeManager();
     private final List<Service> services = List.of(createService(), createService());
     private final ParticipantContextService participantContextService = mock();
+    private final ParticipantContextConfigService participantContextConfigService = mock();
     private final Vault vault = mock();
     private final Monitor monitor = mock();
 
     @BeforeEach
     void setup(ServiceExtensionContext context) {
         context.registerService(ParticipantContextService.class, participantContextService);
+        context.registerService(ParticipantContextConfigService.class, participantContextConfigService);
         context.registerService(Vault.class, vault);
         context.registerService(Monitor.class, monitor);
         context.registerService(TypeManager.class, typeManager);
@@ -58,6 +61,8 @@ class ParticipantContextSeedExtensionTest {
                 SUPERUSER_SERVICES_PROPERTY, typeManager.writeValueAsString(services),
                 "edc.participant.id", PARTICIPANT_ID))
         );
+        when(participantContextConfigService.get(PARTICIPANT_ID)).thenReturn(ServiceResult.notFound("not found"));
+        when(participantContextConfigService.save(any())).thenReturn(ServiceResult.success());
     }
 
     @Test
@@ -108,6 +113,51 @@ class ParticipantContextSeedExtensionTest {
         ext.initialize(context);
         assertThatExceptionOfType(EdcException.class).isThrownBy(ext::start)
                 .withMessageContaining("some error");
+    }
+
+    @Test
+    void start_seedsEmptyConfig_whenNotFound(ParticipantContextSeedExtension ext, ServiceExtensionContext context) {
+        when(participantContextService.getParticipantContext(PARTICIPANT_ID))
+                .thenReturn(ServiceResult.success(mock()));
+
+        ext.initialize(context);
+        ext.start();
+
+        verify(participantContextConfigService).save(assertArg(cfg -> {
+            assertThat(cfg.getParticipantContextId()).isEqualTo(PARTICIPANT_ID);
+            assertThat(cfg.getEntries()).isEmpty();
+        }));
+    }
+
+    @Test
+    void start_configAlreadySeeded_skipsReseed(ParticipantContextSeedExtension ext, ServiceExtensionContext context) {
+        when(participantContextConfigService.get(PARTICIPANT_ID)).thenReturn(ServiceResult.success(mock()));
+        when(participantContextService.getParticipantContext(PARTICIPANT_ID))
+                .thenReturn(ServiceResult.success(mock()));
+
+        ext.initialize(context);
+        ext.start();
+
+        verify(participantContextConfigService, never()).save(any());
+    }
+
+    @Test
+    void start_seedConfigFails_shouldThrow(ParticipantContextSeedExtension ext, ServiceExtensionContext context) {
+        when(participantContextConfigService.save(any())).thenReturn(ServiceResult.conflict("store conflict"));
+
+        ext.initialize(context);
+        assertThatExceptionOfType(EdcException.class).isThrownBy(ext::start)
+                .withMessageContaining("store conflict");
+    }
+
+    @Test
+    void start_seedCheckFails_shouldThrow(ParticipantContextSeedExtension ext, ServiceExtensionContext context) {
+        when(participantContextConfigService.get(PARTICIPANT_ID)).thenReturn(ServiceResult.unexpected("db outage"));
+
+        ext.initialize(context);
+        assertThatExceptionOfType(EdcException.class).isThrownBy(ext::start)
+                .withMessageContaining("db outage");
+        verify(participantContextConfigService, never()).save(any());
     }
 
     private static Service createService() {

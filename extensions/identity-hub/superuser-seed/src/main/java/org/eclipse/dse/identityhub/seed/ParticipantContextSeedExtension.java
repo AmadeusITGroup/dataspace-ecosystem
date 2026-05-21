@@ -6,7 +6,10 @@ import org.eclipse.edc.identityhub.spi.participantcontext.ParticipantContextServ
 import org.eclipse.edc.identityhub.spi.participantcontext.model.CreateParticipantContextResponse;
 import org.eclipse.edc.identityhub.spi.participantcontext.model.KeyDescriptor;
 import org.eclipse.edc.identityhub.spi.participantcontext.model.ParticipantManifest;
+import org.eclipse.edc.participantcontext.spi.config.model.ParticipantContextConfiguration;
+import org.eclipse.edc.participantcontext.spi.config.service.ParticipantContextConfigService;
 import org.eclipse.edc.runtime.metamodel.annotation.Inject;
+import org.eclipse.edc.spi.result.ServiceFailure;
 import org.eclipse.edc.runtime.metamodel.annotation.Setting;
 import org.eclipse.edc.spi.EdcException;
 import org.eclipse.edc.spi.monitor.Monitor;
@@ -16,6 +19,7 @@ import org.eclipse.edc.spi.system.ServiceExtensionContext;
 import org.eclipse.edc.spi.types.TypeManager;
 
 import java.util.List;
+import java.util.Map;
 
 import static java.util.Optional.ofNullable;
 import static org.eclipse.edc.identityhub.spi.authentication.ServicePrincipal.ROLE_ADMIN;
@@ -48,6 +52,9 @@ public class ParticipantContextSeedExtension implements ServiceExtension {
     private ParticipantContextService participantContextService;
 
     @Inject
+    private ParticipantContextConfigService participantContextConfigService;
+
+    @Inject
     private Vault vault;
 
     @Inject
@@ -67,10 +74,15 @@ public class ParticipantContextSeedExtension implements ServiceExtension {
 
     @Override
     public void start() {
+        // Pre-seed empty config so the vault falls through to the global fallback client on restart.
+        seedEmptyParticipantContextConfig();
+
         if (Boolean.parseBoolean(recreate)) {
             participantContextService.deleteParticipantContext(participantId)
                     .orElseThrow(failure -> new EdcException(failure.getFailureDetail()));
             monitor.debug("Force deletion of participant context with ID '%s'".formatted(participantId));
+            // Re-seed after deletion so vault fallback remains reachable during re-creation.
+            seedEmptyParticipantContextConfig();
         }
 
         // create super-user
@@ -82,6 +94,27 @@ public class ParticipantContextSeedExtension implements ServiceExtension {
         ofNullable(vault.resolveSecret(publicKeyAlias))
                 .map(this::createParticipant)
                 .orElseThrow(() -> new EdcException("Failed to find public key with is '%s' in vault".formatted(publicKeyAlias)));
+    }
+
+    private void seedEmptyParticipantContextConfig() {
+        var existing = participantContextConfigService.get(participantId);
+        if (existing.succeeded()) {
+            monitor.debug("ParticipantContextConfiguration already exists for '%s', skipping seed".formatted(participantId));
+            return;
+        }
+        if (existing.getFailure().getReason() != ServiceFailure.Reason.NOT_FOUND) {
+            throw new EdcException("Failed to check ParticipantContextConfiguration for '%s': %s"
+                    .formatted(participantId, existing.getFailureDetail()));
+        }
+        var emptyConfig = ParticipantContextConfiguration.Builder.newInstance()
+                .participantContextId(participantId)
+                .entries(Map.of())
+                .privateEntries(Map.of())
+                .build();
+        participantContextConfigService.save(emptyConfig)
+                .orElseThrow(f -> new EdcException("Failed to seed ParticipantContextConfiguration for '%s': %s"
+                        .formatted(participantId, f.getFailureDetail())));
+        monitor.debug("Seeded in-memory ParticipantContextConfiguration for '%s'".formatted(participantId));
     }
 
     private CreateParticipantContextResponse createParticipant(String publicKeyPem) {
