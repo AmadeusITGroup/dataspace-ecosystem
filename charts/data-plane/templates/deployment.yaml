@@ -52,7 +52,7 @@ spec:
             httpGet:
               path: {{ .Values.dataplane.endpoints.default.path }}/check/liveness
               port: {{ .Values.dataplane.endpoints.default.port }}
-              scheme: HTTPS
+              scheme: {{ if .Values.dataplane.internalTls.enabled }}HTTPS{{ else }}HTTP{{ end }}
               httpHeaders:
                 - name: Host
                   value: {{include "dse.fullname" .}}
@@ -67,7 +67,7 @@ spec:
             httpGet:
               path: {{ .Values.dataplane.endpoints.default.path }}/check/liveness
               port: {{ .Values.dataplane.endpoints.default.port }}
-              scheme: HTTPS
+              scheme: {{ if .Values.dataplane.internalTls.enabled }}HTTPS{{ else }}HTTP{{ end }}
               httpHeaders:
                 - name: Host
                   value: {{include "dse.fullname" .}}
@@ -82,7 +82,7 @@ spec:
             httpGet:
               path: {{ .Values.dataplane.endpoints.default.path }}/check/readiness
               port: {{ .Values.dataplane.endpoints.default.port }}
-              scheme: HTTPS
+              scheme: {{ if .Values.dataplane.internalTls.enabled }}HTTPS{{ else }}HTTP{{ end }}
               httpHeaders:
                 - name: Host
                   value: {{include "dse.fullname" .}}
@@ -230,8 +230,10 @@ spec:
             - name: shared-volume
               readOnly: true
               mountPath: /shared
+{{- if .Values.dataplane.internalTls.enabled }}
             - name: internal-tls-volume
               mountPath: /internal-certs
+{{- end }}
       volumes:
         - name: config
           configMap:
@@ -245,9 +247,11 @@ spec:
                 path: config.properties
         - name: shared-volume
           emptyDir: { }
+{{- if .Values.dataplane.internalTls.enabled }}
         - name: internal-tls-volume
           secret:
-            secretName: {{ required ".Values.dataplane.internalTls.secretName is required" .Values.dataplane.internalTls.secretName }}
+            secretName: {{ .Values.dataplane.internalTls.secretName }}
+{{- end }}
 
       {{- with .Values.dataplane.nodeSelector }}
       nodeSelector:

@@ -67,7 +67,11 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 Control Plane - Control URL
 */}}
 {{- define "dse.controlplane.url.control" -}}
+{{- if .Values.controlplane.internalTls.enabled -}}
 {{- printf "https://%s:%v%s" ( include "dse.fullname" $ ) $.Values.controlplane.endpoints.control.port $.Values.controlplane.endpoints.control.path -}}
+{{- else -}}
+{{- printf "http://%s:%v%s" ( include "dse.fullname" $ ) $.Values.controlplane.endpoints.control.port $.Values.controlplane.endpoints.control.path -}}
+{{- end -}}
 {{- end }}
 
 {{/*

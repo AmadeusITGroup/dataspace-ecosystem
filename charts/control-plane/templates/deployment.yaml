@@ -51,7 +51,7 @@ spec:
             httpGet:
               path: {{.Values.controlplane.endpoints.default.path}}/check/liveness
               port: {{.Values.controlplane.endpoints.default.port}}
-              scheme: HTTPS
+              scheme: {{ if .Values.controlplane.internalTls.enabled }}HTTPS{{ else }}HTTP{{ end }}
               httpHeaders:
                 - name: Host
                   value: {{include "dse.fullname" .}}
@@ -66,7 +66,7 @@ spec:
             httpGet:
               path: {{.Values.controlplane.endpoints.default.path}}/check/liveness
               port: {{.Values.controlplane.endpoints.default.port}}
-              scheme: HTTPS
+              scheme: {{ if .Values.controlplane.internalTls.enabled }}HTTPS{{ else }}HTTP{{ end }}
               httpHeaders:
                 - name: Host
                   value: {{include "dse.fullname" .}}
@@ -81,7 +81,7 @@ spec:
             httpGet:
               path: {{.Values.controlplane.endpoints.default.path}}/check/readiness
               port: {{.Values.controlplane.endpoints.default.port}}
-              scheme: HTTPS
+              scheme: {{ if .Values.controlplane.internalTls.enabled }}HTTPS{{ else }}HTTP{{ end }}
               httpHeaders:
                 - name: Host
                   value: {{include "dse.fullname" .}}
@@ -240,8 +240,10 @@ spec:
             - name: shared-volume
               readOnly: true
               mountPath: /shared
+{{- if .Values.controlplane.internalTls.enabled }}
             - name: internal-tls-volume
               mountPath: /internal-certs
+{{- end }}
       volumes:
         - name: config
           configMap:
@@ -255,9 +257,11 @@ spec:
                 path: config.properties
         - name: shared-volume
           emptyDir: { }
+{{- if .Values.controlplane.internalTls.enabled }}
         - name: internal-tls-volume
           secret:
-            secretName: {{ required ".Values.controlplane.internalTls.secretName is required" .Values.controlplane.internalTls.secretName }}
+            secretName: {{ .Values.controlplane.internalTls.secretName }}
+{{- end }}
 
       {{- with .Values.controlplane.nodeSelector }}
       nodeSelector:

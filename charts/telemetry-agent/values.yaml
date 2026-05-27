@@ -196,6 +196,8 @@ telemetryagent:
       # -- If preset enables certificate generation via cert-manager cluster-wide issuer
       clusterIssuer: ""
   internalTls:
+    # -- Enable internal pod-to-pod TLS. When false, HTTP is used for pod-to-pod communication.
+    enabled: true
     secretName: "internal-service-tls"
   volumeMounts: []
   # -- [volume](https://kubernetes.io/docs/concepts/storage/volumes/) directories

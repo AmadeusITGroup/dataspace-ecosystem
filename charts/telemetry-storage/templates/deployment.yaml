@@ -51,7 +51,7 @@ spec:
           httpGet:
             path: {{.Values.telemetrystorage.endpoints.default.path}}/check/liveness
             port: {{.Values.telemetrystorage.endpoints.default.port}}
-            scheme: HTTPS
+            scheme: {{ if .Values.telemetrystorage.internalTls.enabled }}HTTPS{{ else }}HTTP{{ end }}
             httpHeaders:
               - name: Host
                 value: {{include "dse.fullname" .}}
@@ -66,7 +66,7 @@ spec:
           httpGet:
             path: {{.Values.telemetrystorage.endpoints.default.path}}/check/liveness
             port: {{.Values.telemetrystorage.endpoints.default.port}}
-            scheme: HTTPS
+            scheme: {{ if .Values.telemetrystorage.internalTls.enabled }}HTTPS{{ else }}HTTP{{ end }}
             httpHeaders:
               - name: Host
                 value: {{include "dse.fullname" .}}
@@ -80,7 +80,7 @@ spec:
           httpGet:
             path: {{.Values.telemetrystorage.endpoints.default.path}}/check/readiness
             port: {{.Values.telemetrystorage.endpoints.default.port}}
-            scheme: HTTPS
+            scheme: {{ if .Values.telemetrystorage.internalTls.enabled }}HTTPS{{ else }}HTTP{{ end }}
             httpHeaders:
               - name: Host
                 value: {{include "dse.fullname" .}}
@@ -199,8 +199,10 @@ spec:
         - name: shared-volume
           readOnly: true
           mountPath: /shared
+{{- if .Values.telemetrystorage.internalTls.enabled }}
         - name: internal-tls-volume
           mountPath: /internal-certs
+{{- end }}
       volumes:
       - name: config
         configMap:
@@ -214,9 +216,11 @@ spec:
             path: config.properties
       - name: shared-volume
         emptyDir: { }
+{{- if .Values.telemetrystorage.internalTls.enabled }}
       - name: internal-tls-volume
         secret:
           secretName: {{ .Values.telemetrystorage.internalTls.secretName }}
+{{- end }}
 
       {{- with .Values.telemetrystorage.nodeSelector}}
       nodeSelector:

@@ -52,7 +52,7 @@ spec:
             httpGet:
               path: {{ .Values.federatedcatalog.endpoints.default.path }}/check/liveness
               port: {{ .Values.federatedcatalog.endpoints.default.port }}
-              scheme: HTTPS
+              scheme: {{ if .Values.federatedcatalog.internalTls.enabled }}HTTPS{{ else }}HTTP{{ end }}
               httpHeaders:
                 - name: Host
                   value: {{include "dse.fullname" .}}
@@ -67,7 +67,7 @@ spec:
             httpGet:
               path: {{ .Values.federatedcatalog.endpoints.default.path }}/check/liveness
               port: {{ .Values.federatedcatalog.endpoints.default.port }}
-              scheme: HTTPS
+              scheme: {{ if .Values.federatedcatalog.internalTls.enabled }}HTTPS{{ else }}HTTP{{ end }}
               httpHeaders:
                 - name: Host
                   value: {{include "dse.fullname" .}}
@@ -82,7 +82,7 @@ spec:
             httpGet:
               path: {{ .Values.federatedcatalog.endpoints.default.path }}/check/readiness
               port: {{ .Values.federatedcatalog.endpoints.default.port }}
-              scheme: HTTPS
+              scheme: {{ if .Values.federatedcatalog.internalTls.enabled }}HTTPS{{ else }}HTTP{{ end }}
               httpHeaders:
                 - name: Host
                   value: {{include "dse.fullname" .}}
@@ -244,8 +244,10 @@ spec:
             - name: shared-volume
               readOnly: true
               mountPath: /shared
+{{- if .Values.federatedcatalog.internalTls.enabled }}
             - name: internal-tls-volume
               mountPath: /internal-certs
+{{- end }}
       volumes:
         - name: config
           configMap:
@@ -259,9 +261,11 @@ spec:
                 path: config.properties
         - name: shared-volume
           emptyDir: { }
+{{- if .Values.federatedcatalog.internalTls.enabled }}
         - name: internal-tls-volume
           secret:
-            secretName: {{ required ".Values.federatedcatalog.internalTls.secretName is required" .Values.federatedcatalog.internalTls.secretName }}
+            secretName: {{ .Values.federatedcatalog.internalTls.secretName }}
+{{- end }}
 
       {{- with .Values.federatedcatalog.nodeSelector }}
       nodeSelector:

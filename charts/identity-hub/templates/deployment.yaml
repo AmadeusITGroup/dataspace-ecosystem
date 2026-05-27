@@ -52,7 +52,7 @@ spec:
             httpGet:
               path: {{ .Values.identityhub.endpoints.default.path }}/check/liveness
               port: {{ .Values.identityhub.endpoints.default.port }}
-              scheme: HTTPS
+              scheme: {{ if .Values.identityhub.internalTls.enabled }}HTTPS{{ else }}HTTP{{ end }}
               httpHeaders:
                 - name: Host
                   value: {{include "dse.fullname" .}}
@@ -67,7 +67,7 @@ spec:
             httpGet:
               path: {{ .Values.identityhub.endpoints.default.path }}/check/liveness
               port: {{ .Values.identityhub.endpoints.default.port }}
-              scheme: HTTPS
+              scheme: {{ if .Values.identityhub.internalTls.enabled }}HTTPS{{ else }}HTTP{{ end }}
               httpHeaders:
                 - name: Host
                   value: {{include "dse.fullname" .}}
@@ -82,7 +82,7 @@ spec:
             httpGet:
               path: {{ .Values.identityhub.endpoints.default.path }}/check/readiness
               port: {{ .Values.identityhub.endpoints.default.port }}
-              scheme: HTTPS
+              scheme: {{ if .Values.identityhub.internalTls.enabled }}HTTPS{{ else }}HTTP{{ end }}
               httpHeaders:
                 - name: Host
                   value: {{include "dse.fullname" .}}
@@ -228,8 +228,10 @@ spec:
             - name: shared-volume
               readOnly: true
               mountPath: /shared
+{{- if .Values.identityhub.internalTls.enabled }}
             - name: internal-tls-volume
               mountPath: /internal-certs
+{{- end }}
       volumes:
         - name: config
           configMap:
@@ -243,9 +245,11 @@ spec:
                 path: config.properties
         - name: shared-volume
           emptyDir: { }
+{{- if .Values.identityhub.internalTls.enabled }}
         - name: internal-tls-volume
           secret:
-            secretName: {{ required ".Values.identityhub.internalTls.secretName is required" .Values.identityhub.internalTls.secretName }}
+            secretName: {{ .Values.identityhub.internalTls.secretName }}
+{{- end }}
 
       {{- with .Values.identityhub.nodeSelector }}
       nodeSelector:

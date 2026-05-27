@@ -88,7 +88,11 @@ Data Plane - Public URL
 Data Plane - Control URL
 */}}
 {{- define "dse.dataplane.url.control" -}}
+{{- if .Values.dataplane.internalTls.enabled -}}
 {{- printf "https://%s:%v%s" ( include "dse.fullname" $ ) $.Values.dataplane.endpoints.control.port $.Values.dataplane.endpoints.control.path -}}
+{{- else -}}
+{{- printf "http://%s:%v%s" ( include "dse.fullname" $ ) $.Values.dataplane.endpoints.control.port $.Values.dataplane.endpoints.control.path -}}
+{{- end -}}
 {{- end }}
 
 {{/*

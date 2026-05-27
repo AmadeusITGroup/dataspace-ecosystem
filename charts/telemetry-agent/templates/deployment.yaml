@@ -52,7 +52,7 @@ spec:
             httpGet:
               path: {{ .Values.telemetryagent.endpoints.default.path }}/check/liveness
               port: {{ .Values.telemetryagent.endpoints.default.port }}
-              scheme: HTTPS
+              scheme: {{ if .Values.telemetryagent.internalTls.enabled }}HTTPS{{ else }}HTTP{{ end }}
               httpHeaders:
                 - name: Host
                   value: {{include "dse.fullname" .}}
@@ -67,7 +67,7 @@ spec:
             httpGet:
               path: {{ .Values.telemetryagent.endpoints.default.path }}/check/liveness
               port: {{ .Values.telemetryagent.endpoints.default.port }}
-              scheme: HTTPS
+              scheme: {{ if .Values.telemetryagent.internalTls.enabled }}HTTPS{{ else }}HTTP{{ end }}
               httpHeaders:
                 - name: Host
                   value: {{include "dse.fullname" .}}
@@ -81,7 +81,7 @@ spec:
             httpGet:
               path: {{ .Values.telemetryagent.endpoints.default.path }}/check/readiness
               port: {{ .Values.telemetryagent.endpoints.default.port }}
-              scheme: HTTPS
+              scheme: {{ if .Values.telemetryagent.internalTls.enabled }}HTTPS{{ else }}HTTP{{ end }}
               httpHeaders:
                 - name: Host
                   value: {{include "dse.fullname" .}}
@@ -248,8 +248,10 @@ spec:
             - name: shared-volume
               readOnly: true
               mountPath: /shared
+{{- if .Values.telemetryagent.internalTls.enabled }}
             - name: internal-tls-volume
               mountPath: /internal-certs
+{{- end }}
       volumes:
         - name: config
           configMap:
@@ -263,9 +265,11 @@ spec:
               path: config.properties
         - name: shared-volume
           emptyDir: { }
+{{- if .Values.telemetryagent.internalTls.enabled }}
         - name: internal-tls-volume
           secret:
             secretName: {{ .Values.telemetryagent.internalTls.secretName }}
+{{- end }}
       {{- with .Values.telemetryagent.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

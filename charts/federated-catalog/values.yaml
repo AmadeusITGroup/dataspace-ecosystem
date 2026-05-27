@@ -239,6 +239,8 @@ federatedcatalog:
       # -- If preset enables certificate generation via cert-manager cluster-wide issuer
       clusterIssuer: ""
   internalTls:
+    # -- Enable internal pod-to-pod TLS. When false, HTTP is used for pod-to-pod communication.
+    enabled: true
     # -- Name of the Kubernetes secret containing tls.crt, tls.key, ca.crt for pod-to-pod TLS
     secretName: "internal-service-tls"
   # -- declare where to mount [volumes](https://kubernetes.io/docs/concepts/storage/volumes/) into the container

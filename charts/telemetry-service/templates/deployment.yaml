@@ -51,7 +51,7 @@ spec:
             httpGet:
               path: {{ .Values.telemetryservice.endpoints.default.path }}/check/liveness
               port: {{ .Values.telemetryservice.endpoints.default.port }}
-              scheme: HTTPS
+              scheme: {{ if .Values.telemetryservice.internalTls.enabled }}HTTPS{{ else }}HTTP{{ end }}
               httpHeaders:
                 - name: Host
                   value: {{include "dse.fullname" .}}
@@ -66,7 +66,7 @@ spec:
             httpGet:
               path: {{ .Values.telemetryservice.endpoints.default.path }}/check/liveness
               port: {{ .Values.telemetryservice.endpoints.default.port }}
-              scheme: HTTPS
+              scheme: {{ if .Values.telemetryservice.internalTls.enabled }}HTTPS{{ else }}HTTP{{ end }}
               httpHeaders:
                 - name: Host
                   value: {{include "dse.fullname" .}}
@@ -80,7 +80,7 @@ spec:
             httpGet:
               path: {{ .Values.telemetryservice.endpoints.default.path }}/check/readiness
               port: {{ .Values.telemetryservice.endpoints.default.port }}
-              scheme: HTTPS
+              scheme: {{ if .Values.telemetryservice.internalTls.enabled }}HTTPS{{ else }}HTTP{{ end }}
               httpHeaders:
                 - name: Host
                   value: {{include "dse.fullname" .}}
@@ -250,8 +250,10 @@ spec:
             - name: shared-volume
               readOnly: true
               mountPath: /shared
+{{- if .Values.telemetryservice.internalTls.enabled }}
             - name: internal-tls-volume
               mountPath: /internal-certs
+{{- end }}
       volumes:
         - name: config
           configMap:
@@ -265,9 +267,11 @@ spec:
               path: config.properties
         - name: shared-volume
           emptyDir: { }
+{{- if .Values.telemetryservice.internalTls.enabled }}
         - name: internal-tls-volume
           secret:
             secretName: {{ .Values.telemetryservice.internalTls.secretName }}
+{{- end }}
       {{- with .Values.telemetryservice.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
