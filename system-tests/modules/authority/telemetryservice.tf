@@ -7,7 +7,7 @@ locals {
     "telemetry-service-postgresql-hashicorpvault"
   )
 
-  credential_url = "https://${local.telemetryservice_release_name}:8181/api/credential"
+  credential_url = "${local.scheme}://${local.telemetryservice_release_name}:8181/api/credential"
 }
 
 resource "helm_release" "telemetryservice" {
@@ -27,7 +27,7 @@ resource "helm_release" "telemetryservice" {
         }
       ] : []
       "telemetryservice" : {
-        "initContainers" : [
+        "initContainers" : var.tls_enabled ? [
           {
             "name" : "keystore-setup",
             "image" : "${local.telemetry_service_image}:latest",
@@ -41,7 +41,7 @@ resource "helm_release" "telemetryservice" {
               { "name" : "shared-volume", "mountPath" : "/opt/ca" }
             ]
           }
-        ],
+        ] : [],
         "image" : {
           "repository" : local.telemetry_service_image
           "pullPolicy" : local.image_pull_policy
@@ -55,7 +55,7 @@ resource "helm_release" "telemetryservice" {
         "did" : {
           "web" : {
             "url" : local.did_url
-            "useHttps" : true
+            "useHttps" : var.tls_enabled
           }
         },
 
@@ -74,14 +74,11 @@ edc.vault.hashicorp.token.scheduled-renew-enabled=false
 edc.vault.hashicorp.allow.fallback=true
 dse.namespace.prefix=${var.dse_namespace_prefix}
 dse.policy.prefix=${var.dse_policy_prefix}
-edc.web.https.keystore.path=/shared/keystore.p12
-edc.web.https.keystore.type=PKCS12
-edc.web.https.keystore.password=changeit
-edc.web.https.keymanager.password=changeit
+${local.tls_config_props}
         EOT
 
         "env" : {
-          "JAVA_TOOL_OPTIONS" : "-Djavax.net.ssl.trustStore=/shared/cacerts -Djavax.net.ssl.trustStorePassword=changeit"
+          "JAVA_TOOL_OPTIONS" : local.tls_java_opts
           "EDC_IAM_CREDENTIAL_REVOCATION_MIMETYPE" : "application/json"
         }
 
@@ -98,20 +95,26 @@ edc.web.https.keymanager.password=changeit
         "ingress" : {
           "enabled" : true
           "className" : "nginx"
-          "annotations" : {
-            "nginx.ingress.kubernetes.io/ssl-redirect" : "false"
-            "nginx.ingress.kubernetes.io/use-regex" : "true"
-            "nginx.ingress.kubernetes.io/rewrite-target" : "/api/$1$2"
-            "nginx.ingress.kubernetes.io/backend-protocol" : "HTTPS"
-            "nginx.ingress.kubernetes.io/proxy-ssl-verify" : "on"
-            "nginx.ingress.kubernetes.io/proxy-ssl-secret" : "default/${var.ingress_proxy_ssl_ca_secret_name}"
-            "nginx.ingress.kubernetes.io/proxy-ssl-name" : "${local.telemetryservice_release_name}.default.svc.cluster.local"
-            "nginx.ingress.kubernetes.io/proxy-ssl-server-name" : "on"
-          },
+          "annotations" : merge(
+            {
+              "nginx.ingress.kubernetes.io/ssl-redirect" : "false"
+              "nginx.ingress.kubernetes.io/use-regex" : "true"
+              "nginx.ingress.kubernetes.io/rewrite-target" : "/api/$1$2"
+            },
+            var.tls_enabled ? {
+              "nginx.ingress.kubernetes.io/backend-protocol" : "HTTPS"
+              "nginx.ingress.kubernetes.io/proxy-ssl-verify" : "on"
+              "nginx.ingress.kubernetes.io/proxy-ssl-secret" : "default/${var.ingress_proxy_ssl_ca_secret_name}"
+              "nginx.ingress.kubernetes.io/proxy-ssl-name" : "${local.telemetryservice_release_name}.default.svc.cluster.local"
+              "nginx.ingress.kubernetes.io/proxy-ssl-server-name" : "on"
+              } : {
+              "nginx.ingress.kubernetes.io/backend-protocol" : "HTTP"
+            }
+          ),
           "hostname" : "localhost"
           "tls" : {
-            "enabled" : true
-            "secretName" : var.ingress_tls_secret_name
+            "enabled" : var.tls_enabled
+            "secretName" : var.tls_enabled ? var.ingress_tls_secret_name : ""
           },
           "endpoints" : [
             {
@@ -130,7 +133,8 @@ edc.web.https.keymanager.password=changeit
           }
         },
         "internalTls" : {
-          "secretName" : var.internal_tls_secret_name
+          "enabled" : var.tls_enabled
+          "secretName" : var.tls_enabled ? var.internal_tls_secret_name : ""
         }
 
         "vault" : {

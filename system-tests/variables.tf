@@ -99,6 +99,13 @@ variable "auth_static_users" {
   sensitive   = true
 }
 
+# Global TLS Configuration
+variable "tls_enabled" {
+  description = "Enable TLS (HTTPS) for all components — both internal pod-to-pod TLS and ingress TLS termination. Set to false to use plain HTTP throughout."
+  type        = bool
+  default     = true
+}
+
 # TLS Listener Configuration
 variable "tls_listener_enabled" {
   description = "Enable TLS for proxy listener (clients connect to proxy via TLS)"

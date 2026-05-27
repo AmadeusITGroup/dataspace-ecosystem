@@ -6,7 +6,7 @@ locals {
     "issuer-service-postgresql-hashicorpvault"
   )
 
-  issuance_url = "https://${local.issuerservice_release_name}:8282/api/issuance"
+  issuance_url = "${local.scheme}://${local.issuerservice_release_name}:8282/api/issuance"
 }
 
 resource "helm_release" "issuerservice" {
@@ -26,7 +26,7 @@ resource "helm_release" "issuerservice" {
         }
       ] : []
       "issuerservice" : {
-        "initContainers" : [
+        "initContainers" : var.tls_enabled ? [
           {
             "name" : "keystore-setup",
             "image" : "${local.issuerservice_image}:latest",
@@ -40,7 +40,7 @@ resource "helm_release" "issuerservice" {
               { "name" : "shared-volume", "mountPath" : "/opt/ca" }
             ]
           }
-        ],
+        ] : [],
         "image" : {
           "repository" : local.issuerservice_image
           "pullPolicy" : local.image_pull_policy
@@ -58,7 +58,7 @@ resource "helm_release" "issuerservice" {
         "did" : {
           "web" : {
             "url" : local.did_url
-            "useHttps" : true
+            "useHttps" : var.tls_enabled
           }
         },
         domain : "route",
@@ -73,32 +73,35 @@ resource "helm_release" "issuerservice" {
 
         "config" : <<EOT
 edc.vault.hashicorp.token.scheduled-renew-enabled=false
-edc.web.https.keystore.path=/shared/keystore.p12
-edc.web.https.keystore.type=PKCS12
-edc.web.https.keystore.password=changeit
-edc.web.https.keymanager.password=changeit
 edc.vault.hashicorp.allow.fallback=true
+${local.tls_config_props}
         EOT
 
         "env" : {
-          "JAVA_TOOL_OPTIONS" : "-Djavax.net.ssl.trustStore=/shared/cacerts -Djavax.net.ssl.trustStorePassword=changeit"
-          "EDC_STATUSLIST_CALLBACK_ADDRESS" : "https://${local.issuerservice_release_name}:9999/api/statuslist"
+          "JAVA_TOOL_OPTIONS" : local.tls_java_opts
+          "EDC_STATUSLIST_CALLBACK_ADDRESS" : "${local.scheme}://${local.issuerservice_release_name}:9999/api/statuslist"
           "EDC_IAM_CREDENTIAL_REVOCATION_MIMETYPE" : "application/json"
         }
 
         "ingress" : {
           "enabled" : true
           "className" : "nginx"
-          "annotations" : {
-            "nginx.ingress.kubernetes.io/ssl-redirect" : "false"
-            "nginx.ingress.kubernetes.io/use-regex" : "true"
-            "nginx.ingress.kubernetes.io/rewrite-target" : "/api/$1$2"
-            "nginx.ingress.kubernetes.io/backend-protocol" : "HTTPS"
-            "nginx.ingress.kubernetes.io/proxy-ssl-verify" : "on"
-            "nginx.ingress.kubernetes.io/proxy-ssl-secret" : "default/${var.ingress_proxy_ssl_ca_secret_name}"
-            "nginx.ingress.kubernetes.io/proxy-ssl-name" : "${local.issuerservice_release_name}.default.svc.cluster.local"
-            "nginx.ingress.kubernetes.io/proxy-ssl-server-name" : "on"
-          },
+          "annotations" : merge(
+            {
+              "nginx.ingress.kubernetes.io/ssl-redirect" : "false"
+              "nginx.ingress.kubernetes.io/use-regex" : "true"
+              "nginx.ingress.kubernetes.io/rewrite-target" : "/api/$1$2"
+            },
+            var.tls_enabled ? {
+              "nginx.ingress.kubernetes.io/backend-protocol" : "HTTPS"
+              "nginx.ingress.kubernetes.io/proxy-ssl-verify" : "on"
+              "nginx.ingress.kubernetes.io/proxy-ssl-secret" : "default/${var.ingress_proxy_ssl_ca_secret_name}"
+              "nginx.ingress.kubernetes.io/proxy-ssl-name" : "${local.issuerservice_release_name}.default.svc.cluster.local"
+              "nginx.ingress.kubernetes.io/proxy-ssl-server-name" : "on"
+              } : {
+              "nginx.ingress.kubernetes.io/backend-protocol" : "HTTP"
+            }
+          ),
           "endpoints" : [
             {
               "port" : 8181,
@@ -123,8 +126,8 @@ edc.vault.hashicorp.allow.fallback=true
           ]
           "hostname" : "localhost"
           "tls" : {
-            "enabled" : true
-            "secretName" : var.ingress_tls_secret_name
+            "enabled" : var.tls_enabled
+            "secretName" : var.tls_enabled ? var.ingress_tls_secret_name : ""
           }
         },
         "postgresql" : {
@@ -143,7 +146,8 @@ edc.vault.hashicorp.allow.fallback=true
         }
 
         "internalTls" : {
-          "secretName" : var.internal_tls_secret_name
+          "enabled" : var.tls_enabled
+          "secretName" : var.tls_enabled ? var.internal_tls_secret_name : ""
         }
 
         "vault" : {

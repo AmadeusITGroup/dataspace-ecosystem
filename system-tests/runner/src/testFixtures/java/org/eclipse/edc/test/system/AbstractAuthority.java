@@ -24,6 +24,7 @@ import static io.restassured.RestAssured.given;
 import static io.restassured.http.ContentType.JSON;
 import static org.eclipse.dse.iam.policy.PolicyConstants.DOMAIN_CREDENTIAL_TYPE;
 import static org.eclipse.edc.test.system.ParticipantConstants.CLUSTER_HOSTNAME;
+import static org.eclipse.edc.test.system.ParticipantConstants.SCHEME;
 
 abstract class AbstractAuthority extends AbstractEntity {
 
@@ -37,28 +38,28 @@ abstract class AbstractAuthority extends AbstractEntity {
 
     @Override
     protected String vaultUrl() {
-        return "https://%s/%s/vault".formatted(CLUSTER_HOSTNAME, name());
+        return "%s://%s/%s/vault".formatted(SCHEME, CLUSTER_HOSTNAME, name());
     }
 
     protected String telemetryUrl() {
-        return "https://%s/%s/telemetry-events".formatted(CLUSTER_HOSTNAME, name());
+        return "%s://%s/%s/telemetry-events".formatted(SCHEME, CLUSTER_HOSTNAME, name());
     }
 
     protected String csvManagerUrl() {
-        return "https://%s/%s/billing-reports".formatted(CLUSTER_HOSTNAME, name());
+        return "%s://%s/%s/billing-reports".formatted(SCHEME, CLUSTER_HOSTNAME, name());
     }
 
     @Override
     protected String identityHubIdentityUrl() {
-        return "https://%s/%s/ih/identity".formatted(CLUSTER_HOSTNAME, name());
+        return "%s://%s/%s/ih/identity".formatted(SCHEME, CLUSTER_HOSTNAME, name());
     }
 
     protected String catalogUrl() {
-        return "https://%s/%s/catalog".formatted(CLUSTER_HOSTNAME, name());
+        return "%s://%s/%s/catalog".formatted(SCHEME, CLUSTER_HOSTNAME, name());
     }
 
     protected String issuerServiceAdminUrl() {
-        return "https://%s/%s/is/issueradmin".formatted(CLUSTER_HOSTNAME, name());
+        return "%s://%s/%s/is/issueradmin".formatted(SCHEME, CLUSTER_HOSTNAME, name());
     }
 
     public void defineMembershipCredential() {

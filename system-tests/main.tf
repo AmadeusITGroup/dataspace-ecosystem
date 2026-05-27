@@ -8,12 +8,14 @@ locals {
 
 # Shared CA that signs all internal pod-to-pod TLS certificates.
 resource "tls_private_key" "internal_ca" {
+  count     = var.tls_enabled ? 1 : 0
   algorithm = "RSA"
   rsa_bits  = 4096
 }
 
 resource "tls_self_signed_cert" "internal_ca" {
-  private_key_pem = tls_private_key.internal_ca.private_key_pem
+  count           = var.tls_enabled ? 1 : 0
+  private_key_pem = tls_private_key.internal_ca[0].private_key_pem
 
   subject {
     common_name  = "DXP Internal Service CA"
@@ -33,12 +35,14 @@ resource "tls_self_signed_cert" "internal_ca" {
 
 # Wildcard certificate covering all ClusterIP service DNS names in the default namespace.
 resource "tls_private_key" "internal_service" {
+  count     = var.tls_enabled ? 1 : 0
   algorithm = "RSA"
   rsa_bits  = 2048
 }
 
 resource "tls_cert_request" "internal_service" {
-  private_key_pem = tls_private_key.internal_service.private_key_pem
+  count           = var.tls_enabled ? 1 : 0
+  private_key_pem = tls_private_key.internal_service[0].private_key_pem
 
   subject {
     common_name  = "*.default.svc.cluster.local"
@@ -75,9 +79,10 @@ resource "tls_cert_request" "internal_service" {
 }
 
 resource "tls_locally_signed_cert" "internal_service" {
-  cert_request_pem   = tls_cert_request.internal_service.cert_request_pem
-  ca_private_key_pem = tls_private_key.internal_ca.private_key_pem
-  ca_cert_pem        = tls_self_signed_cert.internal_ca.cert_pem
+  count              = var.tls_enabled ? 1 : 0
+  cert_request_pem   = tls_cert_request.internal_service[0].cert_request_pem
+  ca_private_key_pem = tls_private_key.internal_ca[0].private_key_pem
+  ca_cert_pem        = tls_self_signed_cert.internal_ca[0].cert_pem
 
   validity_period_hours = 8760 # 1 year
 
@@ -89,6 +94,7 @@ resource "tls_locally_signed_cert" "internal_service" {
 }
 
 resource "kubernetes_secret" "internal_service_tls" {
+  count = var.tls_enabled ? 1 : 0
   metadata {
     name      = "internal-service-tls"
     namespace = "default"
@@ -101,9 +107,9 @@ resource "kubernetes_secret" "internal_service_tls" {
   type = "kubernetes.io/tls"
 
   data = {
-    "tls.crt" = "${tls_locally_signed_cert.internal_service.cert_pem}"
-    "tls.key" = tls_private_key.internal_service.private_key_pem
-    "ca.crt"  = tls_self_signed_cert.internal_ca.cert_pem
+    "tls.crt" = "${tls_locally_signed_cert.internal_service[0].cert_pem}"
+    "tls.key" = tls_private_key.internal_service[0].private_key_pem
+    "ca.crt"  = tls_self_signed_cert.internal_ca[0].cert_pem
   }
 }
 
@@ -111,6 +117,7 @@ resource "kubernetes_secret" "internal_service_tls" {
 # to verify upstream (backend pod) TLS certificates. Contains only the internal CA
 # certificate — no private key is exposed to the ingress controller.
 resource "kubernetes_secret" "nginx_proxy_ssl_ca" {
+  count = var.tls_enabled ? 1 : 0
   metadata {
     name      = "nginx-proxy-ssl-ca"
     namespace = "default"
@@ -121,7 +128,7 @@ resource "kubernetes_secret" "nginx_proxy_ssl_ca" {
   }
 
   data = {
-    "ca.crt" = tls_self_signed_cert.internal_ca.cert_pem
+    "ca.crt" = tls_self_signed_cert.internal_ca[0].cert_pem
   }
 }
 
@@ -206,8 +213,8 @@ module "participant" {
 
   # TLS Listener Configuration
   tls_listener_enabled     = var.tls_listener_enabled
-  tls_listener_cert_secret = each.key == "consumer" ? module.consumer_tls_certificates.secret_name : module.provider_tls_certificates.secret_name
-  tls_listener_key_secret  = each.key == "consumer" ? module.consumer_tls_certificates.secret_name : module.provider_tls_certificates.secret_name
+  tls_listener_cert_secret = var.tls_enabled ? (each.key == "consumer" ? module.consumer_tls_certificates.secret_name : module.provider_tls_certificates.secret_name) : ""
+  tls_listener_key_secret  = var.tls_enabled ? (each.key == "consumer" ? module.consumer_tls_certificates.secret_name : module.provider_tls_certificates.secret_name) : ""
   tls_listener_ca_secret   = "" # Empty string disables mutual TLS (client certificate verification)
 
   # Vault Configuration
@@ -217,8 +224,9 @@ module "participant" {
   charts_path = "../charts"
 
   # Internal HTTPS
-  internal_tls_secret_name         = kubernetes_secret.internal_service_tls.metadata[0].name
-  ingress_proxy_ssl_ca_secret_name = kubernetes_secret.nginx_proxy_ssl_ca.metadata[0].name
+  tls_enabled                      = var.tls_enabled
+  internal_tls_secret_name         = var.tls_enabled ? kubernetes_secret.internal_service_tls[0].metadata[0].name : ""
+  ingress_proxy_ssl_ca_secret_name = var.tls_enabled ? kubernetes_secret.nginx_proxy_ssl_ca[0].metadata[0].name : "nginx-proxy-ssl-ca"
 
   depends_on = [
     module.consumer_tls_certificates,
@@ -245,8 +253,9 @@ module "authority" {
   devbox-registry-cred                   = var.devbox-registry-cred
 
   # Internal HTTPS
-  internal_tls_secret_name         = kubernetes_secret.internal_service_tls.metadata[0].name
-  ingress_proxy_ssl_ca_secret_name = kubernetes_secret.nginx_proxy_ssl_ca.metadata[0].name
+  tls_enabled                      = var.tls_enabled
+  internal_tls_secret_name         = var.tls_enabled ? kubernetes_secret.internal_service_tls[0].metadata[0].name : ""
+  ingress_proxy_ssl_ca_secret_name = var.tls_enabled ? kubernetes_secret.nginx_proxy_ssl_ca[0].metadata[0].name : "nginx-proxy-ssl-ca"
 }
 
 #####################

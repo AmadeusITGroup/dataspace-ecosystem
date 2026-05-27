@@ -36,6 +36,12 @@ variable "dse_namespace_prefix" {
   default     = "dse"
 }
 
+variable "tls_enabled" {
+  description = "Enable TLS (HTTPS) for all authority components — both internal pod-to-pod TLS and ingress TLS termination."
+  type        = bool
+  default     = true
+}
+
 variable "internal_tls_secret_name" {
   description = "Name of the Kubernetes secret containing the shared internal TLS certificate (tls.crt, tls.key, ca.crt) used for pod-to-pod HTTPS."
   type        = string

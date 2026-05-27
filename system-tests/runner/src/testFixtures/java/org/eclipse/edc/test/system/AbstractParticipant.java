@@ -32,6 +32,7 @@ import static org.eclipse.edc.spi.core.CoreConstants.DSE_POLICY_PREFIX;
 import static org.eclipse.edc.test.system.ParticipantConstants.CLUSTER_HOSTNAME;
 import static org.eclipse.edc.test.system.ParticipantConstants.CONTROL_PLANE_DSP_PORT;
 import static org.eclipse.edc.test.system.ParticipantConstants.IDENTITY_HUB_DID_PORT;
+import static org.eclipse.edc.test.system.ParticipantConstants.SCHEME;
 import static org.eclipse.edc.protocol.dsp.http.spi.types.HttpMessageProtocol.DATASPACE_PROTOCOL_HTTP;
 import static org.eclipse.edc.protocol.dsp.spi.type.Dsp2025Constants.DATASPACE_PROTOCOL_HTTP_V_2025_1;
 import static org.eclipse.edc.protocol.dsp.spi.type.Dsp2025Constants.V_2025_1_PATH;
@@ -49,16 +50,16 @@ abstract class AbstractParticipant extends AbstractEntity {
 
     @Override
     protected String identityHubIdentityUrl() {
-        return "https://%s/%s/ih/identity".formatted(CLUSTER_HOSTNAME, name());
+        return "%s://%s/%s/ih/identity".formatted(SCHEME, CLUSTER_HOSTNAME, name());
     }
 
     @Override
     protected String vaultUrl() {
-        return "https://%s/%s/vault".formatted(CLUSTER_HOSTNAME, name());
+        return "%s://%s/%s/vault".formatted(SCHEME, CLUSTER_HOSTNAME, name());
     }
 
     private String controlPlaneProtocolBaseUrl() {
-        return "https://%s-controlplane:%s/api/dsp".formatted(name(), CONTROL_PLANE_DSP_PORT);
+        return "%s://%s-controlplane:%s/api/dsp".formatted(SCHEME, name(), CONTROL_PLANE_DSP_PORT);
     }
 
     protected String controlPlaneProtocolUrl() {
@@ -70,15 +71,15 @@ abstract class AbstractParticipant extends AbstractEntity {
     }
 
     protected String controlPlaneManagementUrl() {
-        return "https://%s/%s/cp/management".formatted(CLUSTER_HOSTNAME, name());
+        return "%s://%s/%s/cp/management".formatted(SCHEME, CLUSTER_HOSTNAME, name());
     }
 
     protected String dataPlaneDataUrl() {
-        return "https://%s/%s/dp/data".formatted(CLUSTER_HOSTNAME, name());
+        return "%s://%s/%s/dp/data".formatted(SCHEME, CLUSTER_HOSTNAME, name());
     }
 
     protected String controlPlaneCatalogFilterUrl() {
-        return "https://%s/%s/cp/management/v1alpha/catalog/query".formatted(CLUSTER_HOSTNAME, name());
+        return "%s://%s/%s/cp/management/v1alpha/catalog/query".formatted(SCHEME, CLUSTER_HOSTNAME, name());
     }
 
     protected void createEntry(String assetId, String name, String description, Map<String, Object> dataAddressProps, JsonObject... additionalConstraints) {

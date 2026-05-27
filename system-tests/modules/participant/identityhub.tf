@@ -4,7 +4,7 @@ locals {
   did_url                 = var.selfhosted_did_url != "" ? var.selfhosted_did_url : "did:web:${local.identityhub_release_name}%3A8383:api:did"
   sts_port                = 8484
   sts_path                = "/api/sts"
-  sts_url                 = var.selfhosted_sts_url != "" ? var.selfhosted_sts_url : "https://${local.identityhub_release_name}:${local.sts_port}${local.sts_path}/token"
+  sts_url                 = var.selfhosted_sts_url != "" ? var.selfhosted_sts_url : "${local.scheme}://${local.identityhub_release_name}:${local.sts_port}${local.sts_path}/token"
   sts_client_secret_alias = "${local.did_url}-sts-client-secret"
   did_url_base64_url      = replace(replace(replace(base64encode(local.did_url), "+", "-"), "/", "_"), "=", "")
 
@@ -15,7 +15,7 @@ locals {
     "identity-hub-postgresql-hashicorpvault"
   )
 
-  identityhub_credentials_url = "https://${local.identityhub_release_name}:8282/api/credentials"
+  identityhub_credentials_url = "${local.scheme}://${local.identityhub_release_name}:8282/api/credentials"
 }
 
 resource "helm_release" "identity-hub" {
@@ -35,7 +35,7 @@ resource "helm_release" "identity-hub" {
         }
       ] : []
       "identityhub" : {
-        "initContainers" : [
+        "initContainers" : var.tls_enabled ? [
           {
             "name" : "keystore-setup",
             "image" : "${local.participant_identity_hub_image}:latest",
@@ -49,7 +49,7 @@ resource "helm_release" "identity-hub" {
               { "name" : "shared-volume", "mountPath" : "/opt/ca" }
             ]
           }
-        ],
+        ] : [],
         "image" : {
           "repository" : local.participant_identity_hub_image
           "tag" : "latest"
@@ -82,20 +82,17 @@ resource "helm_release" "identity-hub" {
         "did" : {
           "web" : {
             "url" : local.did_url,
-            "useHttps" : true
+            "useHttps" : var.tls_enabled
           }
         },
         "config" : <<EOT
 edc.vault.hashicorp.token.scheduled-renew-enabled=false
-edc.web.https.keystore.path=/shared/keystore.p12
-edc.web.https.keystore.type=PKCS12
-edc.web.https.keystore.password=changeit
-edc.web.https.keymanager.password=changeit
 edc.vault.hashicorp.allow.fallback=true
+${local.tls_config_props}
         EOT
 
         "env" : {
-          "JAVA_TOOL_OPTIONS" : "-Djavax.net.ssl.trustStore=/shared/cacerts -Djavax.net.ssl.trustStorePassword=changeit"
+          "JAVA_TOOL_OPTIONS" : local.tls_java_opts
           "EDC_IAM_CREDENTIAL_REVOCATION_MIMETYPE" : "application/json"
         }
 
@@ -110,16 +107,22 @@ edc.vault.hashicorp.allow.fallback=true
         "ingress" : {
           "enabled" : true
           "className" : "nginx"
-          "annotations" : {
-            "nginx.ingress.kubernetes.io/ssl-redirect" : "false"
-            "nginx.ingress.kubernetes.io/use-regex" : "true"
-            "nginx.ingress.kubernetes.io/rewrite-target" : "/api/$1$2"
-            "nginx.ingress.kubernetes.io/backend-protocol" : "HTTPS"
-            "nginx.ingress.kubernetes.io/proxy-ssl-verify" : "on"
-            "nginx.ingress.kubernetes.io/proxy-ssl-secret" : "default/${var.ingress_proxy_ssl_ca_secret_name}"
-            "nginx.ingress.kubernetes.io/proxy-ssl-name" : "${local.identityhub_release_name}.default.svc.cluster.local"
-            "nginx.ingress.kubernetes.io/proxy-ssl-server-name" : "on"
-          },
+          "annotations" : merge(
+            {
+              "nginx.ingress.kubernetes.io/ssl-redirect" : "false"
+              "nginx.ingress.kubernetes.io/use-regex" : "true"
+              "nginx.ingress.kubernetes.io/rewrite-target" : "/api/$1$2"
+            },
+            var.tls_enabled ? {
+              "nginx.ingress.kubernetes.io/backend-protocol" : "HTTPS"
+              "nginx.ingress.kubernetes.io/proxy-ssl-verify" : "on"
+              "nginx.ingress.kubernetes.io/proxy-ssl-secret" : "default/${var.ingress_proxy_ssl_ca_secret_name}"
+              "nginx.ingress.kubernetes.io/proxy-ssl-name" : "${local.identityhub_release_name}.default.svc.cluster.local"
+              "nginx.ingress.kubernetes.io/proxy-ssl-server-name" : "on"
+              } : {
+              "nginx.ingress.kubernetes.io/backend-protocol" : "HTTP"
+            }
+          ),
           "endpoints" : [
             {
               "port" : 8181,
@@ -144,12 +147,13 @@ edc.vault.hashicorp.allow.fallback=true
           ]
           "hostname" : "localhost"
           "tls" : {
-            "enabled" : true
-            "secretName" : var.ingress_tls_secret_name
+            "enabled" : var.tls_enabled
+            "secretName" : var.tls_enabled ? var.ingress_tls_secret_name : ""
           }
         },
         "internalTls" : {
-          "secretName" : var.internal_tls_secret_name
+          "enabled" : var.tls_enabled
+          "secretName" : var.tls_enabled ? var.internal_tls_secret_name : ""
         }
 
         "vault" : {

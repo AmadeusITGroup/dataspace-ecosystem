@@ -90,7 +90,7 @@ variable "auth_static_users" {
 variable "tls_listener_enabled" {
   description = "Enable TLS for proxy listener (clients connect to proxy via TLS)"
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "tls_listener_cert_secret" {
@@ -136,6 +136,12 @@ variable "charts_path" {
   description = "Path to the charts directory. Use '../../../charts' when running from participant module, '../charts' when running from system-tests"
   type        = string
   default     = "../../../charts"
+}
+
+variable "tls_enabled" {
+  description = "Enable TLS (HTTPS) for all participant components — both internal pod-to-pod TLS and ingress TLS termination."
+  type        = bool
+  default     = true
 }
 
 variable "internal_tls_secret_name" {

@@ -1,5 +1,5 @@
 output "vault_url" {
-  value = "https://${var.participant_name}-vault:${local.vault_port}"
+  value = "${var.tls_enabled ? "https" : "http"}://${var.participant_name}-vault:${local.vault_port}"
 }
 
 output "vault_secret_name" {

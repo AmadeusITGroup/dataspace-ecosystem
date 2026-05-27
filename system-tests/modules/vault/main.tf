@@ -2,6 +2,30 @@ locals {
   vault_token   = "root"
   vault_port    = 8200
   vault_tls_dir = "/vault/userconfig/vault-tls"
+
+  vault_config_tls = <<-HCL
+    ui = true
+    listener "tcp" {
+      tls_disable     = 0
+      address         = "[::]:${local.vault_port}"
+      cluster_address = "[::]:8201"
+      tls_cert_file   = "${local.vault_tls_dir}/tls.crt"
+      tls_key_file    = "${local.vault_tls_dir}/tls.key"
+    }
+    storage "inmem" {}
+  HCL
+
+  vault_config_no_tls = <<-HCL
+    ui = true
+    listener "tcp" {
+      tls_disable     = 1
+      address         = "[::]:${local.vault_port}"
+      cluster_address = "[::]:8201"
+    }
+    storage "inmem" {}
+  HCL
+
+  vault_config = var.tls_enabled ? local.vault_config_tls : local.vault_config_no_tls
 }
 
 ########################################
@@ -28,34 +52,24 @@ resource "helm_release" "vault" {
           "enabled" : true
           # Use in-memory storage so there is no PVC dependency (same as dev mode).
           # Configure a TLS-enabled TCP listener using the shared internal CA cert.
-          "config" : <<-HCL
-            ui = true
-            listener "tcp" {
-              tls_disable     = 0
-              address         = "[::]:${local.vault_port}"
-              cluster_address = "[::]:8201"
-              tls_cert_file   = "${local.vault_tls_dir}/tls.crt"
-              tls_key_file    = "${local.vault_tls_dir}/tls.key"
-            }
-            storage "inmem" {}
-          HCL
+          "config" : local.vault_config
         }
         # Mount the shared internal TLS secret so vault can use it as its cert.
-        "volumes" : [
+        "volumes" : var.tls_enabled ? [
           {
             "name" : "vault-tls"
             "secret" : {
               "secretName" : var.internal_tls_secret_name
             }
           }
-        ]
-        "volumeMounts" : [
+        ] : []
+        "volumeMounts" : var.tls_enabled ? [
           {
             "name" : "vault-tls"
             "mountPath" : local.vault_tls_dir
             "readOnly" : true
           }
-        ]
+        ] : []
         "readinessProbe" : {
           "enabled" : false
         }
@@ -85,22 +99,28 @@ resource "kubernetes_secret" "vault-secret" {
 resource "kubernetes_ingress_v1" "vault-ingress" {
   metadata {
     name = "${var.participant_name}-vault-ingress"
-    annotations = {
-      "nginx.ingress.kubernetes.io/rewrite-target"        = "/$2"
-      "nginx.ingress.kubernetes.io/use-regex"             = "true"
-      "nginx.ingress.kubernetes.io/ssl-redirect"          = "false"
-      "nginx.ingress.kubernetes.io/backend-protocol"      = "HTTPS"
-      "nginx.ingress.kubernetes.io/proxy-ssl-verify"      = "on"
-      "nginx.ingress.kubernetes.io/proxy-ssl-secret"      = "default/${var.ingress_proxy_ssl_ca_secret_name}"
-      "nginx.ingress.kubernetes.io/proxy-ssl-name"        = "${var.participant_name}-vault.default.svc.cluster.local"
-      "nginx.ingress.kubernetes.io/proxy-ssl-server-name" = "on"
-    }
+    annotations = merge(
+      {
+        "nginx.ingress.kubernetes.io/rewrite-target" = "/$2"
+        "nginx.ingress.kubernetes.io/use-regex"      = "true"
+        "nginx.ingress.kubernetes.io/ssl-redirect"   = "false"
+      },
+      var.tls_enabled ? {
+        "nginx.ingress.kubernetes.io/backend-protocol"      = "HTTPS"
+        "nginx.ingress.kubernetes.io/proxy-ssl-verify"      = "on"
+        "nginx.ingress.kubernetes.io/proxy-ssl-secret"      = "default/${var.ingress_proxy_ssl_ca_secret_name}"
+        "nginx.ingress.kubernetes.io/proxy-ssl-name"        = "${var.participant_name}-vault.default.svc.cluster.local"
+        "nginx.ingress.kubernetes.io/proxy-ssl-server-name" = "on"
+        } : {
+        "nginx.ingress.kubernetes.io/backend-protocol" = "HTTP"
+      }
+    )
   }
   spec {
     ingress_class_name = "nginx"
     tls {
-      hosts       = ["localhost"]
-      secret_name = var.ingress_tls_secret_name
+      hosts       = var.tls_enabled ? ["localhost"] : []
+      secret_name = var.tls_enabled ? var.ingress_tls_secret_name : ""
     }
     rule {
       host = "localhost"
@@ -153,6 +173,11 @@ resource "kubernetes_job" "vault-init-job" {
         container {
           name  = "vault-init"
           image = "hashicorp/vault"
+          security_context {
+            capabilities {
+              add = ["IPC_LOCK"]
+            }
+          }
           command = [
             "sh", "-c",
             <<-EOF
@@ -202,22 +227,31 @@ resource "kubernetes_job" "vault-init-job" {
           ]
           env {
             name  = "VAULT_ADDR"
-            value = "https://${var.participant_name}-vault:${local.vault_port}"
+            value = "${var.tls_enabled ? "https" : "http"}://${var.participant_name}-vault:${local.vault_port}"
           }
-          env {
-            name  = "VAULT_CACERT"
-            value = "/certs/ca.crt"
+          dynamic "env" {
+            for_each = var.tls_enabled ? [1] : []
+            content {
+              name  = "VAULT_CACERT"
+              value = "/certs/ca.crt"
+            }
           }
-          volume_mount {
-            name       = "vault-tls"
-            mount_path = "/certs"
-            read_only  = true
+          dynamic "volume_mount" {
+            for_each = var.tls_enabled ? [1] : []
+            content {
+              name       = "vault-tls"
+              mount_path = "/certs"
+              read_only  = true
+            }
           }
         }
-        volume {
-          name = "vault-tls"
-          secret {
-            secret_name = var.internal_tls_secret_name
+        dynamic "volume" {
+          for_each = var.tls_enabled ? [1] : []
+          content {
+            name = "vault-tls"
+            secret {
+              secret_name = var.internal_tls_secret_name
+            }
           }
         }
       }
@@ -267,6 +301,11 @@ resource "kubernetes_job" "vault-keygen-job" {
         container {
           name  = "keygen"
           image = "hashicorp/vault"
+          security_context {
+            capabilities {
+              add = ["IPC_LOCK"]
+            }
+          }
           command = [
             "sh",
             "-c",
@@ -280,26 +319,35 @@ resource "kubernetes_job" "vault-keygen-job" {
           ]
           env {
             name  = "VAULT_ADDR"
-            value = "https://${var.participant_name}-vault:${local.vault_port}"
+            value = "${var.tls_enabled ? "https" : "http"}://${var.participant_name}-vault:${local.vault_port}"
           }
           env {
             name  = "VAULT_TOKEN"
             value = local.vault_token
           }
-          env {
-            name  = "VAULT_CACERT"
-            value = "/certs/ca.crt"
+          dynamic "env" {
+            for_each = var.tls_enabled ? [1] : []
+            content {
+              name  = "VAULT_CACERT"
+              value = "/certs/ca.crt"
+            }
           }
-          volume_mount {
-            name       = "vault-tls"
-            mount_path = "/certs"
-            read_only  = true
+          dynamic "volume_mount" {
+            for_each = var.tls_enabled ? [1] : []
+            content {
+              name       = "vault-tls"
+              mount_path = "/certs"
+              read_only  = true
+            }
           }
         }
-        volume {
-          name = "vault-tls"
-          secret {
-            secret_name = var.internal_tls_secret_name
+        dynamic "volume" {
+          for_each = var.tls_enabled ? [1] : []
+          content {
+            name = "vault-tls"
+            secret {
+              secret_name = var.internal_tls_secret_name
+            }
           }
         }
       }

@@ -8,7 +8,7 @@ locals {
     var.environment == "devbox" ? "${var.devbox-registry}/federated-catalog-postgresql-hashicorpvault" :
     "federated-catalog-postgresql-hashicorpvault"
   )
-  catalog_url = "https://${local.catalog_release_name}.default.svc.cluster.local:8383/api/catalog/v1alpha/catalog/query"
+  catalog_url = "${local.scheme}://${local.catalog_release_name}.default.svc.cluster.local:8383/api/catalog/v1alpha/catalog/query"
 }
 
 resource "helm_release" "federated-catalog" {
@@ -28,7 +28,7 @@ resource "helm_release" "federated-catalog" {
         }
       ] : []
       "federatedcatalog" : {
-        "initContainers" : [
+        "initContainers" : var.tls_enabled ? [
           {
             "name" : "keystore-setup",
             "image" : "${local.federated_catalog_image}:latest",
@@ -42,7 +42,7 @@ resource "helm_release" "federated-catalog" {
               { "name" : "shared-volume", "mountPath" : "/opt/ca" }
             ]
           }
-        ],
+        ] : [],
         "image" : {
           "repository" : local.federated_catalog_image
           "tag" : "latest"
@@ -51,7 +51,7 @@ resource "helm_release" "federated-catalog" {
         "did" : {
           "web" : {
             "url" : local.did_url,
-            "useHttps" : true
+            "useHttps" : var.tls_enabled
           }
         },
         "crawler" : {
@@ -76,14 +76,11 @@ edc.vault.hashicorp.token.scheduled-renew-enabled=false
 edc.vault.hashicorp.allow.fallback=true
 dse.namespace.prefix=${var.dse_namespace_prefix}
 dse.policy.prefix=${var.dse_policy_prefix}
-edc.web.https.keystore.path=/shared/keystore.p12
-edc.web.https.keystore.type=PKCS12
-edc.web.https.keystore.password=changeit
-edc.web.https.keymanager.password=changeit
+${local.tls_config_props}
         EOT
 
         "env" : {
-          "JAVA_TOOL_OPTIONS" : "-Djavax.net.ssl.trustStore=/shared/cacerts -Djavax.net.ssl.trustStorePassword=changeit"
+          "JAVA_TOOL_OPTIONS" : local.tls_java_opts
           "EDC_IAM_CREDENTIAL_REVOCATION_MIMETYPE" : "application/json"
         }
 
@@ -96,16 +93,22 @@ edc.web.https.keymanager.password=changeit
         "ingress" : {
           "enabled" : true
           "className" : "nginx"
-          "annotations" : {
-            "nginx.ingress.kubernetes.io/ssl-redirect" : "false"
-            "nginx.ingress.kubernetes.io/use-regex" : "true"
-            "nginx.ingress.kubernetes.io/rewrite-target" : "/api/$1$2"
-            "nginx.ingress.kubernetes.io/backend-protocol" : "HTTPS"
-            "nginx.ingress.kubernetes.io/proxy-ssl-verify" : "on"
-            "nginx.ingress.kubernetes.io/proxy-ssl-secret" : "default/${var.ingress_proxy_ssl_ca_secret_name}"
-            "nginx.ingress.kubernetes.io/proxy-ssl-name" : "${local.catalog_release_name}.default.svc.cluster.local"
-            "nginx.ingress.kubernetes.io/proxy-ssl-server-name" : "on"
-          },
+          "annotations" : merge(
+            {
+              "nginx.ingress.kubernetes.io/ssl-redirect" : "false"
+              "nginx.ingress.kubernetes.io/use-regex" : "true"
+              "nginx.ingress.kubernetes.io/rewrite-target" : "/api/$1$2"
+            },
+            var.tls_enabled ? {
+              "nginx.ingress.kubernetes.io/backend-protocol" : "HTTPS"
+              "nginx.ingress.kubernetes.io/proxy-ssl-verify" : "on"
+              "nginx.ingress.kubernetes.io/proxy-ssl-secret" : "default/${var.ingress_proxy_ssl_ca_secret_name}"
+              "nginx.ingress.kubernetes.io/proxy-ssl-name" : "${local.catalog_release_name}.default.svc.cluster.local"
+              "nginx.ingress.kubernetes.io/proxy-ssl-server-name" : "on"
+              } : {
+              "nginx.ingress.kubernetes.io/backend-protocol" : "HTTP"
+            }
+          ),
           "endpoints" : [
             {
               "port" : 8383,
@@ -115,8 +118,8 @@ edc.web.https.keymanager.password=changeit
           ]
           "hostname" : "localhost"
           "tls" : {
-            "enabled" : true
-            "secretName" : var.ingress_tls_secret_name
+            "enabled" : var.tls_enabled
+            "secretName" : var.tls_enabled ? var.ingress_tls_secret_name : ""
           }
         },
 
@@ -136,7 +139,8 @@ edc.web.https.keymanager.password=changeit
         }
 
         "internalTls" : {
-          "secretName" : var.internal_tls_secret_name
+          "enabled" : var.tls_enabled
+          "secretName" : var.tls_enabled ? var.internal_tls_secret_name : ""
         }
 
         "vault" : {

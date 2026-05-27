@@ -1,5 +1,11 @@
 variable "participant_name" {}
 
+variable "tls_enabled" {
+  description = "Enable TLS (HTTPS) for vault. When false, vault runs with plain HTTP."
+  type        = bool
+  default     = true
+}
+
 variable "internal_tls_secret_name" {
   description = "Name of the Kubernetes secret containing the shared internal TLS certificate (tls.crt, tls.key, ca.crt) used as vault's server certificate."
   type        = string

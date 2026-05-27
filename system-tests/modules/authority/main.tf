@@ -11,6 +11,16 @@ locals {
   authority_did = local.did_url
 
   image_pull_policy = var.environment == "local" || var.environment == "selfhosted" ? "Never" : var.environment == "devbox" ? "Always" : "IfNotPresent"
+
+  # Shared TLS helpers used across all authority component files
+  scheme        = var.tls_enabled ? "https" : "http"
+  tls_java_opts = var.tls_enabled ? "-Djavax.net.ssl.trustStore=/shared/cacerts -Djavax.net.ssl.trustStorePassword=changeit" : ""
+  tls_config_props = var.tls_enabled ? join("\n", [
+    "edc.web.https.keystore.path=/shared/keystore.p12",
+    "edc.web.https.keystore.type=PKCS12",
+    "edc.web.https.keystore.password=changeit",
+    "edc.web.https.keymanager.password=changeit",
+  ]) : ""
 }
 module "db" {
   source = "../db"
@@ -65,6 +75,7 @@ module "vault" {
   source = "../vault"
 
   participant_name         = var.authority_name
+  tls_enabled              = var.tls_enabled
   internal_tls_secret_name = var.internal_tls_secret_name
   ingress_tls_secret_name  = var.ingress_tls_secret_name
 }
