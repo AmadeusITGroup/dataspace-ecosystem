@@ -63,6 +63,7 @@ For basic build commands (full build, building without tests, clean build, etc.)
 ### Full Dataspace Deployment
 
 For deploying a complete dataspace environment with multiple participants, see the [Testing Guide](../testing.md) which covers:
+
 - Building Docker/Podman images
 - Loading images into Kind clusters
 - Deploying with Terraform
@@ -72,9 +73,11 @@ For deploying a complete dataspace environment with multiple participants, see t
 For end-to-end testing with a full dataspace deployment, see [Quick Start - Step 5: Run End-to-End Tests](../../getting-started/quick-start.md#step-5-run-end-to-end-tests).
 
 This includes:
+
 - Setting up port forwarding
 - Running system tests: `./gradlew :system-tests:runner:test -DincludeTags="EndToEndTest"`
 - Requirements for the deployed dataspace
+- [TLS Configuration](../build-docs/tls-configuration.md) if running without TLS, both the deployment and test commands require additional flags
 
 !!! warning "One-Time Execution"
     End-to-end tests can only run once per deployment. Destroy and redeploy the dataspace to rerun them.

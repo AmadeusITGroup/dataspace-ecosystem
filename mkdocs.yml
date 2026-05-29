@@ -150,6 +150,7 @@ nav:
           - developer-guide/build-docs/index.md
           - Base Image Configuration: developer-guide/build-docs/base-image-configuration.md
           - Vault Selection Guide: developer-guide/build-docs/vault-selection-guide.md
+          - TLS Configuration: developer-guide/build-docs/tls-configuration.md
       - Testing: developer-guide/testing.md
       - Contributing: developer-guide/contributing.md
   - Onboarding:

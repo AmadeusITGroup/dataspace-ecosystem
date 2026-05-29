@@ -35,6 +35,7 @@ When deploying via Terraform, configure these variables in `system-tests/variabl
 | `kube_config_path` | `~/.kube/config` | Path to kubeconfig |
 | `auth_enabled` | `true` | Enable authentication for proxies |
 | `auth_mechanism` | `PLAIN` | Auth mechanism: `PLAIN` or `OAUTHBEARER` |
+| `tls_enabled` | `true` | Enable TLS for internal service communication (see [TLS Configuration](../developer-guide/build-docs/tls-configuration.md)) |
 
 ## Control Plane Configuration
 
@@ -267,8 +268,15 @@ edc.iam.sts.privatekey.alias=my-participant-private-key
 dse.credential-manager.private-key.alias=telemetry-signing-key
 ```
 
+## TLS Configuration
+
+TLS for internal service communication is enabled by default. Each Helm chart exposes an `internalTls` block, and a single Terraform variable (`tls_enabled`) controls TLS across the entire stack.
+
+See the [TLS Configuration](../developer-guide/build-docs/tls-configuration.md) guide for details on toggling TLS, per-chart component keys, and the full impact matrix.
+
 ## See Also
 
 - [Quick Start](quick-start.md)
 - [Prerequisites](prerequisites.md)
+- [TLS Configuration](../developer-guide/build-docs/tls-configuration.md)
 - [System Overview](../architecture/system-overview.md)

@@ -105,6 +105,9 @@ terraform -chdir=system-tests init
 terraform -chdir=system-tests apply -auto-approve -var="environment=local"
 ```
 
+!!! tip "Running without TLS"
+    To deploy without TLS (useful for local debugging), add `-var="tls_enabled=false"`. See [TLS Configuration](../developer-guide/build-docs/tls-configuration.md) for details.
+
 This deploys:
 
 - **Authority components**: Federated Catalog, Issuer Service, Identity Hub, Participant Registry
@@ -136,6 +139,12 @@ Run the tests:
 ```bash
 ./gradlew :system-tests:runner:test -DincludeTags="EndToEndTest"
 ```
+
+!!! tip "Tests without TLS"
+    If you deployed without TLS, pass the flag to the test runner as well:
+    ```bash
+    TLS_ENABLED=false ./gradlew :system-tests:runner:test -DincludeTags="EndToEndTest"
+    ```
 
 !!! warning "One-Time Execution"
     Tests can only be run once per deployment. To rerun, destroy and redeploy the dataspace first.

@@ -107,6 +107,9 @@ terraform -chdir=system-tests destroy -auto-approve -var="environment=local"
 terraform -chdir=system-tests apply -auto-approve -var="environment=local"
 ```
 
+!!! tip "Running without TLS"
+    To deploy without TLS (useful for local debugging), add `-var="tls_enabled=false"` to the `apply` command. See the [TLS Configuration](build-docs/tls-configuration.md) guide for full details on what this disables.
+
 To destroy the dataspace:
 
 ```bash
@@ -179,6 +182,15 @@ Execute the system tests:
 ```bash
 ./gradlew :system-tests:runner:test -DincludeTags="EndToEndTest"
 ```
+
+!!! tip "Running tests without TLS"
+    If you deployed without TLS, pass the flag to the test runner as well:
+
+    ```bash
+    TLS_ENABLED=false ./gradlew :system-tests:runner:test -DincludeTags="EndToEndTest"
+    ```
+
+    See [TLS Configuration](build-docs/tls-configuration.md) for all options.
 
 !!! warning "Important"
     - Tests can only be run **once per deployment**
