@@ -64,6 +64,9 @@ plugins:
       separator: '[\s\-,:!=\[\]()"/]+|(?!\b)(?=[A-Z][a-z])|\.(?!\d)|&[lg]t;'
   - minify:
       minify_html: true
+  - swagger-ui-tag:
+      docExpansion: none
+      filter: true
 
 # Extensions
 markdown_extensions:
@@ -130,6 +133,7 @@ nav:
       - API Reference:
           - architecture/components-api/index.md
           - Overview: architecture/components-api/overview.md
+          - Published OpenAPI Spec: architecture/components-api/openapi-spec.md
           - Control Plane API: architecture/components-api/control-plane-api.md
           - Data Plane API: architecture/components-api/data-plane-api.md
           - Identity API: architecture/components-api/identity-api.md

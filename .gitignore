@@ -62,3 +62,7 @@ bruno-collection/**/environments/*dev*.bru
 
 # Generated OpenAPI specs (produced by ./gradlew resolve and the generate-openapi workflow)
 openapi-spec/
+/site/
+
+# Generated OpenAPI spec placed under docs/ for the MkDocs site — produced at CI time, never committed
+docs/assets/openapi/

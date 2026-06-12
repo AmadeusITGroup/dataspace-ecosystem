@@ -1,0 +1,92 @@
+openapi: 3.0.1
+security:
+- bearerAuth: []
+- apiKeyAuth: []
+tags:
+- description: A service that allows the filtering of the assets in the federated
+    catalog based on participant vcs
+  name: Federated Catalog Filter
+paths:
+  /filter:
+    post:
+      description: Filters federated catalog assets based on participant vcs
+      operationId: filter
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FilterRequest"
+      responses:
+        "400":
+          description: Missing access token
+        "403":
+          description: Access token is expired or invalid
+        "500":
+          description: "Failed to transfer data, something went wrong on the server\
+            \ side"
+      security:
+      - bearerAuth: []
+      - apiKeyAuth: []
+      tags:
+      - Federated Catalog Filter
+components:
+  schemas:
+    Criterion:
+      type: object
+      properties:
+        operandLeft:
+          type: object
+        operandRight:
+          type: object
+        operator:
+          type: string
+    FilterRequest:
+      type: object
+      properties:
+        participantDid:
+          type: string
+        query:
+          $ref: "#/components/schemas/QuerySpec"
+        tokenRepresentation:
+          $ref: "#/components/schemas/TokenRepresentation"
+    QuerySpec:
+      type: object
+      properties:
+        filterExpression:
+          type: array
+          items:
+            $ref: "#/components/schemas/Criterion"
+        limit:
+          type: integer
+          format: int32
+        offset:
+          type: integer
+          format: int32
+        sortField:
+          type: string
+        sortOrder:
+          type: string
+          enum:
+          - ASC
+          - DESC
+    TokenRepresentation:
+      type: object
+      properties:
+        additional:
+          type: object
+          additionalProperties:
+            type: object
+        expiresIn:
+          type: integer
+          format: int64
+        token:
+          type: string
+  securitySchemes:
+    apiKeyAuth:
+      in: header
+      name: x-api-key
+      type: apiKey
+    bearerAuth:
+      bearerFormat: JWT
+      scheme: bearer
+      type: http

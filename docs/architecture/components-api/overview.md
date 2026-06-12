@@ -228,6 +228,7 @@ OpenAPI specs are available at:
 
 - Control Plane: `http://localhost:8181/api/management/openapi.yaml`
 - Data Plane: `http://localhost:8383/api/public/openapi.yaml`
+- Published merged spec: [Published OpenAPI Spec](openapi-spec.md)
 
 ## API Versioning
 

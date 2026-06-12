@@ -11,7 +11,10 @@ on:
     paths:
       - 'docs/**'
       - 'mkdocs.yml'
+      - 'mkdocs-public.yml'
       - 'requirements-docs.txt'
+      - 'resources/openapi/**'
+      - 'swagger-config.yaml'
   workflow_dispatch:
 
 # Allow only one concurrent deployment
@@ -20,14 +23,27 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Generate OpenAPI spec (reuses the existing generate-openapi workflow)
+  generate-spec:
+    uses: ./.github/workflows/generate-openapi.yaml
+    permissions:
+      contents: read
+
   # Build job
   build:
+    needs: generate-spec
     runs-on: ${{ vars.RUNNER }}
     permissions:
       contents: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+
+      - name: Download OpenAPI spec
+        uses: actions/download-artifact@v4
+        with:
+          name: openapi-specs
+          path: docs/assets/openapi/
 
       - name: Setup Python
         uses: actions/setup-python@v6
@@ -40,7 +56,7 @@ jobs:
         run: pip install -r requirements-docs.txt
 
       - name: Build documentation
-        run: mkdocs build --strict # Fail on warnings (broken links, missing refs) to enforce documentation quality
+        run: python -m mkdocs build --strict # Fail on warnings (broken links, missing refs) to enforce documentation quality
 
       - name: Upload artifact
         if: github.event_name != 'pull_request'

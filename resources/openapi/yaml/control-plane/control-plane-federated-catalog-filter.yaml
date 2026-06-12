@@ -1,0 +1,83 @@
+openapi: 3.0.1
+security:
+- bearerAuth: []
+- apiKeyAuth: []
+tags:
+- description: A service that allows participants to call the filtering of the federated
+    catalog
+  name: Federated Catalog Filter Endpoint for Participant Control-Plane
+paths:
+  /v1alpha/catalog/query:
+    post:
+      description: Creates a Token Representation from Identity Hub and sends it to
+        the filtering of the federated catalog for asset filtering
+      operationId: fetchCatalog
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties:
+                $ref: "#/components/schemas/JsonValue"
+              properties:
+                empty:
+                  type: boolean
+                valueType:
+                  type: string
+                  enum:
+                  - ARRAY
+                  - OBJECT
+                  - STRING
+                  - NUMBER
+                  - "TRUE"
+                  - "FALSE"
+                  - "NULL"
+      responses:
+        "500":
+          description: Failed to fetch the filtered catalog
+      security:
+      - bearerAuth: []
+      - apiKeyAuth: []
+      tags:
+      - Federated Catalog Filter Endpoint for Participant Control-Plane
+components:
+  schemas:
+    JsonObject:
+      type: object
+      additionalProperties:
+        $ref: "#/components/schemas/JsonValue"
+      properties:
+        empty:
+          type: boolean
+        valueType:
+          type: string
+          enum:
+          - ARRAY
+          - OBJECT
+          - STRING
+          - NUMBER
+          - "TRUE"
+          - "FALSE"
+          - "NULL"
+    JsonValue:
+      type: object
+      properties:
+        valueType:
+          type: string
+          enum:
+          - ARRAY
+          - OBJECT
+          - STRING
+          - NUMBER
+          - "TRUE"
+          - "FALSE"
+          - "NULL"
+  securitySchemes:
+    apiKeyAuth:
+      in: header
+      name: x-api-key
+      type: apiKey
+    bearerAuth:
+      bearerFormat: JWT
+      scheme: bearer
+      type: http
