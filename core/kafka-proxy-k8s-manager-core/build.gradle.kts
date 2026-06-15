@@ -20,7 +20,7 @@ dependencies {
     
     // Utilities
     implementation("org.apache.commons:commons-lang3:3.13.0")
-    implementation("commons-io:commons-io:2.15.1")
+    implementation("commons-io:commons-io:2.21.0")
     
     // Testing
     testImplementation(libs.junit.jupiter.api)
