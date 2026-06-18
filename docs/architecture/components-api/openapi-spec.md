@@ -3,12 +3,12 @@
 The merged Dataspace Ecosystem OpenAPI specification, combining all components into a single interactive reference.
 ## Download
 
-- [Download the merged OpenAPI YAML](../../../assets/openapi/dse-full-spec.yaml)
+- [Download the merged OpenAPI YAML](../../assets/openapi/dse-full-spec.yaml)
 
 
 ## Interactive Explorer
 
-<swagger-ui src="../../../assets/openapi/dse-full-spec.yaml"/>
+<swagger-ui src="../../assets/openapi/dse-full-spec.yaml"/>
 
 
 ## How it is produced
