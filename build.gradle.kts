@@ -16,6 +16,12 @@ val dseScmUrl: String by project
 
 val loadToKind = project.hasProperty("loadToKind")
 
+// Versions captured at root scope for use in allprojects constraints
+val jettyVersion: String = libs.versions.jetty.get()
+val bouncycastleVersion: String = libs.versions.bouncycastle.get()
+val jacksonVersion: String = libs.versions.jackson.get()
+val jacksonAnnotationsVersion: String = libs.versions.jacksonAnnotations.get()
+
 // Kind cluster name configuration (can be overridden via environment variable)
 val kindClusterName = System.getenv("KIND_CLUSTER_NAME") ?: "dse-cluster"
 
@@ -74,6 +80,37 @@ allprojects {
     configurations.all {
         resolutionStrategy {
             force("io.netty:netty-codec-http2:4.2.4.Final")
+        }
+    }
+
+    dependencies {
+        constraints {
+            // Jetty: enforce consistent version across all transitive artifacts (security mitigation)
+            // org.eclipse.jetty.toolchain is intentionally excluded (uses its own versioning)
+            add("implementation", "org.eclipse.jetty:jetty-http") { version { strictly(jettyVersion) } }
+            add("implementation", "org.eclipse.jetty:jetty-io") { version { strictly(jettyVersion) } }
+            add("implementation", "org.eclipse.jetty:jetty-security") { version { strictly(jettyVersion) } }
+            add("implementation", "org.eclipse.jetty:jetty-server") { version { strictly(jettyVersion) } }
+            add("implementation", "org.eclipse.jetty:jetty-session") { version { strictly(jettyVersion) } }
+            add("implementation", "org.eclipse.jetty:jetty-util") { version { strictly(jettyVersion) } }
+            add("implementation", "org.eclipse.jetty.ee10:jetty-ee10-servlet") { version { strictly(jettyVersion) } }
+            add("implementation", "org.eclipse.jetty.websocket:jetty-websocket") { version { strictly(jettyVersion) } }
+
+            // Bouncycastle: enforce consistent version across all transitive artifacts (security mitigation)
+            add("implementation", "org.bouncycastle:bcprov-jdk18on") { version { strictly(bouncycastleVersion) } }
+            add("implementation", "org.bouncycastle:bcpkix-jdk18on") { version { strictly(bouncycastleVersion) } }
+            add("implementation", "org.bouncycastle:bcutil-jdk18on") { version { strictly(bouncycastleVersion) } }
+
+            // Jackson: enforce consistent version across all transitive artifacts (security mitigation)
+            add("implementation", "com.fasterxml.jackson.core:jackson-core") { version { strictly(jacksonVersion) } }
+            add("implementation", "com.fasterxml.jackson.core:jackson-databind") { version { strictly(jacksonVersion) } }
+            add("implementation", "com.fasterxml.jackson.core:jackson-annotations") { version { strictly(jacksonAnnotationsVersion) } }
+            add("implementation", "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml") { version { strictly(jacksonVersion) } }
+            add("implementation", "com.fasterxml.jackson.datatype:jackson-datatype-jsr310") { version { strictly(jacksonVersion) } }
+            add("implementation", "com.fasterxml.jackson.datatype:jackson-datatype-jakarta-jsonp") { version { strictly(jacksonVersion) } }
+            add("implementation", "com.fasterxml.jackson.jakarta.rs:jackson-jakarta-rs-base") { version { strictly(jacksonVersion) } }
+            add("implementation", "com.fasterxml.jackson.jakarta.rs:jackson-jakarta-rs-json-provider") { version { strictly(jacksonVersion) } }
+            add("implementation", "com.fasterxml.jackson.module:jackson-module-jakarta-xmlbind-annotations") { version { strictly(jacksonVersion) } }
         }
     }
 }

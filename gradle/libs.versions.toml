@@ -13,7 +13,8 @@ azureMessagingEventHub = "5.21.3"
 awaitility = "4.2.0"
 nimbus = "9.45"
 jackarta-json = "2.0.1"
-jackson = "2.18.2"
+jackson = "2.22.0"
+jacksonAnnotations = "2.22"
 rsApi = "4.0.0"
 servletApi = "5.0.2"
 restAssured = "5.5.0"
@@ -26,6 +27,8 @@ swagger = "2.2.27"
 micrometer = "1.14.2"
 jjwt = "0.13.0"
 netty = "4.2.4.Final"
+jetty = "12.1.10"
+bouncycastle = "1.84"
 
 [libraries]
 edc-spi-core = { module = "org.eclipse.edc:core-spi", version.ref = "edc" }
@@ -201,7 +204,7 @@ jersey-multipart = { module = "org.glassfish.jersey.media:jersey-media-multipart
 jjwt-api = { module = "io.jsonwebtoken:jjwt-api", version.ref = "jjwt" }
 jjwt-impl = { module = "io.jsonwebtoken:jjwt-impl", version.ref = "jjwt" }
 jjwt-jackson = { module = "io.jsonwebtoken:jjwt-jackson", version.ref = "jjwt" }
-jackson-annotations = { module = "com.fasterxml.jackson.core:jackson-annotations", version.ref = "jackson" }
+jackson-annotations = { module = "com.fasterxml.jackson.core:jackson-annotations", version.ref = "jacksonAnnotations" }
 
 # Security fix for PSMP-984
 netty-codec-http2 = { module = "io.netty:netty-codec-http2", version.ref = "netty" }
