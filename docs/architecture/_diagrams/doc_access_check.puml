@@ -1,0 +1,96 @@
+@startuml
+
+skinParam NoteBackgroundColor WhiteSmoke
+skinParam NoteFontColor Black
+skinParam ParticipantBackgroundColor WhiteSmoke
+skinParam ActorBackgroundColor WhiteSmoke
+skinParam AgentBackgroundColor White
+skinParam AgentBorderColor SkyBlue
+skinparam shadowing false
+skinparam BoxPadding 10
+
+!define UserColor E8DAEF
+!define UIColor d9edff
+!define GatewayColor D5F5E3
+!define DocSystemColor D6EAF8
+!define ParticipantColor f8f2ff
+!define AuthorityColor FCF3CF
+
+box "User" #UserColor
+    actor User as "LSS Account\n(airfrance)" #Business
+end box
+
+box "UI (tenant: KL)" #UIColor
+    participant UI as "CRP Portal\n(KL)" #Business
+end box
+
+box "Gateway" #GatewayColor
+    participant MGW as "Microgateway" #Business
+end box
+
+box "Doc System" #DocSystemColor
+    participant DocBE as "Doc System BE" #Business
+end box
+
+box "Participant KL" #ParticipantColor
+    participant CrBff as "cr-bff\n(KL connector)" #Business
+    participant CP as "Control Plane\n(KL)" #Business
+end box
+
+box "Dataspace Authority" #AuthorityColor
+    participant AuthFilter as "Catalog Filter\n(/filter)" #Business
+    participant FedCatalog as "Federated\nCatalog" #Business
+end box
+
+autonumber 1
+
+User ->> UI : login with LSS account
+UI ->> MGW : GET /KL/GetDocs\n{LSS OIDC token, documentationId}
+MGW ->> DocBE : forward request
+
+DocBE ->> MGW : GET /KL/GetDocsDSE\n{LSS OIDC token, documentationId}
+MGW ->> CrBff : forward to KL connector
+activate CrBff
+
+CrBff ->> CP : POST /api/management/v1alpha/catalog/query\n{filterExpression: [documentationId = "..."]}
+activate CP
+
+note right of CP
+  Existing pipeline:
+  1. Obtain own VC token from IH
+  2. Build FilterRequest with query
+end note
+
+CP ->> AuthFilter : POST /filter\n{vcToken, participantDid, querySpec}
+activate AuthFilter
+
+AuthFilter ->> FedCatalog : query catalog\n(with filter on doc property)
+activate FedCatalog
+FedCatalog -->> AuthFilter : matching entries
+deactivate FedCatalog
+
+AuthFilter ->> AuthFilter : evaluate policies\nvs participant VCs
+
+AuthFilter -->> CP : filtered result
+deactivate AuthFilter
+
+CP -->> CrBff : filtered catalog
+deactivate CP
+
+CrBff ->> CrBff : asset found?
+
+alt asset found in filtered catalog
+    CrBff -->> MGW : 200 OK
+    MGW -->> DocBE : 200 OK
+    DocBE -->> MGW : 200 OK (serve documentation)
+    MGW -->> UI : documentation content
+else asset NOT found
+    CrBff -->> MGW : 401 Unauthorized
+    MGW -->> DocBE : 401 Unauthorized
+    DocBE -->> MGW : 401 Unauthorized
+    MGW -->> UI : access denied
+end
+
+deactivate CrBff
+
+@enduml
