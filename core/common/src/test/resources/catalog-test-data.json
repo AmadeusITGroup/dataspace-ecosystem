@@ -1,0 +1,148 @@
+{
+  "id": "urn:catalog:travel-data",
+  "participantId": "urn:participant:amadeus",
+  "datasets": [
+    {
+      "id": "urn:dataset:order-event",
+      "offers": {
+        "offer-1": {}
+      },
+      "properties": {
+        "dcterms:title": "Order Created Event",
+        "dcterms:description": [
+          {
+            "@value": "An event emitted when an order is created"
+          }
+        ],
+        "dcterms:test": {
+          "dcterms:data": [
+            {
+              "@value": "fake"
+            }
+          ]
+        },
+        "dcterms:creator": {
+          "@id": "urn:participant:amadeus",
+          "dcterms:name": [
+            {
+              "@value": "Amadeus"
+            }
+          ],
+          "dcterms:email": [
+            {
+              "@value": "dxp@amadeus.com"
+            }
+          ]
+        },
+        "dcterms:subject": [
+          {
+            "@value": "booking"
+          },
+          {
+            "@value": "travel"
+          },
+          {
+            "@value": "order"
+          }
+        ],
+        "dcterms:format": {
+          "@value": "application/json"
+        },
+        "dcat:distribution": [
+          {
+            "dcat:accessURL": [
+              {
+                "@value": "https://api.example.com/orders"
+              }
+            ],
+            "dcterms:format": {
+              "@value": "application/json"
+            },
+            "dcat:byteSize": {
+              "@value": "2048"
+            }
+          },
+          {
+            "dcat:accessURL": [
+              {
+                "@value": "https://api.example.com/orders/stream"
+              }
+            ],
+            "dcterms:format": {
+              "@value": "application/octet-stream"
+            },
+            "dcat:byteSize": {
+              "@value": "4096"
+            }
+          }
+        ],
+        "dcterms:spatial": {
+          "dcterms:coverage": {
+            "dcterms:regions": [
+              {
+                "@value": "EU"
+              },
+              {
+                "@value": "US"
+              },
+              {
+                "@value": "APAC"
+              }
+            ]
+          }
+        },
+        "dcterms:keywords": [
+          ["travel", "booking"],
+          ["gds", "amadeus"]
+        ],
+        "dcterms:relatedSets": [
+          [{"@value": "set-a1"}, {"@value": "set-a2"}],
+          [{"@value": "set-b1"}, {"@value": "set-b2"}]
+        ],
+        "dcterms:nullableRef": {
+          "dcterms:inner": null
+        }
+      }
+    },
+    {
+      "id": "urn:dataset:flight-offer",
+      "offers": {
+        "offer-2": {}
+      },
+      "properties": {
+        "dcterms:title": "Flight Offer Data",
+        "dcterms:description": [
+          {
+            "@value": "Real-time flight availability and pricing"
+          }
+        ],
+        "dcterms:test": {
+          "dcterms:data": [
+            {
+              "@value": "mock"
+            }
+          ]
+        },
+        "dcterms:creator": {
+          "@id": "urn:participant:airline",
+          "dcterms:name": [
+            {
+              "@value": "Partner Airline"
+            }
+          ]
+        },
+        "dcterms:subject": [
+          {
+            "@value": "flights"
+          },
+          {
+            "@value": "availability"
+          }
+        ],
+        "dcterms:format": {
+          "@value": "text/csv"
+        }
+      }
+    }
+  ]
+}

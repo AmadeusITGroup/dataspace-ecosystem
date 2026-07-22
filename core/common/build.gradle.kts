@@ -6,6 +6,8 @@ dependencies {
     api(project(":spi:common-spi"))
     implementation(libs.edc.runtime.metamodel)
     implementation(libs.edc.spi.core)
+    implementation(libs.edc.lib.util)
     
     testImplementation(libs.edc.core.junit)
+    testImplementation(libs.edc.spi.catalog)
 }
