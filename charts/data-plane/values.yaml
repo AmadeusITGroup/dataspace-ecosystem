@@ -2,6 +2,37 @@ install:
   # -- activates deployment of http server hosting the DID document
   didserver: true
 
+# -- Values shared across subcharts when this chart is deployed via the
+# `participant` umbrella chart (Helm automatically injects `global` into every
+# subchart's context). These provide sane cross-component defaults
+# (release-name-derived URLs, image repository, JDBC URL, vault config) so the
+# component-specific values below can be left empty. Any component-specific
+# value set explicitly always takes precedence over what is derived from
+# `global`.
+global:
+  participantName: ""
+  environment: ""
+  db:
+    serverFqdn: ""
+    name: ""
+    credentials:
+      secret:
+        name: ""
+  keys:
+    privateKeyAlias: ""
+    publicKeyAlias: ""
+  image:
+    baseRepository: ""
+    namePrefix: ""
+  vaultProvider: ""
+  identityHub:
+    didWebUrl: ""
+  vault:
+    url: ""
+  telemetry:
+    enabled: false
+    collectorEndpoint: ""
+
 fullnameOverride: ""
 nameOverride: ""
 # -- Existing image pull secret to use to [obtain the container image from private registries](https://kubernetes.io/docs/concepts/containers/images/#using-a-private-registry)
@@ -16,10 +47,18 @@ dataplane:
     repository: ""
     # -- [Kubernetes image pull policy](https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy) to use
     pullPolicy: IfNotPresent
-    # -- Overrides the image tag whose default is the chart appVersion
+    # -- Image tag. Required — this chart does not set Chart.yaml appVersion,
+    # so a tag must always be provided explicitly.
     tag: ""
+  # -- Overrides the release-name portion of the `app.kubernetes.io/instance`
+  # selector/label (rendered as "<instanceOverride>-dataplane"). Selectors are
+  # immutable, so when migrating an existing Terraform-deployed participant
+  # whose standalone release was "<participant>-dataplane", set this to that
+  # old release name to retain its "<participant>-dataplane-dataplane"
+  # selector. Leave empty for new deployments.
+  instanceOverride: ""
   # -- Cert installer initContainer image
- 
+
   initContainers: []
   livenessProbe:
     # -- Whether to enable kubernetes [liveness-probe](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/)
@@ -104,7 +143,9 @@ dataplane:
     jdbcUrl: ""
     credentials:
       secret:
-        # -- name of the Kubernetes secret containing the PostgreSQL credentials
+        # -- name of the Kubernetes secret containing the PostgreSQL credentials.
+        # Falls back to global.db.credentials.secret.name (participantName-derived
+        # default) when unset.
         name: ""
         # -- secret key containing the username
         userKey: "username"
@@ -147,7 +188,10 @@ dataplane:
 
   # -- Private/public keys information
   keys:
-    # -- Key pair used to sign/verify token generate for Data Plane access
+    # -- Key pair used to sign/verify token generate for Data Plane access.
+    # privateKeyVaultAlias/publicKeyVaultAlias fall back to
+    # global.keys.privateKeyAlias/publicKeyAlias (participantName-derived
+    # defaults) when unset.
     dataplane:
       privateKeyVaultAlias: ""
       publicKeyVaultAlias: ""
@@ -210,6 +254,9 @@ dataplane:
     # -- ingress for public api of the data plane
     - port: 8181
       path: /api/public
+    # -- ingress for data api of the data plane
+    - port: 8282
+      path: /api/data
     # -- Defines the [ingress class](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class)  to use
     className: ""
     # -- TLS [tls class](https://kubernetes.io/docs/concepts/services-networking/ingress/#tls) applied to the ingress resource

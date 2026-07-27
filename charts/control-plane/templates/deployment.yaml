@@ -38,12 +38,17 @@ spec:
           securityContext:
           {{- toYaml .Values.controlplane.securityContext | nindent 12}}
           # either use the specified image, or use the default one
-          image: {{.Values.controlplane.image.repository | required ".Values.controlplane.image.repository is required"}}:{{ .Values.controlplane.image.tag | default .Chart.AppVersion }}
+          image: {{ include "dse.controlplane.imageRepository" . }}:{{ .Values.controlplane.image.tag | required ".Values.controlplane.image.tag is required" }}
           imagePullPolicy: {{.Values.controlplane.image.pullPolicy}}
           ports:
         {{- range $key,$value := .Values.controlplane.endpoints}}
             - name: {{$key}}
               containerPort: {{$value.port}}
+              protocol: TCP
+        {{- end}}
+        {{- if .Values.global.telemetry.enabled}}
+            - name: metrics
+              containerPort: 9464
               protocol: TCP
         {{- end}}
         {{- if .Values.controlplane.livenessProbe.enabled}}
@@ -110,7 +115,7 @@ spec:
           ## ID CONFIGURATION ##
           ######################
           - name: "EDC_PARTICIPANT_ID"
-            value: {{.Values.controlplane.did.web.url | required ".Values.controlplane.did.web.url" | quote}}
+            value: {{ include "dse.controlplane.identityHubDidWebUrl" . | quote }}
           - name: "EDC_COMPONENT_ID"
             value: {{include "dse.fullname" .}}
 
@@ -127,18 +132,18 @@ spec:
             value: {{.Values.controlplane.postgresql.schema.autocreate | required ".Values.controlplane.postgresql.schema.autocreate is required" | quote}}
 
         {{- with .Values.controlplane.postgresql}}
-        {{- if .jdbcUrl}}
+        {{- if or .jdbcUrl $.Values.global.db.serverFqdn}}
           - name: "EDC_DATASOURCE_DEFAULT_URL"
-            value: {{.jdbcUrl | required ".jdbcUrl is required" | quote}}
+            value: {{ include "dse.controlplane.jdbcUrl" $ | quote }}
           - name: "EDC_DATASOURCE_DEFAULT_USER"
             valueFrom:
               secretKeyRef:
-                name: {{.credentials.secret.name | required ".credentials.secret.name is required" | quote}}
+                name: {{ include "dse.controlplane.postgresql.credentials.secretName" $ | quote }}
                 key: {{.credentials.secret.userKey | required ".credentials.secret.userKey is required" | quote}}
           - name: "EDC_DATASOURCE_DEFAULT_PASSWORD"
             valueFrom:
               secretKeyRef:
-                name: {{.credentials.secret.name | required ".credentials.secret.name is required" | quote}}
+                name: {{ include "dse.controlplane.postgresql.credentials.secretName" $ | quote }}
                 key: {{.credentials.secret.passwordKey | required ".credentials.secret.passwordKey is required" | quote}}
         {{- end}}
         {{- end}}
@@ -147,14 +152,14 @@ spec:
           #####################
           ## HASHICORP VAULT ##
           #####################
-        {{- if .Values.controlplane.vault.hashicorp.url }}
+        {{- if or .Values.controlplane.vault.hashicorp.url (and .Values.global.vault.url (or (eq .Values.global.vaultProvider "hashicorp") (eq .Values.global.vaultProvider "hashicorpvault"))) }}
           # https://github.com/eclipse-edc/Connector/tree/main/extensions/common/vault/vault-hashicorp
           - name: "EDC_VAULT_HASHICORP_URL"
-            value: {{ .Values.controlplane.vault.hashicorp.url | quote }}
+            value: {{ include "dse.controlplane.vaultUrl" . | quote }}
           - name: "EDC_VAULT_HASHICORP_TOKEN"
             valueFrom:
               secretKeyRef:
-                name: {{ .Values.controlplane.vault.hashicorp.token.secret.name | required ".Values.controlplane.vault.hashicorp.token.secret.name is required" | quote }}
+                name: {{ include "dse.controlplane.vaultTokenSecretName" . | quote }}
                 key: {{ .Values.controlplane.vault.hashicorp.token.secret.tokenKey | required ".Values.controlplane.vault.hashicorp.token.secret.tokenKey is required" | quote }}
           - name: "EDC_VAULT_HASHICORP_TOKEN_SCHEDULED-RENEW-ENABLED"
             value: {{ .Values.controlplane.vault.hashicorp.token.renewal.enabled | quote }}
@@ -171,7 +176,7 @@ spec:
           - name: "EDC_VAULT_HASHICORP_API_SECRET_PATH"
             value: {{ .Values.controlplane.vault.hashicorp.paths.secret | quote }}
           - name: "EDC_VAULT_HASHICORP_FOLDER"
-            value: {{.Values.controlplane.vault.hashicorp.paths.folder | quote}}
+            value: {{ include "dse.controlplane.vaultFolder" . | quote }}
           - name: "EDC_VAULT_HASHICORP_API_HEALTH_CHECK_PATH"
             value: {{ .Values.controlplane.vault.hashicorp.paths.health | quote }}
           - name: "EDC_VAULT_HASHICORP_ALLOW_FALLBACK"
@@ -182,22 +187,22 @@ spec:
           # DID #
           #######
           - name: "EDC_IAM_ISSUER_ID"
-            value: {{.Values.controlplane.did.web.url | required ".Values.controlplane.did.web.url" | quote}}
+            value: {{ include "dse.controlplane.identityHubDidWebUrl" . | quote }}
           - name: "EDC_IDENTITY_DID_URL"
-            value: {{.Values.controlplane.did.web.url | required ".Values.controlplane.did.web.url" | quote}}
+            value: {{ include "dse.controlplane.identityHubDidWebUrl" . | quote }}
           - name: "EDC_IAM_DID_WEB_USE_HTTPS"
-            value: {{.Values.controlplane.did.web.useHttps | required ".Values.controlplane.did.web.useHttps is required" | quote}}
+            value: {{ include "dse.controlplane.did.web.useHttps" . | quote }}
           - name: "DSE_AUTHORITY_DID"
-            value: {{.Values.controlplane.trustedIssuers.authority.did | required ".Values.controlplane.trustedIssuers.authority.did is required" | quote}}
+            value: {{ include "dse.controlplane.authorityDid" . | quote }}
           #####################
           # STS REMOTE CONFIG #
           #####################
           - name: "EDC_IAM_STS_OAUTH_TOKEN_URL"
-            value: {{.Values.controlplane.sts.tokenUrl | required ".Values.controlplane.sts.tokenUrl is required" | quote}}
+            value: {{ include "dse.controlplane.sts.tokenUrl" . | quote }}
           - name: "EDC_IAM_STS_OAUTH_CLIENT_ID"
-            value: {{.Values.controlplane.sts.clientId | required ".Values.controlplane.sts.clientId is required" | quote}}
+            value: {{ include "dse.controlplane.sts.clientId" . | quote }}
           - name: "EDC_IAM_STS_OAUTH_CLIENT_SECRET_ALIAS"
-            value: {{.Values.controlplane.sts.clientSecretAlias | required ".Values.controlplane.sts.clientSecretAlias is required" | quote}}
+            value: {{ include "dse.controlplane.sts.clientSecretAlias" . | quote }}
 
             #######
             # API #
@@ -206,6 +211,14 @@ spec:
             value: {{ .Values.controlplane.api.cors.enabled | required ".Values.controlplane.api.cors.enabled is required" | quote }}
           - name: "EDC_WEB_REST_CORS_HEADERS"
             value: {{ .Values.controlplane.api.cors.allowedHeaders | required ".Values.controlplane.api.cors.allowedHeaders is required" | quote }}
+
+        {{- if .Values.global.telemetry.enabled }}
+          #############################
+          # OPENTELEMETRY (via global) #
+          #############################
+          - name: "OTEL_RESOURCE_ATTRIBUTES"
+            value: {{ include "dse.controlplane.otelResourceAttributes" . | quote }}
+        {{- end }}
 
         {{- range $key, $value := .Values.controlplane.envValueFrom }}
           - name: {{ $key | quote }}

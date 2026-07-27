@@ -1,0 +1,80 @@
+{{- /*
+OpenShift routes for the participant, rendered as Ingress resources.
+
+Reproduces the standalone `kubernetes_ingress_v1` resources the Terraform
+`terraform/backend/participant` module creates outside the component Helm
+releases (which keep `ingress.enabled: false`). One Ingress per component with:
+  - a fixed path->port map (each path can target a different Service port),
+  - an empty `tls: [{}]` stanza (OpenShift converts an Ingress with a TLS
+    stanza into a Route with TLS; for reencrypt the destination CA comes from
+    the annotation below, not from a secret referenced here),
+  - cert-manager + route.openshift.io annotations.
+
+Host is derived once from `global.route.hostPattern` (Terraform's
+`oc_route_pattern`) as printf(pattern, participantName, componentToken).
+Backend Service names match each subchart's fullname ("<release>-<component>").
+The telemetry-agent is intentionally excluded (Terraform exposes it via its own
+nginx chart ingress, not an OpenShift route).
+*/ -}}
+{{- if .Values.global.route.enabled }}
+{{- $rt := .Values.global.route }}
+{{- $pname := required "global.participantName is required when global.route.enabled is true" .Values.global.participantName }}
+{{- $pattern := required "global.route.hostPattern is required when global.route.enabled is true (two %s verbs: participantName, componentToken)" $rt.hostPattern }}
+{{- $rel := .Release.Name }}
+{{- $kafkaEnabled := index .Values "kafka-proxy" "enabled" }}
+{{- $components := list
+      (dict "svc" "controlplane" "token" "controlplane" "certManager" true "enabled" true
+            "paths" (list (dict "path" "/api/management" "port" 8181) (dict "path" "/api/dsp" "port" 8282)))
+      (dict "svc" "dataplane" "token" "dataplane" "certManager" true "enabled" .Values.dataplane.enabled
+            "paths" (list (dict "path" "/api/public" "port" 8181) (dict "path" "/api/data" "port" 8282)))
+      (dict "svc" "identityhub" "token" "identityhub" "certManager" true "enabled" true
+            "paths" (list (dict "path" "/api/identity" "port" 8181) (dict "path" "/api/credentials" "port" 8282) (dict "path" "/api/did" "port" 8383) (dict "path" "/api/sts" "port" 8484)))
+      (dict "svc" "kafka-proxy" "token" "kafkaproxy" "certManager" false "enabled" $kafkaEnabled
+            "paths" (list (dict "path" "/api" "port" 8080) (dict "path" "/management" "port" 8081)))
+}}
+{{- range $c := $components }}
+{{- if $c.enabled }}
+{{- $svcName := printf "%s-%s" $rel $c.svc }}
+{{- $host := printf $pattern $pname $c.token }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ $svcName }}
+  namespace: {{ $.Release.Namespace | default "default" | quote }}
+  labels:
+    app.kubernetes.io/managed-by: {{ $.Release.Service }}
+    app.kubernetes.io/part-of: {{ $pname }}
+    app.kubernetes.io/component: {{ $c.svc }}
+  annotations:
+    {{- if and $c.certManager $rt.clusterIssuer }}
+    cert-manager.io/cluster-issuer: {{ $rt.clusterIssuer | quote }}
+    {{- end }}
+    {{- if $rt.termination }}
+    route.openshift.io/termination: {{ $rt.termination | quote }}
+    {{- end }}
+    {{- if $rt.destinationCaCertificateSecret }}
+    route.openshift.io/destination-ca-certificate-secret: {{ $rt.destinationCaCertificateSecret | quote }}
+    {{- end }}
+spec:
+  {{- if $rt.className }}
+  ingressClassName: {{ $rt.className }}
+  {{- end }}
+  tls:
+    - {}
+  rules:
+    - host: {{ $host | quote }}
+      http:
+        paths:
+          {{- range $p := $c.paths }}
+          - path: {{ $p.path }}
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $svcName }}
+                port:
+                  number: {{ $p.port }}
+          {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}

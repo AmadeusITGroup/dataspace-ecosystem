@@ -1,0 +1,33 @@
+# CI fixture for `ct lint`/`ct install`: minimal-but-valid values
+# exercising the global-only deployment style. Kept in sync with
+# charts/participant/ci/ci-values.yaml.
+global:
+  participantName: ci-test
+  environment: ci
+  useHttps: true
+  db:
+    serverFqdn: db.ci.example.com
+    name: ci_test
+  image:
+    baseRepository: registry.example.com
+    namePrefix: ci-test
+  vaultProvider: hashicorp
+  identityHub:
+    didWebUrl: did:web:example.com:ci-test:identityhub
+  authority:
+    didWebUrl: did:web:example.com:authority
+  telemetry:
+    enabled: true
+    collectorEndpoint: http://otel-collector.ci.example.com:4317
+controlplane:
+  image:
+    tag: 1.0.0
+  postgresql:
+    credentials:
+      secret:
+        name: ci-test-controlplane-db
+  vault:
+    hashicorp:
+      token:
+        secret:
+          tokenKey: token

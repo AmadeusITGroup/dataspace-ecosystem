@@ -6,16 +6,57 @@ imagePullSecrets:
 # -- To add some custom labels
 customLabels: {}
 
+# -- Values shared across subcharts when this chart is deployed via the
+# `participant` umbrella chart (Helm automatically injects `global` into every
+# subchart's context). These provide sane cross-component defaults
+# (release-name-derived URLs, image repository, JDBC URL, vault config) so the
+# component-specific values below can be left empty. Any component-specific
+# value set explicitly always takes precedence over what is derived from
+# `global`.
+global:
+  participantName: ""
+  environment: ""
+  useHttps: null
+  db:
+    serverFqdn: ""
+    name: ""
+    credentials:
+      secret:
+        name: ""
+  keys:
+    privateKeyAlias: ""
+    publicKeyAlias: ""
+  image:
+    baseRepository: ""
+    namePrefix: ""
+  vaultProvider: ""
+  identityHub:
+    didWebUrl: ""
+  vault:
+    url: ""
+  telemetry:
+    enabled: false
+    collectorEndpoint: ""
+
 identityhub:
   image:
     # -- Docker repository for the Identity Hub
     repository: ""
     # -- [Kubernetes image pull policy](https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy) to use
     pullPolicy: IfNotPresent
-    # -- Overrides the image tag whose default is the chart appVersion
+    # -- Image tag. Required — this chart does not set Chart.yaml appVersion,
+    # so a tag must always be provided explicitly.
     tag: ""
+  # -- Overrides the `app.kubernetes.io/instance` selector/label value
+  # (normally derived from `.Release.Name`). Deployment/Service selectors are
+  # immutable, so when migrating an existing Terraform-deployed participant
+  # (whose standalone release was named "<participant>-identityhub") into
+  # this umbrella chart (where `.Release.Name` is just "<participant>"), set
+  # this to the old release name to avoid a selector change that would force
+  # a Deployment delete+recreate. Leave empty for new deployments.
+  instanceOverride: ""
   # -- Cert installer initContainer image
- 
+
   # -- name of the Kubernetes Service Account object
   serviceAccountName: ""
   initContainers: []
@@ -79,7 +120,7 @@ identityhub:
       port: 8383
       # -- path for incoming api calls
       path: /api/did
-    #-- STS api
+    # -- STS api
     sts:
       # -- port for incoming api calls
       port: 8484
@@ -90,11 +131,15 @@ identityhub:
   did:
     web:
       url: ""
-      useHttps: false
+      # -- Whether DID Web resolution uses HTTPS. When unset, falls back to
+      # global.useHttps and then false for standalone compatibility.
+      useHttps: null
 
   # -- Private/public keys information
   keys:
-    # -- Key pair used by the Secure Token Service
+    # -- Key pair used by the Secure Token Service. privateKeyAlias/
+    # publicKeyAlias fall back to global.keys.privateKeyAlias/publicKeyAlias
+    # (participantName-derived defaults) when unset.
     sts:
       privateKeyAlias: ""
       publicKeyAlias: ""
@@ -110,7 +155,10 @@ identityhub:
 
   participantcontext:
     superuser:
-      services: "[]"
+      # -- DID services for the seeded participant context. Accepts a YAML
+      # list or a JSON array string. When empty, derives the participant DSP
+      # and Credential Service URLs.
+      services: []
 
   # -- Postgresql database configuration
   postgresql:
@@ -120,7 +168,9 @@ identityhub:
     jdbcUrl: ""
     credentials:
       secret:
-        # -- name of the Kubernetes secret containing the PostgreSQL credentials
+        # -- name of the Kubernetes secret containing the PostgreSQL credentials.
+        # Falls back to global.db.credentials.secret.name (participantName-derived
+        # default) when unset.
         name: ""
         # -- secret key containing the username
         userKey: "username"
@@ -136,10 +186,16 @@ identityhub:
         tlsPath: "/shared/"
       token:
         renewal:
-          # -- enable token renewal
-          enabled: false
-          renewBuffer: 30
-          ttl: 300
+          # -- enable token renewal. Unlike the other DSE components, identity-hub
+          # needs a long-lived, self-renewing vault token since it manages the
+          # participant's key material continuously (renewBuffer/ttl below default
+          # to a ~1 year lifetime, matching the previous Terraform-managed setup).
+          enabled: true
+          renewBuffer: 300
+          # -- quoted to avoid Helm's YAML->JSON value conversion rendering
+          # this as float64 (e.g. `3.15576e+07` instead of `31557600`) when
+          # piped through the `quote` template function.
+          ttl: "31557600"
         secret:
           # -- name of the Kubernetes secret containing the Hashicorp Vault token
           name: ""
@@ -212,12 +268,18 @@ identityhub:
     annotations: {}
     # -- EDC endpoints exposed by this ingress resource
     endpoints:
+    # -- ingress for identity api
+    - port: 8181
+      path: /api/identity
     # -- ingress for credentials api
     - port: 8282
       path: /api/credentials
     # -- ingress for DID api
     - port: 8383
       path: /api/did
+    # -- ingress for STS api
+    - port: 8484
+      path: /api/sts
     # -- Defines the [ingress class](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class)  to use
     className: ""
     # -- TLS [tls class](https://kubernetes.io/docs/concepts/services-networking/ingress/#tls) applied to the ingress resource

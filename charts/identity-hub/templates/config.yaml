@@ -10,7 +10,7 @@ data:
     {{- .Values.identityhub.logging | nindent 4 }}
 
   opentelemetry.properties: |-
-    {{- .Values.identityhub.opentelemetry | nindent 4 }}
+    {{- include "dse.identityhub.opentelemetryProperties" . | nindent 4 }}
 
   config.properties: |-
     {{- .Values.identityhub.config | nindent 4 }}

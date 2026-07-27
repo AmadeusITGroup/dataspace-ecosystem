@@ -1,0 +1,23 @@
+# Configuration for the `helm/chart-testing` (ct) tool used by
+# .github/workflows/chart-lint.yaml.
+remote: origin
+target-branch: master
+chart-dirs:
+  - charts
+# Chart.yaml `version` is intentionally never bumped in this repo: the
+# published version is supplied at release time via `helm package --version`
+# (see .github/workflows/release-*.yaml), so ct's version-increment check
+# would always report a false positive.
+check-version-increment: false
+# The charts below have pre-existing, unrelated template bugs (invalid YAML
+# in templates/deployment.yaml) that predate and are out of scope for the
+# `participant` umbrella-chart hardening work. Excluded here so this new
+# lint CI doesn't fail on pre-existing issues; fixing them and removing
+# these exclusions is tracked separately.
+excluded-charts:
+  - federated-catalog
+  - federated-catalog-filter
+  - issuer-service
+  - telemetry-csv-manager
+  - telemetry-service
+  - telemetry-storage

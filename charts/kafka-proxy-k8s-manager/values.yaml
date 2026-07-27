@@ -2,10 +2,29 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
+# -- Override the chart name used in resource names/labels (default: chart name)
+nameOverride: ""
+# -- Override the fully qualified app name used for resource names (default:
+# "<release>-<chart>")
+fullnameOverride: ""
+
 # Global configuration
 global:
   imageRegistry: ""
   imagePullSecrets: []
+  # -- Values shared across subcharts when this chart is deployed via the
+  # `participant` umbrella chart (Helm automatically injects `global` into
+  # every subchart's context). These provide sane cross-component defaults
+  # (image repository, participant id, vault folder/token secret name) so the
+  # component-specific values below can be left empty. Any component-specific
+  # value set explicitly always takes precedence over what is derived from
+  # `global`.
+  participantName: ""
+  image:
+    baseRepository: ""
+    namePrefix: ""
+  vault:
+    url: ""
 
 # Kafka Proxy Manager configuration
 kafkaProxy:
@@ -17,19 +36,32 @@ kafkaProxy:
       repository: ""
       tag: ""
       pullPolicy: IfNotPresent
+    # -- Overrides the `app.kubernetes.io/instance` selector/label value
+    # (normally derived from `.Release.Name`). Deployment/Service selectors
+    # are immutable, so when migrating an existing Terraform-deployed
+    # participant (whose standalone release was named
+    # "<participant>-kafka-proxy") into this umbrella chart (where
+    # `.Release.Name` is just "<participant>"), set this to the old release
+    # name to avoid a selector change that would force a Deployment
+    # delete+recreate. Leave empty for new deployments.
+    instanceOverride: ""
     # Cert installer initContainer image
-   
+
 
     initContainers: []
 
     # Resource limits and requests
     resources: {}
-    
+
     # Kafka Proxy Configuration
-    vaultAddr: "http://vault:8200"
+    # -- Vault URL. Falls back to global.vault.url, then to the legacy
+    # standalone default "http://vault:8200".
+    vaultAddr: ""
     vaultTokenSecret:
-      # Name of the secret containing the Vault token
-      name: "vault-token"
+      # -- Name of the secret containing the Vault token. When unset, derives
+      # "<global.participantName>-vault-token" for umbrella deployments and
+      # falls back to the legacy standalone name "vault-token".
+      name: ""
       # Key within the secret that contains the token
       key: "token"
     # Vault TLS Configuration
@@ -44,39 +76,48 @@ kafkaProxy:
         # Key within the secret containing the CA cert (default: ca.crt)
         key: "tls.crt"
         path: "/vault-ca/tls.crt"
+        # Inline PEM content of the CA certificate, as an alternative to
+        # `secret` above. When set (and `secret` is empty), it is mounted from
+        # the generated `<fullname>-vault-ca` ConfigMap. Leave empty to use
+        # `secret`.
+        inline: ""
     vaultFolder: ""
-    namespace: "default"
-    proxyImage: "grepplabs/kafka-proxy:0.4.3-all"
+    # -- Namespace where proxy Deployments and Services are managed. Defaults
+    # to the Helm release namespace.
+    namespace: ""
+    # -- Proxy/auth image. When unset, derives the DSE image from global.image
+    # for umbrella deployments and otherwise uses the legacy standalone image.
+    proxyImage: ""
     sharedDir: "/shared"
     certDir: "/certificates"
     extraConfig: ""
     checkInterval: 15
     enableLock: true
     lockFilePath: "/tmp/kubectl-deployer.lock"
-    
+
     # Participant identification for proxy ownership
     # Used to prevent cross-consumer proxy deletion
     # If not set, falls back to EDC_PARTICIPANT_ID environment variable
     participantId: ""
-    
+
     # Service fixed ClusterIP (optional)
     # If specified, the Kafka proxy service will be created with this fixed IP address
     # The IP must be within the service CIDR range of your cluster
     # Leave empty to let Kubernetes assign an IP automatically
     serviceClusterIP: ""
-    
+
     # Base proxy port for Kafka proxy instances
     # This is the port that will be used for the Kafka proxy service
     # Default: 30001
     baseProxyPort: 30001
-    
+
     # Maximum number of broker ports to expose
     # For multi-broker Kafka clusters, the proxy needs to expose sequential ports
     # starting from baseProxyPort+1 up to baseProxyPort+maxBrokerPorts
     # This should be set to at least the number of brokers in your largest Kafka cluster
     # Default: 20 (supports clusters with up to 20 brokers)
     maxBrokerPorts: 20
-    
+
     # Downstream Authentication Configuration
     # Configures how clients authenticate to the proxy's listener
     auth:
@@ -92,7 +133,7 @@ kafkaProxy:
       staticUsers: ""
       # Custom image with authentication plugins (entra-token-verifier, entra-token-info)
       image: ""
-    
+
     # TLS Listener Configuration
     tls:
       listener:
@@ -100,7 +141,7 @@ kafkaProxy:
         certSecret: ""
         keySecret: ""
         caSecret: ""
-    
+
     # EDC Runtime configuration (optional)
     edc:
       runtimeId: ""
@@ -124,22 +165,22 @@ service:
 deployment:
   # Number of replicas (should be 1 for file-based queue management)
   replicaCount: 1
-  
+
   # Deployment strategy
   strategy:
     type: RollingUpdate
     rollingUpdate:
       maxUnavailable: 0
       maxSurge: 1
-  
+
   # Pod disruption budget
   podDisruptionBudget:
     enabled: false
     minAvailable: 1
-  
+
   # Annotations
   annotations: {}
-  
+
   # Labels
   labels: {}
 
@@ -147,19 +188,19 @@ deployment:
 pod:
   # Security context
   securityContext: {}
-  
+
   # Annotations
   annotations: {}
-  
+
   # Labels
   labels: {}
-  
+
   # Node selector
   nodeSelector: {}
-  
+
   # Tolerations
   tolerations: []
-  
+
   # Affinity
   affinity: {}
 
@@ -174,7 +215,7 @@ persistence:
       - ReadWriteOnce
     size: 1Gi
     annotations: {}
-  
+
   # Configuration persistence
   config:
     enabled: false
@@ -199,7 +240,7 @@ rbac:
   # Rules for the kafka-proxy manager
   rules:
     - apiGroups: [""]
-      resources: ["services", "pods", "configmaps"]
+      resources: ["services", "pods", "configmaps", "secrets"]
       verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
     - apiGroups: ["apps"]
       resources: ["deployments", "replicasets"]

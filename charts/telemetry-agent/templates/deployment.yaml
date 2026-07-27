@@ -39,7 +39,7 @@ spec:
             {{- toYaml .Values.telemetryagent.securityContext | nindent 12 }}
 
           # either use the specified image, or use the default one
-          image: {{ .Values.telemetryagent.image.repository | required ".Values.telemetryagent.image.repository is required" }}:{{ .Values.telemetryagent.image.tag | default .Chart.AppVersion }}
+          image: {{ include "dse.telemetryagent.imageRepository" . }}:{{ .Values.telemetryagent.image.tag | required ".Values.telemetryagent.image.tag is required" }}
           imagePullPolicy: {{ .Values.telemetryagent.image.pullPolicy }}
           ports:
           {{- range $key,$value := .Values.telemetryagent.endpoints }}
@@ -110,14 +110,14 @@ spec:
             #####################
             ## HASHICORP VAULT ##
             #####################
-          {{- if .Values.telemetryagent.vault.hashicorp.url }}
+          {{- if or .Values.telemetryagent.vault.hashicorp.url (and .Values.global.vault.url (or (eq .Values.global.vaultProvider "hashicorp") (eq .Values.global.vaultProvider "hashicorpvault"))) }}
             # https://github.com/eclipse-edc/Connector/tree/main/extensions/common/vault/vault-hashicorp
             - name: "EDC_VAULT_HASHICORP_URL"
-              value: {{ .Values.telemetryagent.vault.hashicorp.url | quote }}
+              value: {{ include "dse.telemetryagent.vaultUrl" . | quote }}
             - name: "EDC_VAULT_HASHICORP_TOKEN"
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Values.telemetryagent.vault.hashicorp.token.secret.name | required ".Values.telemetryagent.vault.hashicorp.token.secret.name is required" | quote }}
+                  name: {{ include "dse.telemetryagent.vaultTokenSecretName" . | quote }}
                   key: {{ .Values.telemetryagent.vault.hashicorp.token.secret.tokenKey | required ".Values.telemetryagent.vault.hashicorp.token.secret.tokenKey is required" | quote }}
             - name: "EDC_VAULT_HASHICORP_TOKEN_SCHEDULED-RENEW-ENABLED"
               value: {{.Values.telemetryagent.vault.hashicorp.token.renewal.enabled | quote}}
@@ -134,7 +134,7 @@ spec:
             - name: "EDC_VAULT_HASHICORP_API_SECRET_PATH"
               value: {{ .Values.telemetryagent.vault.hashicorp.paths.secret | quote }}
             - name: "EDC_VAULT_HASHICORP_FOLDER"
-              value: {{.Values.telemetryagent.vault.hashicorp.paths.folder | quote}}
+              value: {{ include "dse.telemetryagent.vaultFolder" . | quote }}
             - name: "EDC_VAULT_HASHICORP_API_HEALTH_CHECK_PATH"
               value: {{ .Values.telemetryagent.vault.hashicorp.paths.health | quote }}
             - name: "EDC_VAULT_HASHICORP_ALLOW_FALLBACK"
@@ -145,18 +145,18 @@ spec:
           # POSTGRESQL #
           ##############
           {{- with .Values.telemetryagent.postgresql }}
-          {{- if .jdbcUrl }}
+          {{- if or .jdbcUrl $.Values.global.db.serverFqdn }}
             - name: "EDC_DATASOURCE_DEFAULT_URL"
-              value: {{ .jdbcUrl | required ".jdbcUrl is required" | quote }}
+              value: {{ include "dse.telemetryagent.jdbcUrl" $ | quote }}
             - name: "EDC_DATASOURCE_DEFAULT_USER"
               valueFrom:
                 secretKeyRef:
-                  name: {{ .credentials.secret.name | required ".credentials.secret.name is required" | quote }}
+                  name: {{ include "dse.telemetryagent.postgresql.credentials.secretName" $ | quote }}
                   key: {{ .credentials.secret.userKey | required ".credentials.secret.userKey is required" | quote }}
             - name: "EDC_DATASOURCE_DEFAULT_PASSWORD"
               valueFrom:
                 secretKeyRef:
-                  name: {{ .credentials.secret.name | required ".credentials.secret.name is required" | quote }}
+                  name: {{ include "dse.telemetryagent.postgresql.credentials.secretName" $ | quote }}
                   key: {{ .credentials.secret.passwordKey | required ".credentials.secret.passwordKey is required" | quote }}
           {{- end }}
           {{- end }}
@@ -166,10 +166,10 @@ spec:
             # AZURE CREDENTIAL FACTORY #
             ############################
             - name: "DSE_CREDENTIAL-MANAGER_PRIVATE-KEY_ALIAS"
-              value: {{ .Values.telemetryagent.credentialmanager.privatekey.alias | required ".Values.telemetryagent.credentialmanager.privatekey.alias is required" | quote }}
+              value: {{ include "dse.telemetryagent.credentialmanager.privatekey.alias" . | quote }}
 
             - name: "DSE_AUTHORITY_DID"
-              value: {{ .Values.telemetryagent.authority.did | required ".Values.telemetryagent.authority.did is required" | quote }}
+              value: {{ include "dse.telemetryagent.authorityDid" . | quote }}
             - name: "DSE_TELEMETRY-SERVICE_EVENTHUB_NAME"
               value: {{ .Values.telemetryagent.telemetryservice.eventhub.name | required ".Values.telemetryagent.telemetryservice.eventhub.name is required" | quote }}
             - name: "DSE_TELEMETRY-SERVICE_EVENTHUB_NAMESPACE"
@@ -182,30 +182,30 @@ spec:
             - name: "EDC_IH_IAM_ID"
               value: {{ include "dse.telemetryagent.did.web.url" . }}
             - name: "EDC_IAM_DID_WEB_USE_HTTPS"
-              value: {{ .Values.telemetryagent.did.web.useHttps | required ".Values.telemetryagent.did.web.useHttps is required" | quote }}
+              value: {{ include "dse.telemetryagent.did.web.useHttps" . | quote }}
             - name: "EDC_IH_IAM_PUBLICKEY_ALIAS"
-              value: {{ .Values.telemetryagent.keys.sts.publicKeyVaultAlias | required ".Values.telemetryagent.keys.sts.publicKeyVaultAlias is required" | quote }}
+              value: {{ include "dse.telemetryagent.keys.sts.publicKeyVaultAlias" . | quote }}
 
 
             #######
             # DID #
             #######
             - name: "EDC_IAM_ISSUER_ID"
-              value: {{.Values.telemetryagent.did.web.url | required ".Values.telemetryagent.did.web.url" | quote}}
+              value: {{ include "dse.telemetryagent.did.web.url" . | quote }}
             - name: "EDC_IDENTITY_DID_URL"
-              value: {{.Values.telemetryagent.did.web.url | required ".Values.telemetryagent.did.web.url" | quote}}
+              value: {{ include "dse.telemetryagent.did.web.url" . | quote }}
             - name: "EDC_IAM_DID_WEB_USE_HTTPS"
-              value: {{.Values.telemetryagent.did.web.useHttps | required ".Values.telemetryagent.did.web.useHttps is required" | quote}}
+              value: {{ include "dse.telemetryagent.did.web.useHttps" . | quote }}
 
             #####################
             # STS REMOTE CONFIG #
             #####################
             - name: "EDC_IAM_STS_OAUTH_TOKEN_URL"
-              value: {{.Values.telemetryagent.sts.tokenUrl | required ".Values.telemetryagent.sts.tokenUrl is required" | quote}}
+              value: {{ include "dse.telemetryagent.sts.tokenUrl" . | quote }}
             - name: "EDC_IAM_STS_OAUTH_CLIENT_ID"
-              value: {{.Values.telemetryagent.sts.clientId | required ".Values.telemetryagent.sts.clientId is required" | quote}}
+              value: {{ include "dse.telemetryagent.sts.clientId" . | quote }}
             - name: "EDC_IAM_STS_OAUTH_CLIENT_SECRET_ALIAS"
-              value: {{.Values.telemetryagent.sts.clientSecretAlias | required ".Values.telemetryagent.sts.clientSecretAlias is required" | quote}}
+              value: {{ include "dse.telemetryagent.sts.clientSecretAlias" . | quote }}
 
             #######
             # API #

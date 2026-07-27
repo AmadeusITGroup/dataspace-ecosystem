@@ -39,12 +39,17 @@ spec:
             {{- toYaml .Values.identityhub.securityContext | nindent 12 }}
 
           # either use the specified image, or use the default one
-          image: {{ .Values.identityhub.image.repository | required ".Values.identityhub.image.repository is required" }}:{{ .Values.identityhub.image.tag | default .Chart.AppVersion }}
+          image: {{ include "dse.identityhub.imageRepository" . }}:{{ .Values.identityhub.image.tag | required ".Values.identityhub.image.tag is required" }}
           imagePullPolicy: {{ .Values.identityhub.image.pullPolicy }}
           ports:
           {{- range $key,$value := .Values.identityhub.endpoints }}
             - name: {{ $key }}
               containerPort: {{ $value.port }}
+              protocol: TCP
+          {{- end }}
+          {{- if .Values.global.telemetry.enabled }}
+            - name: metrics
+              containerPort: 9464
               protocol: TCP
           {{- end }}
           {{- if .Values.identityhub.livenessProbe.enabled }}
@@ -112,14 +117,14 @@ spec:
             #####################
             ## HASHICORP VAULT ##
             #####################
-          {{- if .Values.identityhub.vault.hashicorp.url }}
+          {{- if or .Values.identityhub.vault.hashicorp.url (and .Values.global.vault.url (or (eq .Values.global.vaultProvider "hashicorp") (eq .Values.global.vaultProvider "hashicorpvault"))) }}
             # https://github.com/eclipse-edc/Connector/tree/main/extensions/common/vault/vault-hashicorp
             - name: "EDC_VAULT_HASHICORP_URL"
-              value: {{ .Values.identityhub.vault.hashicorp.url | quote }}
+              value: {{ include "dse.identityhub.vaultUrl" . | quote }}
             - name: "EDC_VAULT_HASHICORP_TOKEN"
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Values.identityhub.vault.hashicorp.token.secret.name | required ".Values.identityhub.vault.hashicorp.token.secret.name is required" | quote }}
+                  name: {{ include "dse.identityhub.vaultTokenSecretName" . | quote }}
                   key: {{ .Values.identityhub.vault.hashicorp.token.secret.tokenKey | required ".Values.identityhub.vault.hashicorp.token.secret.tokenKey is required" | quote }}
             - name: "EDC_VAULT_HASHICORP_TOKEN_SCHEDULED-RENEW-ENABLED"
               value: {{ .Values.identityhub.vault.hashicorp.token.renewal.enabled | quote }}
@@ -136,7 +141,7 @@ spec:
             - name: "EDC_VAULT_HASHICORP_API_SECRET_PATH"
               value: {{ .Values.identityhub.vault.hashicorp.paths.secret | quote }}
             - name: "EDC_VAULT_HASHICORP_FOLDER"
-              value: {{.Values.identityhub.vault.hashicorp.paths.folder | quote}}
+              value: {{ include "dse.identityhub.vaultFolder" . | quote }}
             - name: "EDC_VAULT_HASHICORP_API_HEALTH_CHECK_PATH"
               value: {{ .Values.identityhub.vault.hashicorp.paths.health | quote }}
             - name: "EDC_VAULT_HASHICORP_ALLOW_FALLBACK"
@@ -150,18 +155,18 @@ spec:
               value: {{.Values.identityhub.postgresql.schema.autocreate | required ".Values.identityhub.postgresql.schema.autocreate is required" | quote}}
 
           {{- with .Values.identityhub.postgresql }}
-          {{- if .jdbcUrl }}
+          {{- if or .jdbcUrl $.Values.global.db.serverFqdn }}
             - name: "EDC_DATASOURCE_DEFAULT_URL"
-              value: {{ .jdbcUrl | required ".jdbcUrl is required" | quote }}
+              value: {{ include "dse.identityhub.jdbcUrl" $ | quote }}
             - name: "EDC_DATASOURCE_DEFAULT_USER"
               valueFrom:
                 secretKeyRef:
-                  name: {{ .credentials.secret.name | required ".credentials.secret.name is required" | quote }}
+                  name: {{ include "dse.identityhub.postgresql.credentials.secretName" $ | quote }}
                   key: {{ .credentials.secret.userKey | required ".credentials.secret.userKey is required" | quote }}
             - name: "EDC_DATASOURCE_DEFAULT_PASSWORD"
               valueFrom:
                 secretKeyRef:
-                  name: {{ .credentials.secret.name | required ".credentials.secret.name is required" | quote }}
+                  name: {{ include "dse.identityhub.postgresql.credentials.secretName" $ | quote }}
                   key: {{ .credentials.secret.passwordKey | required ".credentials.secret.passwordKey is required" | quote }}
           {{- end }}
           {{- end }}
@@ -173,13 +178,13 @@ spec:
             - name: "EDC_IH_IAM_ID"
               value: {{include "dse.identityhub.did.web.url" .}}
             - name: "EDC_IAM_DID_WEB_USE_HTTPS"
-              value: {{.Values.identityhub.did.web.useHttps | required ".Values.identityhub.did.web.useHttps is required" | quote}}
+              value: {{ include "dse.identityhub.did.web.useHttps" . | quote }}
             - name: "EDC_IAM_STS_PRIVATEKEY_ALIAS"
-              value: {{.Values.identityhub.keys.sts.privateKeyAlias | required ".Values.identityhub.keys.sts.privateKeyAlias is required" | quote}}
+              value: {{ include "dse.identityhub.keys.sts.privateKeyAlias" . | quote }}
             - name: "EDC_IAM_STS_PUBLICKEY_ALIAS"
-              value: {{.Values.identityhub.keys.sts.publicKeyAlias | required ".Values.identityhub.keys.sts.publicKeyAlias is required" | quote}}
+              value: {{ include "dse.identityhub.keys.sts.publicKeyAlias" . | quote }}
             - name: "EDC_IAM_STS_PUBLICKEY_ID"
-              value: {{.Values.identityhub.keys.sts.publicKeyId | required ".Values.identityhub.keys.sts.publicKeyId is required" | quote}}
+              value: {{ include "dse.identityhub.stsPublicKeyId" . | quote }}
 
           #######
           # API #
@@ -193,7 +198,15 @@ spec:
           # SUPERUSER #
           ##############
             - name: "EDC_IH_API_SUPERUSER_SERVICES"
-              value: {{.Values.identityhub.participantcontext.superuser.services | required ".Values.identityhub.participantcontext.superuser.services is required" | quote}}
+              value: {{ include "dse.identityhub.participantContextServices" . | quote }}
+
+          {{- if .Values.global.telemetry.enabled }}
+            #############################
+            # OPENTELEMETRY (via global) #
+            #############################
+            - name: "OTEL_RESOURCE_ATTRIBUTES"
+              value: {{ include "dse.identityhub.otelResourceAttributes" . | quote }}
+          {{- end }}
 
           {{- range $key, $value := .Values.identityhub.envValueFrom }}
             - name: {{ $key | quote }}

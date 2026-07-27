@@ -3,7 +3,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: {{ include "kafka-proxy.fullname" . }}
-  namespace: {{ .Release.Namespace }}
+  namespace: {{ include "kafka-proxy.targetNamespace" . }}
   labels:
     {{- include "kafka-proxy.labels" . | nindent 4 }}
 rules:
@@ -13,7 +13,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: {{ include "kafka-proxy.fullname" . }}
-  namespace: {{ .Release.Namespace }}
+  namespace: {{ include "kafka-proxy.targetNamespace" . }}
   labels:
     {{- include "kafka-proxy.labels" . | nindent 4 }}
 roleRef:
@@ -24,4 +24,34 @@ subjects:
   - kind: ServiceAccount
     name: {{ include "kafka-proxy.serviceAccountName" . }}
     namespace: {{ .Release.Namespace }}
+{{- if ne (include "kafka-proxy.targetNamespace" .) .Release.Namespace }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "kafka-proxy.fullname" . }}-manager-pod-reader
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kafka-proxy.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "kafka-proxy.fullname" . }}-manager-pod-reader
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kafka-proxy.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "kafka-proxy.fullname" . }}-manager-pod-reader
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "kafka-proxy.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}
 {{- end }}

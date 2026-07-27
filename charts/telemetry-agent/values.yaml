@@ -6,16 +6,59 @@ imagePullSecrets:
 # -- To add some custom labels
 customLabels: {}
 
+# -- Values shared across subcharts when this chart is deployed via the
+# `participant` umbrella chart (Helm automatically injects `global` into every
+# subchart's context). These provide sane cross-component defaults
+# (release-name-derived URLs, image repository, JDBC URL, vault config) so the
+# component-specific values below can be left empty. Any component-specific
+# value set explicitly always takes precedence over what is derived from
+# `global`.
+global:
+  participantName: ""
+  environment: ""
+  useHttps: null
+  db:
+    serverFqdn: ""
+    name: ""
+    credentials:
+      secret:
+        name: ""
+  keys:
+    privateKeyAlias: ""
+    publicKeyAlias: ""
+  image:
+    baseRepository: ""
+    namePrefix: ""
+  vaultProvider: ""
+  identityHub:
+    didWebUrl: ""
+  authority:
+    didWebUrl: ""
+  vault:
+    url: ""
+  telemetry:
+    enabled: false
+    collectorEndpoint: ""
+
 telemetryagent:
   image:
-    # -- Docker repository for the Identity Hub
+    # -- Docker repository for the telemetry agent image. If not set, the global.image.baseRepository is used.
     repository: ""
     # -- [Kubernetes image pull policy](https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy) to use
     pullPolicy: IfNotPresent
-    # -- Overrides the image tag whose default is the chart appVersion
+    # -- Image tag. Required — this chart does not set Chart.yaml appVersion,
+    # so a tag must always be provided explicitly.
     tag: ""
+  # -- Overrides the `app.kubernetes.io/instance` selector/label value
+  # (normally derived from `.Release.Name`). Deployment/Service selectors are
+  # immutable, so when migrating an existing Terraform-deployed participant
+  # (whose standalone release was named "<participant>-telemetryagent") into
+  # this umbrella chart (where `.Release.Name` is just "<participant>"), set
+  # this to the old release name to avoid a selector change that would force
+  # a Deployment delete+recreate. Leave empty for new deployments.
+  instanceOverride: ""
   # -- Cert installer initContainer image
- 
+
   # -- name of the Kubernetes Service Account object
   serviceAccountName: ""
   initContainers: []
@@ -72,15 +115,61 @@ telemetryagent:
       privatekey:
         alias: ""
 
+  # NOTE: `credentialfactory.credentialmanager.privatekey.alias` above is not
+  # referenced by any template (dead default) - the actual value used by
+  # deployment.yaml is `telemetryagent.credentialmanager.privatekey.alias`
+  # below. Kept for backward compatibility; not removed to avoid unrelated
+  # scope creep.
+  credentialmanager:
+    privatekey:
+      # -- alias of the private key used by the Azure Credential Factory.
+      # Falls back to global.keys.privateKeyAlias (participantName-derived
+      # default) when unset.
+      alias: ""
+
+  # -- decentralized identity used by this component to authenticate via STS.
+  # This is typically the participant's Identity Hub DID (see
+  # global.identityHub.didWebUrl).
+  did:
+    web:
+      url: ""
+      # -- Whether DID Web resolution uses HTTPS. When unset, falls back to
+      # global.useHttps and then false for standalone compatibility.
+      useHttps: null
+      # -- port used to derive a fallback did:web URL (see
+      # dse.telemetryagent.did.web.url) when did.web.url/
+      # global.identityHub.didWebUrl are unset and ingress is disabled.
+      # Not exposed on the Service (unlike telemetryagent.endpoints.*)
+      # since it's only used for this URL derivation, not for routing traffic.
+      port: ""
+
+  # -- Secure Token Service remote configuration used to obtain access tokens
+  # from this participant's Identity Hub.
+  sts:
+    tokenUrl: ""
+    clientId: ""
+    clientSecretAlias: ""
+
   authority:
     did: ""
+
+  # -- Azure Event Hub used to publish telemetry records. Required (no
+  # sensible default) — must be set explicitly per environment.
+  telemetryservice:
+    eventhub:
+      # -- name of the Azure Event Hub instance
+      name: ""
+      # -- namespace of the Azure Event Hub instance
+      namespace: ""
 
   postgresql:
     # -- jdbc url of the database
     jdbcUrl: ""
     credentials:
       secret:
-        # -- name of the Kubernetes secret containing the PostgreSQL credentials
+        # -- name of the Kubernetes secret containing the PostgreSQL credentials.
+        # Falls back to global.db.credentials.secret.name (participantName-derived
+        # default) when unset.
         name: ""
         # -- secret key containing the username
         userKey: "username"
@@ -116,7 +205,7 @@ telemetryagent:
       # -- allow fallback to env-based vault token if participant-context token not available
       allowFallback: false
 
-      
+
   # -- Private/public keys information
   keys:
     # -- Key pair used by the Secure Token Service

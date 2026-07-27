@@ -21,5 +21,11 @@ spec:
       port: {{ $value.port }}
       protocol: TCP
     {{- end }}
+    {{- if .Values.global.telemetry.enabled }}
+    - name: metrics
+      targetPort: metrics
+      port: 9464
+      protocol: TCP
+    {{- end }}
   selector:
     {{- include "dse.identityhub.selectorLabels" . | nindent 4 }}

@@ -1,3 +1,34 @@
+# -- Values shared across subcharts when this chart is deployed via the
+# `participant` umbrella chart (Helm automatically injects `global` into every
+# subchart's context). These provide sane cross-component defaults
+# (release-name-derived URLs, image repository, JDBC URL, vault config) so the
+# component-specific values below can be left empty. Any component-specific
+# value set explicitly always takes precedence over what is derived from
+# `global`.
+global:
+  participantName: ""
+  environment: ""
+  useHttps: null
+  db:
+    serverFqdn: ""
+    name: ""
+    credentials:
+      secret:
+        name: ""
+  image:
+    baseRepository: ""
+    namePrefix: ""
+  vaultProvider: ""
+  identityHub:
+    didWebUrl: ""
+  authority:
+    didWebUrl: ""
+  vault:
+    url: ""
+  telemetry:
+    enabled: false
+    collectorEndpoint: ""
+
 fullnameOverride: ""
 nameOverride: ""
 # -- Existing image pull secret to use to [obtain the container image from private registries](https://kubernetes.io/docs/concepts/containers/images/#using-a-private-registry)
@@ -12,10 +43,19 @@ controlplane:
     repository: ""
     # -- [Kubernetes image pull policy](https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy) to use
     pullPolicy: IfNotPresent
-    # -- Overrides the image tag whose default is the chart appVersion
+    # -- Image tag. Required — this chart does not set Chart.yaml appVersion,
+    # so a tag must always be provided explicitly.
     tag: ""
+  # -- Overrides the `app.kubernetes.io/instance` selector/label value
+  # (normally derived from `.Release.Name`). Deployment/Service selectors are
+  # immutable, so when migrating an existing Terraform-deployed participant
+  # (whose standalone release was named "<participant>-controlplane") into
+  # this umbrella chart (where `.Release.Name` is just "<participant>"), set
+  # this to the old release name to avoid a selector change that would force
+  # a Deployment delete+recreate. Leave empty for new deployments.
+  instanceOverride: ""
   # -- Cert installer initContainer image
- 
+
   initContainers: []
   livenessProbe:
     # -- Whether to enable kubernetes [liveness-probe](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/)
@@ -94,7 +134,9 @@ controlplane:
     jdbcUrl: ""
     credentials:
       secret:
-        # -- name of the Kubernetes secret containing the PostgreSQL credentials
+        # -- name of the Kubernetes secret containing the PostgreSQL credentials.
+        # Falls back to global.db.credentials.secret.name (participantName-derived
+        # default) when unset.
         name: ""
         # -- secret key containing the username
         userKey: "username"
@@ -186,7 +228,9 @@ controlplane:
   did:
     web:
       url: ""
-      useHttps: false
+      # -- Whether DID Web resolution uses HTTPS. When unset, falls back to
+      # global.useHttps and then false for standalone compatibility.
+      useHttps: null
 
   # -- trusted issuers information
   trustedIssuers:

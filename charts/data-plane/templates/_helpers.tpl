@@ -60,7 +60,7 @@ Data Selector labels
 */}}
 {{- define "dse.dataplane.selectorLabels" -}}
 app.kubernetes.io/name: {{ include "dse.name" . }}-dataplane
-app.kubernetes.io/instance: {{ .Release.Name }}-dataplane
+app.kubernetes.io/instance: {{ printf "%s-dataplane" (.Values.dataplane.instanceOverride | default .Release.Name) }}
 {{- end }}
 
 {{/*
@@ -92,6 +92,198 @@ Data Plane - Control URL
 {{- printf "https://%s:%v%s" ( include "dse.fullname" $ ) $.Values.dataplane.endpoints.control.port $.Values.dataplane.endpoints.control.path -}}
 {{- else -}}
 {{- printf "http://%s:%v%s" ( include "dse.fullname" $ ) $.Values.dataplane.endpoints.control.port $.Values.dataplane.endpoints.control.path -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Data Plane - image suffix for the selected Vault provider. Friendly provider
+names are mapped to the suffixes used by published images; existing explicit
+suffixes remain valid.
+*/}}
+{{- define "dse.dataplane.vaultProviderImageSuffix" -}}
+{{- $provider := required "global.vaultProvider is required when dataplane.image.repository is not set" .Values.global.vaultProvider -}}
+{{- if eq $provider "hashicorp" -}}
+hashicorpvault
+{{- else if eq $provider "azure" -}}
+azurevault
+{{- else -}}
+{{- $provider -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Data Plane - Image repository. Uses the explicit value if set, otherwise
+derives it from global.image.* + global.vaultProvider.
+*/}}
+{{- define "dse.dataplane.imageRepository" -}}
+{{- if .Values.dataplane.image.repository -}}
+{{- .Values.dataplane.image.repository -}}
+{{- else -}}
+{{- printf "%s/%s-data-plane-postgresql-%s" (required "global.image.baseRepository is required when dataplane.image.repository is not set" .Values.global.image.baseRepository) (required "global.image.namePrefix is required when dataplane.image.repository is not set" .Values.global.image.namePrefix) (include "dse.dataplane.vaultProviderImageSuffix" .) -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Data Plane - JDBC URL. Uses the explicit value if set, otherwise derives it
+from global.db.serverFqdn/name.
+*/}}
+{{- define "dse.dataplane.jdbcUrl" -}}
+{{- if .Values.dataplane.postgresql.jdbcUrl -}}
+{{- .Values.dataplane.postgresql.jdbcUrl -}}
+{{- else -}}
+{{- printf "jdbc:postgresql://%s:5432/%s" (required "global.db.serverFqdn is required when dataplane.postgresql.jdbcUrl is not set" .Values.global.db.serverFqdn) (required "global.db.name is required when dataplane.postgresql.jdbcUrl is not set" .Values.global.db.name) -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Data Plane - this participant's Identity Hub DID Web URL. Uses the explicit
+value if set, otherwise falls back to global.identityHub.didWebUrl.
+*/}}
+{{- define "dse.dataplane.identityHubDidWebUrl" -}}
+{{- if .Values.dataplane.did.web.url -}}
+{{- .Values.dataplane.did.web.url -}}
+{{- else -}}
+{{- required "global.identityHub.didWebUrl is required when dataplane.did.web.url is not set" .Values.global.identityHub.didWebUrl -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Data Plane - DPF selector URL (points at this participant's control plane).
+Uses the explicit value if set, otherwise derives it from the control plane's
+default release-name-based service address ("<participantName>-controlplane").
+*/}}
+{{- define "dse.dataplane.selectorUrl" -}}
+{{- if .Values.dataplane.selector.url -}}
+{{- .Values.dataplane.selector.url -}}
+{{- else -}}
+{{- printf "https://%s-controlplane:8383/api/control/v1/dataplanes" (required "global.participantName is required when dataplane.selector.url is not set" .Values.global.participantName) -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Data Plane - OpenTelemetry resource attributes string.
+*/}}
+{{- define "dse.dataplane.otelResourceAttributes" -}}
+{{- printf "tenant_id=%s,service.version=%s,deployment.environment=%s" .Values.global.participantName (.Values.dataplane.image.tag | default .Chart.AppVersion) .Values.global.environment -}}
+{{- end }}
+
+{{/*
+Data Plane - OpenTelemetry javaagent properties. When global.telemetry is
+enabled, reproduce the Terraform-managed otel block; otherwise fall back to
+the chart's standalone opentelemetry value.
+*/}}
+{{- define "dse.dataplane.opentelemetryProperties" -}}
+{{- if .Values.global.telemetry.enabled -}}
+otel.javaagent.enabled=true
+otel.javaagent.debug=false
+otel.exporter.otlp.protocol=grpc
+otel.exporter.otlp.endpoint={{ required "global.telemetry.collectorEndpoint is required when global.telemetry.enabled is true" .Values.global.telemetry.collectorEndpoint }}
+otel.exporter.otlp.headers=tenant_id={{ .Values.global.participantName }}
+otel.service.name={{ .Values.global.participantName }}-dataplane
+otel.metrics.exporter=prometheus
+otel.instrumentation.default.enabled=false
+otel.instrumentation.micrometer.enabled=true
+{{- else -}}
+{{- .Values.dataplane.opentelemetry -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Data Plane - config.properties. Reproduces the static EDC blobstore endpoint
+template the Terraform reference always injects, then appends any extra
+component config supplied via .Values.dataplane.config.
+*/}}
+{{- define "dse.dataplane.configProperties" -}}
+edc.blobstore.endpoint.template=https://%s.blob.core.windows.net
+{{- with .Values.dataplane.config }}
+{{ . }}
+{{- end }}
+{{- end }}
+
+{{/*
+Data Plane - Hashicorp Vault URL. Uses the explicit value if set, otherwise
+falls back to global.vault.url.
+*/}}
+{{- define "dse.dataplane.vaultUrl" -}}
+{{- if .Values.dataplane.vault.hashicorp.url -}}
+{{- .Values.dataplane.vault.hashicorp.url -}}
+{{- else -}}
+{{- .Values.global.vault.url -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Data Plane - Hashicorp Vault token secret name. Derived from
+global.participantName unless explicitly overridden.
+*/}}
+{{- define "dse.dataplane.vaultTokenSecretName" -}}
+{{- if .Values.dataplane.vault.hashicorp.token.secret.name -}}
+{{- .Values.dataplane.vault.hashicorp.token.secret.name -}}
+{{- else -}}
+{{- printf "%s-vault-token" (required "global.participantName is required when dataplane.vault.hashicorp.token.secret.name is not set" .Values.global.participantName) -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Data Plane - Hashicorp Vault folder. Derived from global.participantName
+unless explicitly overridden.
+*/}}
+{{- define "dse.dataplane.vaultFolder" -}}
+{{- if .Values.dataplane.vault.hashicorp.paths.folder -}}
+{{- .Values.dataplane.vault.hashicorp.paths.folder -}}
+{{- else if .Values.global.participantName -}}
+{{- .Values.global.participantName -}}
+{{- else -}}
+{{- "" -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Data Plane - PostgreSQL credentials secret name. Falls back to
+global.db.credentials.secret.name (shared across every component using the
+same DB user, matching Terraform's "<participantName>-db" convention), which
+itself derives from global.participantName unless explicitly overridden.
+*/}}
+{{- define "dse.dataplane.postgresql.credentials.secretName" -}}
+{{- if .Values.dataplane.postgresql.credentials.secret.name -}}
+{{- .Values.dataplane.postgresql.credentials.secret.name -}}
+{{- else if .Values.global.db.credentials.secret.name -}}
+{{- .Values.global.db.credentials.secret.name -}}
+{{- else -}}
+{{- printf "%s-db" (required "global.participantName is required when neither dataplane.postgresql.credentials.secret.name nor global.db.credentials.secret.name is set" .Values.global.participantName) -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Data Plane - private key vault alias used to sign transfer proxy tokens.
+Falls back to global.keys.privateKeyAlias (shared across data-plane,
+identity-hub, and telemetry-agent, matching Terraform's "<participantName>-privatekey"
+convention), which itself derives from global.participantName unless
+explicitly overridden.
+*/}}
+{{- define "dse.dataplane.keys.dataplane.privateKeyVaultAlias" -}}
+{{- if .Values.dataplane.keys.dataplane.privateKeyVaultAlias -}}
+{{- .Values.dataplane.keys.dataplane.privateKeyVaultAlias -}}
+{{- else if .Values.global.keys.privateKeyAlias -}}
+{{- .Values.global.keys.privateKeyAlias -}}
+{{- else -}}
+{{- printf "%s-privatekey" (required "global.participantName is required when neither dataplane.keys.dataplane.privateKeyVaultAlias nor global.keys.privateKeyAlias is set" .Values.global.participantName) -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Data Plane - public key vault alias used to verify transfer proxy tokens.
+Falls back to global.keys.publicKeyAlias (shared across data-plane and
+identity-hub, matching Terraform's "<participantName>-publickey" convention),
+which itself derives from global.participantName unless explicitly overridden.
+*/}}
+{{- define "dse.dataplane.keys.dataplane.publicKeyVaultAlias" -}}
+{{- if .Values.dataplane.keys.dataplane.publicKeyVaultAlias -}}
+{{- .Values.dataplane.keys.dataplane.publicKeyVaultAlias -}}
+{{- else if .Values.global.keys.publicKeyAlias -}}
+{{- .Values.global.keys.publicKeyAlias -}}
+{{- else -}}
+{{- printf "%s-publickey" (required "global.participantName is required when neither dataplane.keys.dataplane.publicKeyVaultAlias nor global.keys.publicKeyAlias is set" .Values.global.participantName) -}}
 {{- end -}}
 {{- end }}
 

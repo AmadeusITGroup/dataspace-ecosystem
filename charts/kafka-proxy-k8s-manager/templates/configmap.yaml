@@ -17,19 +17,19 @@ data:
     {{- end }}
     
     # Kafka Proxy Configuration
-    kafka.proxy.vault.addr={{ .Values.kafkaProxy.manager.vaultAddr }}
+    kafka.proxy.vault.addr={{ include "kafka-proxy.vaultAddr" . }}
     kafka.proxy.vault.token=${KAFKA_PROXY_VAULT_TOKEN}
-    {{- if .Values.kafkaProxy.manager.vaultFolder }}
-    kafka.proxy.vault.folder={{ .Values.kafkaProxy.manager.vaultFolder }}
+    {{- if or .Values.kafkaProxy.manager.vaultFolder .Values.global.participantName }}
+    kafka.proxy.vault.folder={{ include "kafka-proxy.vaultFolder" . }}
     {{- end }}
-    kafka.proxy.namespace={{ .Values.kafkaProxy.manager.namespace }}
-    kafka.proxy.image={{ .Values.kafkaProxy.manager.proxyImage }}
+    kafka.proxy.namespace={{ include "kafka-proxy.targetNamespace" . }}
+    kafka.proxy.image={{ include "kafka-proxy.proxyImage" . }}
     kafka.proxy.shared.dir={{ .Values.kafkaProxy.manager.sharedDir }}
     kafka.proxy.check.interval={{ .Values.kafkaProxy.manager.checkInterval }}
     kafka.proxy.enable.lock={{ .Values.kafkaProxy.manager.enableLock }}
     kafka.proxy.lock.file.path={{ .Values.kafkaProxy.manager.lockFilePath }}
-    {{- if .Values.kafkaProxy.manager.participantId }}
-    kafka.proxy.participant.id={{ .Values.kafkaProxy.manager.participantId }}
+    {{- if or .Values.kafkaProxy.manager.participantId .Values.global.participantName }}
+    kafka.proxy.participant.id={{ include "kafka-proxy.participantId" . }}
     {{- end }}
     {{- if .Values.kafkaProxy.manager.serviceClusterIP }}
     kafka.proxy.service.clusterIP={{ .Values.kafkaProxy.manager.serviceClusterIP }}
@@ -58,6 +58,8 @@ data:
     {{- end }}
     {{- if .Values.kafkaProxy.manager.auth.image }}
     kafka.proxy.auth.image={{ .Values.kafkaProxy.manager.auth.image }}
+    {{- else if and .Values.kafkaProxy.manager.auth.enabled .Values.global.image.baseRepository }}
+    kafka.proxy.auth.image={{ include "kafka-proxy.proxyImage" . }}
     {{- end }}
     
     # TLS Listener Configuration

@@ -9,7 +9,7 @@ data:
     {{- .Values.controlplane.logging | nindent 4 }}
 
   opentelemetry.properties: |-
-    {{- .Values.controlplane.opentelemetry | nindent 4 }}
+    {{- include "dse.controlplane.opentelemetryProperties" . | nindent 4 }}
 
   config.properties: |-
-    {{- .Values.controlplane.config | nindent 4 }}
+    {{- include "dse.controlplane.configProperties" . | nindent 4 }}

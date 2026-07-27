@@ -1,0 +1,26 @@
+NOTES for {{ .Release.Name }} ({{ .Chart.Name }}-{{ .Chart.Version }})
+
+This release deploys the following components of a Dataspace Ecosystem participant:
+  - Control Plane   ({{ .Release.Name }}-controlplane)
+  - Data Plane      ({{ .Release.Name }}-dataplane)
+  - Identity Hub    ({{ .Release.Name }}-identityhub)
+{{- if index .Values "kafka-proxy" "enabled" }}
+  - Kafka Proxy K8s Manager ({{ .Release.Name }}-kafka-proxy)
+{{- end }}
+{{- if .Values.telemetryagent.enabled }}
+  - Telemetry Agent ({{ .Release.Name }}-telemetryagent)
+{{- end }}
+
+Note: the Content Definition Service (cr-bff) is released independently and is
+not deployed by this chart — compose it alongside this release at the Argo CD
+layer (e.g. a multi-source Application) if this participant needs it.
+
+Check the status of the release with:
+  helm status {{ .Release.Name }} -n {{ .Release.Namespace }}
+  kubectl get pods -n {{ .Release.Namespace }} -l app.kubernetes.io/instance={{ .Release.Name }}
+
+Note: if you set a component's `instanceOverride` (used when migrating an
+existing Terraform-managed participant to preserve immutable selectors), that
+component's pods carry `app.kubernetes.io/instance=<override>` instead of
+"{{ .Release.Name }}", so the command above will not list them — query those
+components by their overridden instance label.

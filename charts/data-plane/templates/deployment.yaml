@@ -39,12 +39,17 @@ spec:
             {{- toYaml .Values.dataplane.securityContext | nindent 12 }}
 
           # either use the specified image, or use the default one
-          image: {{ .Values.dataplane.image.repository | required ".Values.dataplane.image.repository is required" }}:{{ .Values.dataplane.image.tag | default .Chart.AppVersion }}
+          image: {{ include "dse.dataplane.imageRepository" . }}:{{ .Values.dataplane.image.tag | required ".Values.dataplane.image.tag is required" }}
           imagePullPolicy: {{ .Values.dataplane.image.pullPolicy }}
           ports:
           {{- range $key,$value := .Values.dataplane.endpoints }}
             - name: {{ $key }}
               containerPort: {{ $value.port }}
+              protocol: TCP
+          {{- end }}
+          {{- if .Values.global.telemetry.enabled }}
+            - name: metrics
+              containerPort: 9464
               protocol: TCP
           {{- end }}
           {{- if .Values.dataplane.livenessProbe.enabled }}
@@ -106,7 +111,7 @@ spec:
             ## ID CONFIGURATION ##
             ######################
             - name: "EDC_PARTICIPANT_ID"
-              value: {{ .Values.dataplane.did.web.url | required ".Values.dataplane.did.web.url" | quote }}
+              value: {{ include "dse.dataplane.identityHubDidWebUrl" . | quote }}
             - name: "EDC_COMPONENT_ID"
               value: {{ include "dse.fullname" .}}
 
@@ -123,18 +128,18 @@ spec:
               value: {{ .Values.dataplane.postgresql.schema.autocreate | required ".Values.dataplane.postgresql.schema.autocreate is required" | quote }}
 
           {{- with .Values.dataplane.postgresql }}
-          {{- if .jdbcUrl }}
+          {{- if or .jdbcUrl $.Values.global.db.serverFqdn }}
             - name: "EDC_DATASOURCE_DEFAULT_URL"
-              value: {{ .jdbcUrl | required ".jdbcUrl is required" | quote }}
+              value: {{ include "dse.dataplane.jdbcUrl" $ | quote }}
             - name: "EDC_DATASOURCE_DEFAULT_USER"
               valueFrom:
                 secretKeyRef:
-                  name: {{ .credentials.secret.name | required ".credentials.secret.name is required" | quote }}
+                  name: {{ include "dse.dataplane.postgresql.credentials.secretName" $ | quote }}
                   key: {{ .credentials.secret.userKey | required ".credentials.secret.userKey is required" | quote }}
             - name: "EDC_DATASOURCE_DEFAULT_PASSWORD"
               valueFrom:
                 secretKeyRef:
-                  name: {{ .credentials.secret.name | required ".credentials.secret.name is required" | quote }}
+                  name: {{ include "dse.dataplane.postgresql.credentials.secretName" $ | quote }}
                   key: {{ .credentials.secret.passwordKey | required ".credentials.secret.passwordKey is required" | quote }}
           {{- end }}
           {{- end }}
@@ -142,14 +147,14 @@ spec:
             #####################
             ## HASHICORP VAULT ##
             #####################
-          {{- if .Values.dataplane.vault.hashicorp.url }}
+          {{- if or .Values.dataplane.vault.hashicorp.url (and .Values.global.vault.url (or (eq .Values.global.vaultProvider "hashicorp") (eq .Values.global.vaultProvider "hashicorpvault"))) }}
             # https://github.com/eclipse-edc/Connector/tree/main/extensions/common/vault/vault-hashicorp
             - name: "EDC_VAULT_HASHICORP_URL"
-              value: {{ .Values.dataplane.vault.hashicorp.url | quote }}
+              value: {{ include "dse.dataplane.vaultUrl" . | quote }}
             - name: "EDC_VAULT_HASHICORP_TOKEN"
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Values.dataplane.vault.hashicorp.token.secret.name | required ".Values.dataplane.vault.hashicorp.token.secret.name is required" | quote }}
+                  name: {{ include "dse.dataplane.vaultTokenSecretName" . | quote }}
                   key: {{ .Values.dataplane.vault.hashicorp.token.secret.tokenKey | required ".Values.dataplane.vault.hashicorp.token.secret.tokenKey is required" | quote }}
             - name: "EDC_VAULT_HASHICORP_TOKEN_SCHEDULED-RENEW-ENABLED"
               value: {{ .Values.dataplane.vault.hashicorp.token.renewal.enabled | quote }}
@@ -166,7 +171,7 @@ spec:
             - name: "EDC_VAULT_HASHICORP_API_SECRET_PATH"
               value: {{ .Values.dataplane.vault.hashicorp.paths.secret | quote }}
             - name: "EDC_VAULT_HASHICORP_FOLDER"
-              value: {{ .Values.dataplane.vault.hashicorp.paths.folder | quote }}
+              value: {{ include "dse.dataplane.vaultFolder" . | quote }}
             - name: "EDC_VAULT_HASHICORP_API_HEALTH_CHECK_PATH"
               value: {{ .Values.dataplane.vault.hashicorp.paths.health | quote }}
             - name: "EDC_VAULT_HASHICORP_ALLOW_FALLBACK"
@@ -177,9 +182,9 @@ spec:
             # DPF ##
             ########
             - name: "EDC_TRANSFER_PROXY_TOKEN_SIGNER_PRIVATEKEY_ALIAS"
-              value: {{ .Values.dataplane.keys.dataplane.privateKeyVaultAlias | required ".Values.dataplane.keys.dataplane.privateKeyVaultAlias is required" | quote }}
+              value: {{ include "dse.dataplane.keys.dataplane.privateKeyVaultAlias" . | quote }}
             - name: "EDC_TRANSFER_PROXY_TOKEN_VERIFIER_PUBLICKEY_ALIAS"
-              value: {{ .Values.dataplane.keys.dataplane.publicKeyVaultAlias | required ".Values.dataplane.keys.dataplane.publicKeyVaultAlias is required" | quote }}
+              value: {{ include "dse.dataplane.keys.dataplane.publicKeyVaultAlias" . | quote }}
             - name: "EDC_DATAPLANE_API_PUBLIC_BASEURL"
               value: {{ include "dse.dataplane.url.public" .}}
 
@@ -187,7 +192,7 @@ spec:
           # DPF SELECTOR ##
           #################
             - name: "EDC_DPF_SELECTOR_URL"
-              value: {{ .Values.dataplane.selector.url | required ".Values.dataplane.selector.url is required" | quote }}
+              value: {{ include "dse.dataplane.selectorUrl" . | quote }}
 
             #######
             # API #
@@ -196,6 +201,14 @@ spec:
               value: {{ .Values.dataplane.api.cors.enabled | required ".Values.dataplane.api.cors.enabled is required" | quote }}
             - name: "EDC_WEB_REST_CORS_HEADERS"
               value: {{ .Values.dataplane.api.cors.allowedHeaders | required ".Values.dataplane.api.cors.allowedHeaders is required" | quote }}
+
+          {{- if .Values.global.telemetry.enabled }}
+            #############################
+            # OPENTELEMETRY (via global) #
+            #############################
+            - name: "OTEL_RESOURCE_ATTRIBUTES"
+              value: {{ include "dse.dataplane.otelResourceAttributes" . | quote }}
+          {{- end }}
 
           {{- range $key, $value := .Values.dataplane.envValueFrom }}
             - name: {{ $key | quote }}

@@ -1,0 +1,112 @@
+# CI fixture for `ct lint`/`ct install`: exercises the recommended
+# "global-only" deployment style (see README.md) where every component's
+# image repository, JDBC URL, DID wiring, vault config, and OTEL attributes
+# are all derived from `global.*` rather than set per component. Only the
+# irreducibly per-component values (image tags, secret/key alias names) are
+# set explicitly here, matching what a real deployment would need to supply.
+global:
+  participantName: ci-test
+  environment: ci
+  useHttps: true
+  db:
+    serverFqdn: db.ci.example.com
+    name: ci_test
+  image:
+    baseRepository: registry.example.com
+    namePrefix: ci-test
+  vaultProvider: hashicorp
+  identityHub:
+    didWebUrl: "did:web:example.com:ci-test:identityhub"
+  authority:
+    didWebUrl: "did:web:example.com:authority"
+  telemetry:
+    enabled: true
+    collectorEndpoint: http://otel-collector.ci.example.com:4317
+  route:
+    enabled: true
+    hostPattern: "%s-%s.apps.ci.example.com"
+    className: openshift-default
+    clusterIssuer: paas
+    termination: reencrypt
+    destinationCaCertificateSecret: ci-test-internal-tls
+
+controlplane:
+  controlplane:
+    image:
+      tag: "1.0.0"
+    postgresql:
+      credentials:
+        secret:
+          name: ci-test-controlplane-db
+    vault:
+      hashicorp:
+        token:
+          secret:
+            tokenKey: token
+
+dataplane:
+  dataplane:
+    image:
+      tag: "1.0.0"
+    postgresql:
+      credentials:
+        secret:
+          name: ci-test-dataplane-db
+    vault:
+      hashicorp:
+        token:
+          secret:
+            tokenKey: token
+    keys:
+      dataplane:
+        privateKeyVaultAlias: ci-test-dataplane-private-key
+        publicKeyVaultAlias: ci-test-dataplane-public-key
+
+identityhub:
+  identityhub:
+    image:
+      tag: "1.0.0"
+    postgresql:
+      credentials:
+        secret:
+          name: ci-test-identityhub-db
+    vault:
+      hashicorp:
+        token:
+          secret:
+            tokenKey: token
+    keys:
+      sts:
+        privateKeyAlias: ci-test-sts-private-key
+        publicKeyAlias: ci-test-sts-public-key
+        publicKeyId: ci-test-sts-key-id
+
+telemetryagent:
+  telemetryagent:
+    image:
+      tag: "1.0.0"
+    postgresql:
+      credentials:
+        secret:
+          name: ci-test-telemetryagent-db
+    vault:
+      hashicorp:
+        token:
+          secret:
+            tokenKey: token
+    keys:
+      sts:
+        publicKeyVaultAlias: ci-test-telemetry-public-key
+    credentialmanager:
+      privatekey:
+        alias: ci-test-credentialmanager-private-key
+    telemetryservice:
+      eventhub:
+        name: ci-test-eventhub
+        namespace: ci-test-eventhub-ns
+
+kafka-proxy:
+  kafkaProxy:
+    manager:
+      image:
+        tag: "1.0.0"

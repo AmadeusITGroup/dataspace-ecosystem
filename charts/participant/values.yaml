@@ -1,0 +1,176 @@
+# Default values for the `participant` umbrella chart.
+# Each top-level key below (other than `global`) namespaces values for the
+# matching subchart dependency declared in Chart.yaml.
+#
+# This chart intentionally mirrors the component set and wiring performed by
+# the `terraform/backend/participant` module in
+# cloud-native-jdf/eonax-iac-workflows, so that "one full participant" can be
+# installed with a single `helm install`.
+
+# -- Values shared across every subchart (Helm automatically injects `global`
+# into each subchart's context). This is the primary values surface an
+# external Argo CD values repository needs to supply per participant/
+# environment — each chart derives its own release-name-based URLs, image
+# repository names, JDBC URLs, DID encoding, OTEL attributes, and vault
+# config blocks from these primitives. Any subchart-specific value set
+# explicitly (see the per-component sections below) always takes precedence
+# over what is derived from `global`.
+global:
+  # -- Participant short name, used to derive release names
+  # ("<participantName>-controlplane", etc.), the default vault folder,
+  # vault token secret name, DID paths, and OTEL tenant_id.
+  participantName: ""
+  # -- Deployment environment name (e.g. dev/test/prod), used in the
+  # generated OTEL deployment.environment attribute.
+  environment: ""
+  # -- Whether public-facing URLs derived by the charts should use https.
+  useHttps: true
+  db:
+    # -- Fully qualified hostname of the shared PostgreSQL server used to
+    # derive each component's JDBC URL ("jdbc:postgresql://<serverFqdn>:5432/<name>").
+    serverFqdn: ""
+    # -- Database name shared by all components (each component uses its own
+    # schema within it).
+    name: ""
+    credentials:
+      secret:
+        # -- Name of the Kubernetes secret containing the shared PostgreSQL
+        # credentials (Terraform's `db_user_secret_name`, "<participantName>-db"),
+        # used by control-plane, data-plane, identity-hub, and telemetry-agent
+        # when their own `postgresql.credentials.secret.name` is not set
+        # explicitly. Derived from `global.participantName` when unset.
+        name: ""
+  keys:
+    # -- Vault alias of the shared private key (Terraform's `privatekey_alias`,
+    # "<participantName>-privatekey") used by data-plane, identity-hub, and
+    # telemetry-agent's credential manager when their own component-level
+    # alias is not set explicitly. Derived from `global.participantName` when unset.
+    privateKeyAlias: ""
+    # -- Vault alias of the shared public key (Terraform's `publickey_alias`,
+    # "<participantName>-publickey") used by data-plane and identity-hub when
+    # their own component-level alias is not set explicitly. Derived from
+    # `global.participantName` when unset. Not used by telemetry-agent, whose
+    # public key alias is instead derived from `global.identityHub.didWebUrl`.
+    publicKeyAlias: ""
+  image:
+    # -- Base Docker repository prefix (Terraform's `base_docker_image`), used
+    # to derive each component's image repository.
+    baseRepository: ""
+    # -- Image name prefix (Terraform's `image_name_prefix`), used to derive
+    # each component's image repository, e.g.
+    # "<baseRepository>/<namePrefix>-control-plane-postgresql-<vaultProvider>".
+    namePrefix: ""
+  # -- Vault provider used in derived image repository names. Friendly names
+  # "hashicorp" and "azure" map to the published "hashicorpvault" and
+  # "azurevault" image suffixes; the explicit suffixes are also accepted.
+  vaultProvider: ""
+  identityHub:
+    # -- This participant's Identity Hub DID Web URL. Used as the shared
+    # participant identity (EDC_PARTICIPANT_ID) by control-plane, data-plane,
+    # and telemetry-agent, and as identity-hub's own DID when its
+    # `identityhub.did.web.url` is not set explicitly.
+    didWebUrl: ""
+  authority:
+    # -- The dataspace authority's DID Web URL, used to derive
+    # DSE_AUTHORITY_DID on control-plane and telemetry-agent.
+    didWebUrl: ""
+  vault:
+    # -- Hashicorp Vault URL shared by all components. Convenience default
+    # matches the in-cluster Vault service used by the Terraform deployment.
+    # This default is intentionally only set here (the umbrella chart) and
+    # not duplicated in any subchart's own values.yaml, since a non-empty
+    # default there would make each subchart always render its Vault
+    # integration block even when Vault isn't wanted for standalone use.
+    url: "https://vault:8200"
+  telemetry:
+    # -- Enables OpenTelemetry on the control-plane, data-plane, and
+    # identity-hub: turns on the otel javaagent, OTLP gRPC exporter,
+    # prometheus metrics, and the derived OTEL_RESOURCE_ATTRIBUTES env var,
+    # and exposes the metrics endpoint (9464). Mirrors Terraform's
+    # `telemetry_enabled`. (The telemetry-agent has no otel wiring in the
+    # Terraform reference, so it is intentionally not instrumented here.)
+    enabled: false
+    # -- OTLP collector gRPC endpoint (Terraform's
+    # `opentelemetry_collector_endpoint`). Required when telemetry.enabled
+    # is true; environment-specific, so supply it per environment.
+    collectorEndpoint: ""
+  # -- OpenShift routes (rendered as Ingress resources by the umbrella chart's
+  # templates/routes.yaml). Reproduces the standalone `kubernetes_ingress_v1`
+  # resources the Terraform reference creates for control-plane, data-plane,
+  # identity-hub, and kafka-proxy (each with fixed path->port maps, an empty
+  # `tls: [{}]` stanza to trigger OpenShift Route TLS, and OpenShift/cert-manager
+  # annotations). The component subcharts keep `ingress.enabled: false`; these
+  # routes are driven entirely from here. The telemetry-agent is intentionally
+  # excluded — Terraform exposes it through its own nginx chart ingress, not an
+  # OpenShift route.
+  route:
+    # -- Enable rendering of the OpenShift routes.
+    enabled: false
+    # -- printf-style host pattern with two `%s` verbs: participant name then
+    # component token (Terraform's `oc_route_pattern`), e.g.
+    # "%s-%s.apps.cluster.example.com" -> "acme-controlplane.apps...". Component
+    # tokens are controlplane/dataplane/identityhub/kafkaproxy. Required when
+    # route.enabled is true.
+    hostPattern: ""
+    # -- Ingress class name applied to every route (Terraform's
+    # `ingress_class_name`).
+    className: ""
+    # -- cert-manager cluster issuer annotation applied to the control-plane,
+    # data-plane, and identity-hub routes (not kafka-proxy, matching Terraform).
+    clusterIssuer: paas
+    # -- route.openshift.io/termination annotation value.
+    termination: reencrypt
+    # -- route.openshift.io/destination-ca-certificate-secret annotation value.
+    # Omitted from the rendered annotations when empty.
+    destinationCaCertificateSecret: ""
+
+# -- Control Plane (EDC connector control plane). Always deployed.
+controlplane:
+  controlplane:
+    image:
+      repository: ""
+      tag: ""
+    # -- Public exposure is handled by the umbrella's OpenShift routes
+    # (global.route), matching the Terraform reference where each release keeps
+    # its own ingress disabled. Re-enable here only if you want the subchart's
+    # own Ingress instead of the umbrella route.
+    ingress:
+      enabled: false
+
+# -- Data Plane (EDC connector data plane). Deployed by default; set
+# enabled: false to skip. Depends on controlplane and identityhub being reachable.
+dataplane:
+  enabled: true
+  dataplane:
+    image:
+      repository: ""
+      tag: ""
+    ingress:
+      enabled: false
+
+# -- Identity Hub (EDC Credential Service). Always deployed.
+identityhub:
+  identityhub:
+    ingress:
+      enabled: false
+    image:
+      repository: ""
+      tag: ""
+
+# -- Kafka Proxy K8s Manager. Deployed by default; set enabled: false to skip.
+kafka-proxy:
+  enabled: true
+  kafkaProxy:
+    manager:
+      image:
+        repository: ""
+        tag: ""
+
+# -- Telemetry Agent. Optional — mirrors `telemetry_agent_enabled` in the
+# Terraform module. Set enabled: false to skip.
+telemetryagent:
+  enabled: true
+  telemetryagent:
+    image:
+      repository: ""
+      tag: ""

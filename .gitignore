@@ -40,9 +40,10 @@ hs_err_pid*
 ## Helm stuff
 requirements.lock
 Chart.lock
-/charts/
-**/charts/
-!/**/charts/
+# Vendored dependency subchart archives produced by `helm dependency update`
+# (e.g. charts/participant/charts/*.tgz) — build output, not source, and goes
+# stale relative to the actual subchart source whenever it's not regenerated.
+charts/*/charts/
 !externalLibs/*.jar
 **/image.tar
 

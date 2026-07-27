@@ -1,0 +1,170 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "participant",
+  "description": "Values schema for the `participant` umbrella chart. Validates the `global.*` contract that an external Argo CD values repository is expected to supply per participant/environment. Per-component sections are intentionally left permissive here: their own irreducible required values (image tags, secret names, etc.) are enforced at render time via Helm's `required` function in each subchart, which gives more precise/contextual error messages than JSON schema can.",
+  "type": "object",
+  "properties": {
+    "global": {
+      "type": "object",
+      "description": "Values shared across every subchart. This is the primary values surface an external Argo CD values repository needs to supply per participant/environment.",
+      "properties": {
+        "participantName": {
+          "type": "string",
+          "description": "Participant short name, used to derive release names, the default vault folder, vault token secret name, DID paths, and OTEL tenant_id."
+        },
+        "environment": {
+          "type": "string",
+          "description": "Deployment environment name (e.g. dev/test/prod), used in the generated OTEL deployment.environment attribute."
+        },
+        "useHttps": {
+          "type": "boolean",
+          "description": "Whether public-facing URLs derived by the charts should use https."
+        },
+        "db": {
+          "type": "object",
+          "description": "Shared PostgreSQL connection primitives used to derive each component's JDBC URL.",
+          "properties": {
+            "serverFqdn": {
+              "type": "string",
+              "description": "Fully qualified hostname of the shared PostgreSQL server."
+            },
+            "name": {
+              "type": "string",
+              "description": "Database name shared by all components (each component uses its own schema within it)."
+            },
+            "credentials": {
+              "type": "object",
+              "properties": {
+                "secret": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "description": "Name of the Kubernetes secret containing the shared PostgreSQL credentials, used by control-plane, data-plane, identity-hub, and telemetry-agent when their own component-level secret name is not set."
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+        "image": {
+          "type": "object",
+          "description": "Primitives used to derive each component's image repository.",
+          "properties": {
+            "baseRepository": {
+              "type": "string",
+              "description": "Base Docker repository prefix (Terraform's `base_docker_image`)."
+            },
+            "namePrefix": {
+              "type": "string",
+              "description": "Image name prefix (Terraform's `image_name_prefix`)."
+            }
+          },
+          "additionalProperties": false
+        },
+        "vaultProvider": {
+          "type": "string",
+          "description": "Vault provider used in derived image repository names. \"hashicorp\" and \"azure\" map to the published \"hashicorpvault\" and \"azurevault\" image suffixes; explicit suffixes are also accepted."
+        },
+        "keys": {
+          "type": "object",
+          "description": "Shared vault key aliases used by data-plane, identity-hub, and telemetry-agent when their own component-level alias is not set.",
+          "properties": {
+            "privateKeyAlias": {
+              "type": "string",
+              "description": "Vault alias of the shared private key (Terraform's `privatekey_alias`, \"<participantName>-privatekey\") used by data-plane, identity-hub, and telemetry-agent's credential manager."
+            },
+            "publicKeyAlias": {
+              "type": "string",
+              "description": "Vault alias of the shared public key (Terraform's `publickey_alias`, \"<participantName>-publickey\") used by data-plane and identity-hub. Not used by telemetry-agent, whose public key alias is derived from `global.identityHub.didWebUrl`."
+            }
+          },
+          "additionalProperties": false
+        },
+        "identityHub": {
+          "type": "object",
+          "properties": {
+            "didWebUrl": {
+              "type": "string",
+              "description": "This participant's Identity Hub DID Web URL."
+            }
+          },
+          "additionalProperties": false
+        },
+        "authority": {
+          "type": "object",
+          "properties": {
+            "didWebUrl": {
+              "type": "string",
+              "description": "The dataspace authority's DID Web URL."
+            }
+          },
+          "additionalProperties": false
+        },
+        "vault": {
+          "type": "object",
+          "properties": {
+            "url": {
+              "type": "string",
+              "description": "Hashicorp Vault URL shared by all components."
+            }
+          },
+          "additionalProperties": false
+        },
+        "telemetry": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enables OpenTelemetry (javaagent, OTLP exporter, prometheus metrics endpoint 9464, and OTEL_RESOURCE_ATTRIBUTES) on the control-plane, data-plane, and identity-hub. The telemetry-agent is not instrumented, matching the Terraform reference."
+            },
+            "collectorEndpoint": {
+              "type": "string",
+              "description": "OTLP collector gRPC endpoint (Terraform's opentelemetry_collector_endpoint). Required when telemetry.enabled is true."
+            }
+          },
+          "additionalProperties": false
+        },
+        "route": {
+          "type": "object",
+          "description": "OpenShift routes (rendered as Ingress resources) reproducing Terraform's per-component kubernetes_ingress_v1 resources for control-plane, data-plane, identity-hub, and kafka-proxy.",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable rendering of the OpenShift routes."
+            },
+            "hostPattern": {
+              "type": "string",
+              "description": "printf host pattern with two %s verbs (participantName, componentToken), Terraform's oc_route_pattern. Required when route.enabled is true."
+            },
+            "className": {
+              "type": "string",
+              "description": "Ingress class name applied to every route (Terraform's ingress_class_name)."
+            },
+            "clusterIssuer": {
+              "type": "string",
+              "description": "cert-manager cluster issuer annotation for the control-plane, data-plane, and identity-hub routes (not kafka-proxy)."
+            },
+            "termination": {
+              "type": "string",
+              "description": "route.openshift.io/termination annotation value (e.g. reencrypt)."
+            },
+            "destinationCaCertificateSecret": {
+              "type": "string",
+              "description": "route.openshift.io/destination-ca-certificate-secret annotation value; omitted when empty."
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "global"
+  ]
+}
