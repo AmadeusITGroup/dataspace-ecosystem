@@ -1,147 +1,229 @@
 {
-  "id": "urn:catalog:travel-data",
-  "participantId": "urn:participant:amadeus",
+  "catalogId": "urn:catalog:travel-data",
+  "participantId": "did:web:provider-identityhub",
+  "catalogProperties": {},
+
+  "dataServices": [
+    {
+      "id": "3e8ce5fa-3ebe-4ea1-ab97-32b49f8db382",
+      "endpointUrl": "https://provider-controlplane:8282/api/dsp/2025-1",
+      "endpointDescription": "dspace:connector"
+    }
+  ],
+
   "datasets": [
     {
-      "id": "urn:dataset:order-event",
+      "id": "https://test.platform.api.amadeus.com/content-management/content-definitions/order-created-event",
+
       "offers": {
-        "offer-1": {}
+        "ZDVhN2Y4ZmMtMDNlNy00ODgzLWJkMDItNGIyMzdmMGRkNDEz:ZGNhdC1hc3NldC1hbHBoYQ==:offer-1": {
+          "type": "OFFER",
+          "permissions": [],
+          "prohibitions": [],
+          "obligations": []
+        }
       },
-      "properties": {
-        "dcterms:title": "Order Created Event",
-        "dcterms:description": [
-          {
-            "@value": "An event emitted when an order is created"
+
+      "distributions": [
+        {
+          "format": "HttpData-PULL",
+          "dataService": {
+            "id": "3e8ce5fa-3ebe-4ea1-ab97-32b49f8db382",
+            "endpointUrl": "https://provider-controlplane:8282/api/dsp/2025-1",
+            "endpointDescription": "dspace:connector"
           }
+        }
+      ],
+
+      "properties": {
+        "https://w3id.org/edc/v0.0.1/ns/id": "https://test.platform.api.amadeus.com/content-management/content-definitions/order-created-event",
+        "https://w3id.org/edc/v0.0.1/ns/createdAt": "2026-07-23T15:38:16.224Z",
+
+        "http://purl.org/dc/terms/title": "Order Created Event",
+        "http://purl.org/dc/terms/test": {
+          "http://purl.org/dc/terms/data": [
+            { "@value": "fake" }
+          ]
+        },
+
+        "http://www.w3.org/ns/dcat#keyword": "BUSINESS",
+        "http://purl.org/dc/terms/type": "EVENT",
+        "http://purl.org/dc/terms/description": "Event emitted when a new order is created in the order management system. Contains complete order details including items, customer information, and payment status.",
+        "http://purl.org/dc/terms/issued": "2023-11-19",
+
+        "http://www.w3.org/ns/dcat#hasVersion": [
+          { "@id": "urn:amadeus:platform:content-management:nevio:content-definitions:order-created-event:versions:v1.0.0" },
+          { "@id": "urn:amadeus:platform:content-management:nevio:content-definitions:order-created-event:versions:v1.1.0" }
         ],
-        "dcterms:test": {
-          "dcterms:data": [
+
+        "http://www.w3.org/ns/dcat#distribution": {
+          "@id": "urn:amadeus:platform:content-management:nevio:content-distributions:order-created-event",
+          "@type": ["http://www.w3.org/ns/dcat#Distribution"],
+          "http://www.w3.org/ns/dcat#accessService": [
             {
-              "@value": "fake"
+              "@id": "urn:amadeus:platform:content-management:nevio:content-distributions:order-created-event:service",
+              "@type": ["http://www.w3.org/ns/dcat#DataService"],
+              "http://purl.org/dc/terms/conformsTo": [
+                {
+                  "@id": "https://www.asyncapi.com/docs/reference/bindings/kafka",
+                  "http://purl.org/dc/terms/title": [{ "@value": "Binding Kafka-specific information on AsyncAPI" }]
+                }
+              ],
+              "http://www.w3.org/ns/dcat#mediaType": [{ "@value": "https://www.iana.org/assignments/media-types/application/json" }]
             }
           ]
         },
-        "dcterms:creator": {
-          "@id": "urn:participant:amadeus",
-          "dcterms:name": [
+
+        "http://www.w3.org/ns/dcat#themeTaxonomy": {
+          "@id": "urn:amadeus:platform:content-management:taxonomy",
+          "@type": ["http://www.w3.org/2004/02/skos/core#ConceptScheme"],
+          "http://purl.org/dc/terms/title": [{ "@value": "Enterprise Domain Taxonomy" }],
+          "http://www.w3.org/2004/02/skos/core#hasTopConcept": [
             {
-              "@value": "Amadeus"
+              "@id": "urn:amadeus:platform:content-management:nevio:category:50",
+              "@type": ["http://www.w3.org/2004/02/skos/core#Concept"],
+              "http://www.w3.org/2004/02/skos/core#prefLabel": [{ "@value": "Airline Order" }],
+              "http://www.w3.org/2004/02/skos/core#definition": [{ "@value": "Nevio Order Management System" }],
+              "http://www.w3.org/2004/02/skos/core#notation": [{ "@value": "50" }],
+              "http://www.w3.org/2004/02/skos/core#narrower": [
+                {
+                  "@id": "urn:amadeus:platform:content-management:nevio:category:990",
+                  "@type": ["http://www.w3.org/2004/02/skos/core#Concept"],
+                  "http://www.w3.org/2004/02/skos/core#prefLabel": [{ "@value": "Order Management System" }],
+                  "http://www.w3.org/2004/02/skos/core#definition": [{ "@value": "List of order items created with associated products/services and their fulfilment status." }],
+                  "http://www.w3.org/2004/02/skos/core#notation": [{ "@value": "990" }]
+                }
+              ]
+            }
+          ]
+        },
+
+        "http://www.w3.org/ns/prov#qualifiedAttribution": {
+          "@type": ["http://www.w3.org/ns/prov#Attribution"],
+          "http://www.w3.org/ns/prov#agent": [
+            {
+              "@id": "urn:amadeus:platform:content-management:AF",
+              "@type": ["http://www.w3.org/ns/prov#Organization"],
+              "foaf:name": [{ "@value": "AF" }]
             }
           ],
-          "dcterms:email": [
+          "http://www.w3.org/ns/prov#hadRole": [
             {
-              "@value": "dxp@amadeus.com"
+              "@id": "urn:amadeus:platform:content-management:role:owner",
+              "@type": ["http://www.w3.org/ns/prov#Role"]
             }
           ]
         },
-        "dcterms:subject": [
-          {
-            "@value": "booking"
-          },
-          {
-            "@value": "travel"
-          },
-          {
-            "@value": "order"
-          }
-        ],
-        "dcterms:format": {
-          "@value": "application/json"
-        },
-        "dcat:distribution": [
-          {
-            "dcat:accessURL": [
-              {
-                "@value": "https://api.example.com/orders"
-              }
-            ],
-            "dcterms:format": {
-              "@value": "application/json"
-            },
-            "dcat:byteSize": {
-              "@value": "2048"
-            }
-          },
-          {
-            "dcat:accessURL": [
-              {
-                "@value": "https://api.example.com/orders/stream"
-              }
-            ],
-            "dcterms:format": {
-              "@value": "application/octet-stream"
-            },
-            "dcat:byteSize": {
-              "@value": "4096"
-            }
-          }
-        ],
-        "dcterms:spatial": {
-          "dcterms:coverage": {
-            "dcterms:regions": [
-              {
-                "@value": "EU"
-              },
-              {
-                "@value": "US"
-              },
-              {
-                "@value": "APAC"
-              }
-            ]
-          }
-        },
-        "dcterms:keywords": [
-          ["travel", "booking"],
-          ["gds", "amadeus"]
-        ],
-        "dcterms:relatedSets": [
-          [{"@value": "set-a1"}, {"@value": "set-a2"}],
-          [{"@value": "set-b1"}, {"@value": "set-b2"}]
-        ],
-        "dcterms:nullableRef": {
-          "dcterms:inner": null
-        }
+
+        "https://w3id.org/edc/v0.0.1/ns/updatedAt": "2026-07-08T13:31:02.821203588Z"
       }
     },
     {
-      "id": "urn:dataset:flight-offer",
+      "id": "urn:amadeus:platform:content-management:nevio:content-definitions:booking-confirmed-event",
+
       "offers": {
-        "offer-2": {}
+        "ZDVhN2Y4ZmMtMDNlNy00ODgzLWJkMDItNGIyMzdmMGRkNDEz:ZGNhdC1hc3NldC1iZXRh:offer-2": {
+          "type": "OFFER",
+          "permissions": [],
+          "prohibitions": [],
+          "obligations": []
+        }
       },
-      "properties": {
-        "dcterms:title": "Flight Offer Data",
-        "dcterms:description": [
-          {
-            "@value": "Real-time flight availability and pricing"
+
+      "distributions": [
+        {
+          "format": "HttpData-PULL",
+          "dataService": {
+            "id": "3e8ce5fa-3ebe-4ea1-ab97-32b49f8db382",
+            "endpointUrl": "https://provider-controlplane:8282/api/dsp/2025-1",
+            "endpointDescription": "dspace:connector"
           }
+        }
+      ],
+
+      "properties": {
+        "https://w3id.org/edc/v0.0.1/ns/id": "urn:amadeus:platform:content-management:nevio:content-definitions:booking-confirmed-event",
+        "https://w3id.org/edc/v0.0.1/ns/createdAt": "2026-07-23T15:40:02.118Z",
+
+        "http://purl.org/dc/terms/title": "Booking Confirmed Event",
+        "http://purl.org/dc/terms/type": "EVENT",
+        "http://www.w3.org/ns/dcat#keyword": "BUSINESS",
+
+        "http://www.w3.org/ns/dcat#hasVersion": [
+          { "@id": "urn:amadeus:platform:content-management:nevio:content-definitions:booking-confirmed-event:versions:v1.0.0" }
         ],
-        "dcterms:test": {
-          "dcterms:data": [
-            {
-              "@value": "mock"
-            }
-          ]
-        },
-        "dcterms:creator": {
-          "@id": "urn:participant:airline",
-          "dcterms:name": [
-            {
-              "@value": "Partner Airline"
-            }
-          ]
-        },
-        "dcterms:subject": [
+
+        "http://www.w3.org/ns/dcat#distribution": [
           {
-            "@value": "flights"
+            "@id": "urn:amadeus:platform:content-management:nevio:content-distributions:booking-confirmed-event:kafka",
+            "@type": ["http://www.w3.org/ns/dcat#Distribution"],
+            "http://www.w3.org/ns/dcat#accessService": [
+              {
+                "@id": "urn:amadeus:platform:content-management:nevio:content-distributions:booking-confirmed-event:kafka:service",
+                "@type": ["http://www.w3.org/ns/dcat#DataService"],
+                "http://purl.org/dc/terms/conformsTo": [
+                  {
+                    "@id": "https://www.asyncapi.com/docs/reference/bindings/kafka",
+                    "http://purl.org/dc/terms/title": [{ "@value": "Binding Kafka-specific information on AsyncAPI" }]
+                  }
+                ],
+                "http://www.w3.org/ns/dcat#mediaType": [{ "@value": "application/json" }]
+              }
+            ]
           },
           {
-            "@value": "availability"
+            "@id": "urn:amadeus:platform:content-management:nevio:content-distributions:booking-confirmed-event:http",
+            "@type": ["http://www.w3.org/ns/dcat#Distribution"],
+            "http://www.w3.org/ns/dcat#accessService": [
+              {
+                "@id": "urn:amadeus:platform:content-management:nevio:content-distributions:booking-confirmed-event:http:service",
+                "@type": ["http://www.w3.org/ns/dcat#DataService"]
+              }
+            ]
           }
         ],
-        "dcterms:format": {
-          "@value": "text/csv"
-        }
+
+        "http://www.w3.org/ns/dcat#themeTaxonomy": [
+          {
+            "@id": "urn:amadeus:platform:content-management:taxonomy:booking",
+            "@type": ["http://www.w3.org/2004/02/skos/core#ConceptScheme"],
+            "http://purl.org/dc/terms/title": [{ "@value": "Booking Domain Taxonomy" }],
+            "http://www.w3.org/2004/02/skos/core#hasTopConcept": [
+              {
+                "@id": "urn:amadeus:platform:content-management:nevio:category:60",
+                "@type": ["http://www.w3.org/2004/02/skos/core#Concept"],
+                "http://www.w3.org/2004/02/skos/core#prefLabel": [{ "@value": "Booking Management" }],
+                "http://www.w3.org/2004/02/skos/core#notation": [{ "@value": "60" }]
+              }
+            ]
+          },
+          {
+            "@id": "urn:amadeus:platform:content-management:taxonomy:payments",
+            "@type": ["http://www.w3.org/2004/02/skos/core#ConceptScheme"],
+            "http://purl.org/dc/terms/title": [{ "@value": "Payments Domain Taxonomy" }],
+            "http://www.w3.org/2004/02/skos/core#hasTopConcept": [
+              {
+                "@id": "urn:amadeus:platform:content-management:nevio:category:70",
+                "@type": ["http://www.w3.org/2004/02/skos/core#Concept"],
+                "http://www.w3.org/2004/02/skos/core#prefLabel": [{ "@value": "Payment Processing" }],
+                "http://www.w3.org/2004/02/skos/core#notation": [{ "@value": "70" }]
+              }
+            ]
+          }
+        ],
+
+        "http://www.w3.org/ns/prov#qualifiedAttribution": {
+          "@type": ["http://www.w3.org/ns/prov#Attribution"],
+          "http://www.w3.org/ns/prov#agent": [
+            {
+              "@id": "urn:amadeus:platform:content-management:AF",
+              "@type": ["http://www.w3.org/ns/prov#Organization"],
+              "foaf:name": [{ "@value": "AF" }]
+            }
+          ]
+        },
+
+        "https://w3id.org/edc/v0.0.1/ns/updatedAt": "2026-07-08T13:35:11.442901123Z"
       }
     }
   ]

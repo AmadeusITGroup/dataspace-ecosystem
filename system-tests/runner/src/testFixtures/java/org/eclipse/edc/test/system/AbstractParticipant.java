@@ -101,6 +101,83 @@ abstract class AbstractParticipant extends AbstractEntity {
         client.createContractDefinition(asset, UUID.randomUUID().toString(), policy, policy);
     }
 
+    /**
+     * Creates an asset with a custom {@code @context} (e.g. to add {@code dct:} or other prefixes)
+     * and arbitrary properties including nested Maps.
+     *
+     * @param assetId            asset identifier
+     * @param extraContext       additional entries for the JSON-LD {@code @context} (e.g. {@code Map.of("dct", "http://purl.org/dc/terms/")})
+     * @param properties         flat or nested asset properties; nested {@link Map} values are serialized as JSON objects
+     * @param dataAddressProps   data address configuration
+     * @param additionalConstraints optional additional ODRL constraints
+     */
+    protected void createEntryWithCustomContext(String assetId,
+                                                Map<String, String> extraContext,
+                                                Map<String, Object> properties,
+                                                Map<String, Object> dataAddressProps,
+                                                JsonObject... additionalConstraints) {
+        var contextBuilder = createObjectBuilder()
+                .add(VOCAB, EDC_NAMESPACE)
+                .add(DSE_POLICY_PREFIX, DSE_POLICY_NS);
+        extraContext.forEach(contextBuilder::add);
+
+        var propsBuilder = createObjectBuilder();
+        properties.forEach((k, v) -> {
+            if (v instanceof Map<?, ?> nested) {
+                // Safe: callers of this test helper always provide Map<String, Object> for nested values
+                @SuppressWarnings("unchecked")
+                var nestedMap = (Map<String, Object>) nested;
+                propsBuilder.add(k, buildJsonObject(nestedMap));
+            } else {
+                propsBuilder.add(k, v.toString());
+            }
+        });
+
+        var body = createObjectBuilder()
+                .add(CONTEXT, contextBuilder)
+                .add(ID, assetId)
+                .add(TYPE, "Asset")
+                .add("properties", propsBuilder)
+                .add("dataAddress", createObjectBuilder()
+                        .add(TYPE, "DataAddress")
+                        .add("type", "HttpData")
+                        .add("baseUrl", dataAddressProps.getOrDefault("baseUrl", "http://example.com").toString()))
+                .build();
+
+        var assetId_ = participantClient().baseManagementRequest()
+                .contentType(JSON)
+                .body(body)
+                .when()
+                .post("/v3/assets")
+                .then()
+                .log().ifError()
+                .statusCode(200)
+                .contentType(JSON)
+                .extract().jsonPath().getString(ID);
+
+        var constraints = new ArrayList<JsonObject>();
+        constraints.add(atomicConstraint("%s:%s".formatted(DSE_POLICY_PREFIX, MEMBERSHIP_CONSTRAINT), "odrl:eq", "active"));
+        constraints.addAll(Arrays.asList(additionalConstraints));
+
+        var permissions = constraints.stream().map(this::createPermission).toList();
+        var policy = createPolicyDefinition(PolicyFixtures.policy(permissions));
+        participantClient().createContractDefinition(assetId_, UUID.randomUUID().toString(), policy, policy);
+    }
+
+@SuppressWarnings("unchecked")
+    private static jakarta.json.JsonObject buildJsonObject(Map<String, Object> map) {
+        var builder = createObjectBuilder();
+        map.forEach((k, v) -> {
+            if (v instanceof Map<?, ?> nested) {
+                // Safe: callers of this test helper always provide Map<String, Object> for nested values
+                builder.add(k, buildJsonObject((Map<String, Object>) nested));
+            } else {
+                builder.add(k, v.toString());
+            }
+        });
+        return builder.build();
+    }
+
     public String createPolicyDefinition(JsonObject policy) {
         var requestBody = createObjectBuilder()
                 .add(CONTEXT, createObjectBuilder()

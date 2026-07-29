@@ -40,6 +40,7 @@ include(":extensions:issuer-service:domain-attestation-store-sql")
 
 include(":extensions:federated-catalog:participant-registry-node-directory")
 include(":extensions:federated-catalog:filter")
+include(":extensions:federated-catalog:federated-catalog-cache")
 
 include(":extensions:telemetry-agent")
 include(":extensions:telemetry-agent:event-hub-telemetry-record-publisher")

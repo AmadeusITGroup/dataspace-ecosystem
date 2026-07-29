@@ -166,7 +166,7 @@ public final class DseReflectionUtil {
      */
     private static <T> T resolveSingleSegment(String propertyName, Object object) {
         if (object instanceof Map<?, ?> map) {
-            return (T) unwrapValueObject(map.get(propertyName));
+            return (T) unwrapMapValue(map.get(propertyName));
         } else if (object instanceof List<?> list) {
             return (T) list.stream()
                     .filter(Objects::nonNull)
@@ -176,6 +176,23 @@ public final class DseReflectionUtil {
         } else {
             return getRecursiveValue(propertyName, object);
         }
+    }
+
+    /**
+     * Unwraps a value fetched from a direct {@link Map} key lookup. If the value is itself a
+     * {@link List} (e.g. a JSON-LD array of {@code {"@value": ...}} maps), it is routed through
+     * {@link #flatten(Object)} — the same list-aware unwrapping used when an intermediate path
+     * segment resolves to a List — so that {@code @value} maps nested inside it are unwrapped too.
+     * Otherwise, the value is unwrapped directly via {@link #unwrapValueObject(Object)}.
+     *
+     * @param rawValue the value fetched from the map, before unwrapping
+     * @return the unwrapped value
+     */
+    private static Object unwrapMapValue(Object rawValue) {
+        if (rawValue instanceof List<?>) {
+            return flatten(rawValue).toList();
+        }
+        return unwrapValueObject(rawValue);
     }
 
 

@@ -17,6 +17,11 @@ public class LocalProvider extends AbstractParticipant {
     public static final String ASSET_ID_REST_API_ROUTE_DOMAIN_RESTRICTED = "rest-api-route-domain-restricted";
     public static final String ASSET_ID_REST_API_TRAVEL_DOMAIN_RESTRICTED = "rest-api-travel-domain-restricted";
 
+    // DCAT metadata assets for filter/sort/pagination tests
+    public static final String ASSET_ID_DCAT_ALPHA = "dcat-asset-alpha";
+    public static final String ASSET_ID_DCAT_BETA = "dcat-asset-beta";
+    public static final String ASSET_ID_DCAT_GAMMA = "dcat-asset-gamma";
+
     // Azure Blob Storage constants
     public static final String ASSET_ID_AZURE_BLOB = "azure-blob-storage";
     public static final String AZURE_STORAGE_ACCOUNT_NAME = "devstoreaccount1";

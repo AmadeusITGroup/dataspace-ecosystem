@@ -73,6 +73,9 @@ import static org.eclipse.edc.spi.constants.CoreConstants.EDC_NAMESPACE;
 import static org.eclipse.edc.test.system.AbstractAuthority.DOMAIN_ROUTE;
 import static org.eclipse.edc.test.system.AbstractAuthority.DOMAIN_TRAVEL;
 import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_AZURE_BLOB;
+import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_DCAT_ALPHA;
+import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_DCAT_BETA;
+import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_DCAT_GAMMA;
 import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_FAILURE_REST_API;
 import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_KAFKA_STREAM;
 import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_REST_20_SEC_API;
@@ -460,6 +463,64 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
                 "blobName", AZURE_STORAGE_BLOB_NAME,
                 "keyName", AZURE_STORAGE_ACCOUNT_NAME
         ), genericClaimConstraint(MEMBERSHIP_CREDENTIAL_TYPE, "name", "odrl:eq", "consumer"));
+
+        // ── DCAT-metadata assets for filter / sort / pagination tests ──────────
+        // Three assets with dct:* metadata and nested theme identifiers.
+        // Property keys after JSON-LD expansion (used in filter queries):
+        //   dct:identifier                 → http://purl.org/dc/terms/identifier
+        //   dct:publisher                  → http://purl.org/dc/terms/publisher
+        //   dct:type                       → http://purl.org/dc/terms/type
+        //   dcat:theme.dct:identifier      → http://www.w3.org/ns/dcat#theme . http://purl.org/dc/terms/identifier
+        //   dcat:theme.dcat:theme.dct:identifier → http://www.w3.org/ns/dcat#theme . http://www.w3.org/ns/dcat#theme . http://purl.org/dc/terms/identifier
+        var dctContext = Map.of(
+                "dct", "http://purl.org/dc/terms/",
+                "dcat", "http://www.w3.org/ns/dcat#"
+        );
+
+        PROVIDER.createEntryWithCustomContext(ASSET_ID_DCAT_ALPHA, dctContext,
+                Map.of(
+                        "dct:identifier", "dataset-alpha",
+                        "dct:publisher", "publisher-alpha",
+                        "dct:type",      "DATASET",
+                        "dcat:theme",    Map.of(
+                                "dct:identifier", "theme-a",
+                                "dcat:theme", Map.of(
+                                        "dct:identifier", "sub-a"
+                                )
+                        )
+                ),
+                Map.of("baseUrl", "http://provider-backend:8080/api/provider/data")
+        );
+
+        PROVIDER.createEntryWithCustomContext(ASSET_ID_DCAT_BETA, dctContext,
+                Map.of(
+                        "dct:identifier", "dataset-beta",
+                        "dct:publisher", "publisher-beta",
+                        "dct:type",      "EVENT",
+                        "dcat:theme",    Map.of(
+                                "dct:identifier", "theme-b",
+                                "dcat:theme", Map.of(
+                                        "dct:identifier", "sub-b"
+                                )
+                        )
+                ),
+                Map.of("baseUrl", "http://provider-backend:8080/api/provider/data")
+        );
+
+        PROVIDER.createEntryWithCustomContext(ASSET_ID_DCAT_GAMMA, dctContext,
+                Map.of(
+                        "dct:identifier", "dataset-gamma",
+                        "dct:publisher", "publisher-alpha",
+                        "dct:type",      "DATASET",
+                        "dcat:theme",    Map.of(
+                                "dct:identifier", "theme-c",
+                                "dcat:theme", Map.of(
+                                        "dct:identifier", "sub-c"
+                                )
+                        )
+                ),
+                Map.of("baseUrl", "http://provider-backend:8080/api/provider/data")
+        );
     }
 
     private static JsonObject genericClaimConstraint(String credentialType, String path, String operator, String rightOperand) {
@@ -505,7 +566,10 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
                     ASSET_ID_KAFKA_STREAM + "-tst-2",
                     ASSET_ID_REST_API_ROUTE_DOMAIN_RESTRICTED,
                     ASSET_ID_REST_API_TRAVEL_DOMAIN_RESTRICTED,
-                    ASSET_ID_AZURE_BLOB
+                    ASSET_ID_AZURE_BLOB,
+                    ASSET_ID_DCAT_ALPHA,
+                    ASSET_ID_DCAT_BETA,
+                    ASSET_ID_DCAT_GAMMA
             );
 
             assertThat(queryParticipantDatasets(AUTHORITY, PROVIDER.did(), PROVIDER.controlPlaneCatalogFilterUrl()))
@@ -523,6 +587,304 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
             assertThat(queryParticipantDatasets(AUTHORITY, PROVIDER.did(), CONSUMER.controlPlaneCatalogFilterUrl()))
                     .anyMatch(dataset -> ASSET_ID_REST_API_ROUTE_DOMAIN_RESTRICTED.equals(dataset.getString(ID)))
                     .noneMatch(dataset -> ASSET_ID_REST_API_TRAVEL_DOMAIN_RESTRICTED.equals(dataset.getString(ID)));
+        }
+    }
+
+    /**
+     * End-to-end tests for the {@code CustomFederatedCatalogCache} filter / sort / pagination
+     * capabilities introduced via {@code DatasetAwareQueryResolver}.
+     *
+        * <p>Three assets are seeded in {@code seedData()} with DCAT metadata:
+     * <pre>
+        *   dcat-asset-alpha  dct:identifier=dataset-alpha  publisher=publisher-alpha  type=DATASET  dcat:theme.identifier=theme-a  dcat:theme.dcat:theme.identifier=sub-a
+        *   dcat-asset-beta   dct:identifier=dataset-beta   publisher=publisher-beta   type=EVENT    dcat:theme.identifier=theme-b  dcat:theme.dcat:theme.identifier=sub-b
+        *   dcat-asset-gamma  dct:identifier=dataset-gamma  publisher=publisher-alpha  type=DATASET  dcat:theme.identifier=theme-c  dcat:theme.dcat:theme.identifier=sub-c
+     * </pre>
+     *
+     * <p>All requests target the authority's direct catalog endpoint
+     * ({@code /authority/catalog/v1alpha/catalog/query}) which goes through
+     * {@code CustomFederatedCatalogCache}.
+     *
+     * <p>Property paths use the JSON-LD expanded IRI form because that is how keys are
+     * stored internally after the DSP crawl:
+     * <ul>
+        *   <li>{@code dct:identifier} → {@code http://purl.org/dc/terms/identifier}</li>
+        *   <li>{@code dct:publisher}  → {@code http://purl.org/dc/terms/publisher}</li>
+        *   <li>{@code dct:type}       → {@code http://purl.org/dc/terms/type}</li>
+        *   <li>{@code dcat:theme}      → {@code http://www.w3.org/ns/dcat#theme}</li>
+        *   <li>{@code dcat:theme.dct:identifier} and {@code dcat:theme.dcat:theme.dct:identifier}</li>
+     * </ul>
+     */
+    @Nested
+    class CatalogFilterSortPaginationTest {
+
+        // Expanded IRI constants used in filter / sort paths
+        private static final String DCT_NS        = "http://purl.org/dc/terms/";
+        private static final String EDC_NS        = "https://w3id.org/edc/v0.0.1/ns/";
+        private static final String DCAT_NS       = "http://www.w3.org/ns/dcat#";
+        private static final String PROP_IDENTIFIER = "properties.'" + DCT_NS + "identifier'";
+        private static final String PROP_PUBLISHER = "properties.'" + DCT_NS + "publisher'";
+        private static final String PROP_TYPE      = "properties.'" + DCT_NS + "type'";
+        private static final String PROP_THEME_ID  = "properties.'" + DCAT_NS + "theme'.'" + DCT_NS + "identifier'";
+        private static final String PROP_THEME_SUB_ID = "properties.'" + DCAT_NS + "theme'.'" + DCAT_NS + "theme'.'" + DCT_NS + "identifier'";
+
+        private static final String CATALOG_QUERY_URL =
+                AUTHORITY.catalogUrl() + "/v1alpha/catalog/query";
+
+        // ── Filter tests ─────────────────────────────────────────────────────
+
+        @Test
+        void catalog_filter_by_publisher_returns_matching_assets() {
+            var query = querySpec(
+                    Json.createObjectBuilder()
+                            .add("@context",        Json.createObjectBuilder().add("@vocab", EDC_NS))
+                            .add("filterExpression", Json.createArrayBuilder().add(
+                                    criterion(PROP_PUBLISHER, "=", "publisher-alpha")))
+                            .build()
+            );
+
+            var datasets = queryCatalogWithFilter(CATALOG_QUERY_URL, query, 2);
+
+            assertThat(datasets)
+                    .extracting(ds -> getDatasetId(ds))
+                    .containsExactlyInAnyOrder(ASSET_ID_DCAT_ALPHA, ASSET_ID_DCAT_GAMMA);
+        }
+
+        @Test
+        void catalog_filter_by_type_returns_matching_assets() {
+            var query = querySpec(
+                    Json.createObjectBuilder()
+                            .add("@context",        Json.createObjectBuilder().add("@vocab", EDC_NS))
+                            .add("filterExpression", Json.createArrayBuilder().add(
+                                    criterion(PROP_TYPE, "=", "DATASET")))
+                            .build()
+            );
+
+            var datasets = queryCatalogWithFilter(CATALOG_QUERY_URL, query, 2);
+
+            assertThat(datasets)
+                    .extracting(ds -> getDatasetId(ds))
+                    .containsExactlyInAnyOrder(ASSET_ID_DCAT_ALPHA, ASSET_ID_DCAT_GAMMA);
+        }
+
+        @Test
+        void catalog_filter_by_identifier_exact_returns_single_asset() {
+            var query = querySpec(
+                    Json.createObjectBuilder()
+                            .add("@context",        Json.createObjectBuilder().add("@vocab", EDC_NS))
+                            .add("filterExpression", Json.createArrayBuilder().add(
+                                    criterion(PROP_IDENTIFIER, "=", "dataset-beta")))
+                            .build()
+            );
+
+            var datasets = queryCatalogWithFilter(CATALOG_QUERY_URL, query, 1);
+
+            assertThat(datasets)
+                    .extracting(ds -> getDatasetId(ds))
+                    .containsExactly(ASSET_ID_DCAT_BETA);
+        }
+
+        @Test
+        void catalog_filter_by_identifier_like_returns_matching_assets() {
+            var query = querySpec(
+                    Json.createObjectBuilder()
+                            .add("@context",        Json.createObjectBuilder().add("@vocab", EDC_NS))
+                            .add("filterExpression", Json.createArrayBuilder().add(
+                                    criterion(PROP_IDENTIFIER, "like", "dataset-%")))
+                            .build()
+            );
+
+            var datasets = queryCatalogWithFilter(CATALOG_QUERY_URL, query, 3);
+
+            assertThat(datasets)
+                    .extracting(ds -> getDatasetId(ds))
+                    .containsExactlyInAnyOrder(ASSET_ID_DCAT_ALPHA, ASSET_ID_DCAT_BETA, ASSET_ID_DCAT_GAMMA);
+        }
+
+        @Test
+        void catalog_filter_by_theme_identifier() {
+            var query = querySpec(
+                    Json.createObjectBuilder()
+                            .add("@context",        Json.createObjectBuilder().add("@vocab", EDC_NS))
+                            .add("filterExpression", Json.createArrayBuilder().add(
+                                    criterion(PROP_THEME_ID, "=", "theme-a")))
+                            .build()
+            );
+
+            var datasets = queryCatalogWithFilter(CATALOG_QUERY_URL, query, 1);
+
+            assertThat(datasets)
+                    .extracting(ds -> getDatasetId(ds))
+                    .containsExactly(ASSET_ID_DCAT_ALPHA);
+        }
+
+        @Test
+        void catalog_filter_by_theme_sub_identifier() {
+            var query = querySpec(
+                    Json.createObjectBuilder()
+                            .add("@context",        Json.createObjectBuilder().add("@vocab", EDC_NS))
+                            .add("filterExpression", Json.createArrayBuilder().add(
+                                    criterion(PROP_THEME_SUB_ID, "=", "sub-b")))
+                            .build()
+            );
+
+            var datasets = queryCatalogWithFilter(CATALOG_QUERY_URL, query, 1);
+
+            assertThat(datasets)
+                    .extracting(ds -> getDatasetId(ds))
+                    .containsExactly(ASSET_ID_DCAT_BETA);
+        }
+
+        @Test
+        void catalog_filter_publisher_and_type_combined() {
+            // Both criteria must match: publisher-alpha AND EVENT → no asset matches (publisher-alpha only has DATASET datasets)
+            var query = querySpec(
+                    Json.createObjectBuilder()
+                            .add("@context",        Json.createObjectBuilder().add("@vocab", EDC_NS))
+                            .add("filterExpression", Json.createArrayBuilder()
+                                    .add(criterion(PROP_PUBLISHER, "=", "publisher-alpha"))
+                                    .add(criterion(PROP_TYPE,      "=", "EVENT")))
+                            .build()
+            );
+
+            var datasets = queryCatalogWithFilter(CATALOG_QUERY_URL, query, 0);
+            assertThat(datasets).isEmpty();
+        }
+
+        // ── Sort tests ───────────────────────────────────────────────────────
+
+        @Test
+        void catalog_sort_by_identifier_asc() {
+            // dataset-alpha < dataset-beta < dataset-gamma (alphabetical)
+            var query = querySpec(
+                    Json.createObjectBuilder()
+                            .add("@context",   Json.createObjectBuilder().add("@vocab", EDC_NS))
+                            .add("filterExpression", Json.createArrayBuilder()
+                                    .add(criterion(PROP_PUBLISHER, "in", Json.createArrayBuilder()
+                                            .add("publisher-alpha").add("publisher-beta"))))
+                            .add("sortField",  PROP_IDENTIFIER)
+                            .add("sortOrder",  "ASC")
+                            .build()
+            );
+
+            var datasets = queryCatalogWithFilter(CATALOG_QUERY_URL, query, 3);
+            var ids = datasets.stream().map(ds -> getDatasetId(ds)).toList();
+
+            assertThat(ids).containsExactly(
+                                        ASSET_ID_DCAT_ALPHA,  // "dataset-alpha"
+                                        ASSET_ID_DCAT_BETA,   // "dataset-beta"
+                                        ASSET_ID_DCAT_GAMMA   // "dataset-gamma"
+            );
+        }
+
+        @Test
+        void catalog_sort_by_identifier_desc() {
+            var query = querySpec(
+                    Json.createObjectBuilder()
+                            .add("@context",   Json.createObjectBuilder().add("@vocab", EDC_NS))
+                            .add("filterExpression", Json.createArrayBuilder()
+                                    .add(criterion(PROP_PUBLISHER, "in", Json.createArrayBuilder()
+                                            .add("publisher-alpha").add("publisher-beta"))))
+                            .add("sortField",  PROP_IDENTIFIER)
+                            .add("sortOrder",  "DESC")
+                            .build()
+            );
+
+            var datasets = queryCatalogWithFilter(CATALOG_QUERY_URL, query, 3);
+            var ids = datasets.stream().map(ds -> getDatasetId(ds)).toList();
+
+            assertThat(ids).containsExactly(
+                                        ASSET_ID_DCAT_GAMMA,  // "dataset-gamma"
+                                        ASSET_ID_DCAT_BETA,   // "dataset-beta"
+                                        ASSET_ID_DCAT_ALPHA   // "dataset-alpha"
+            );
+        }
+
+        // ── Pagination tests ─────────────────────────────────────────────────
+
+        @Test
+        void catalog_pagination_first_page() {
+            // ASC sort by dct:identifier, take first 2: dataset-alpha, dataset-beta
+            var query = querySpec(
+                    Json.createObjectBuilder()
+                            .add("@context",   Json.createObjectBuilder().add("@vocab", EDC_NS))
+                            .add("filterExpression", Json.createArrayBuilder()
+                                    .add(criterion(PROP_PUBLISHER, "in", Json.createArrayBuilder()
+                                            .add("publisher-alpha").add("publisher-beta"))))
+                            .add("sortField",  PROP_IDENTIFIER)
+                            .add("sortOrder",  "ASC")
+                            .add("limit",  2)
+                            .add("offset", 0)
+                            .build()
+            );
+
+            var datasets = queryCatalogWithFilter(CATALOG_QUERY_URL, query, 2);
+            assertThat(datasets).hasSize(2);
+            assertThat(datasets.stream().map(ds -> getDatasetId(ds)).toList())
+                    .containsExactly(ASSET_ID_DCAT_ALPHA, ASSET_ID_DCAT_BETA);
+        }
+
+        @Test
+        void catalog_pagination_second_page() {
+            // ASC sort by dct:identifier, skip first 2, take 1: only dataset-gamma remains
+            var query = querySpec(
+                    Json.createObjectBuilder()
+                            .add("@context",   Json.createObjectBuilder().add("@vocab", EDC_NS))
+                            .add("filterExpression", Json.createArrayBuilder()
+                                    .add(criterion(PROP_PUBLISHER, "in", Json.createArrayBuilder()
+                                            .add("publisher-alpha").add("publisher-beta"))))
+                            .add("sortField",  PROP_IDENTIFIER)
+                            .add("sortOrder",  "ASC")
+                            .add("limit",  1)
+                            .add("offset", 2)
+                            .build()
+            );
+
+            var datasets = queryCatalogWithFilter(CATALOG_QUERY_URL, query, 1);
+            assertThat(datasets).hasSize(1);
+            assertThat(getDatasetId(datasets.get(0))).isEqualTo(ASSET_ID_DCAT_GAMMA);
+        }
+
+        @Test
+        void catalog_pagination_offset_beyond_results_returns_empty() {
+            var query = querySpec(
+                    Json.createObjectBuilder()
+                            .add("@context",   Json.createObjectBuilder().add("@vocab", EDC_NS))
+                            .add("filterExpression", Json.createArrayBuilder()
+                                    .add(criterion(PROP_TYPE, "=", "DATASET")))
+                            .add("sortField",  PROP_IDENTIFIER)
+                            .add("sortOrder",  "ASC")
+                            .add("limit",  5)
+                            .add("offset", 99)
+                            .build()
+            );
+
+            // offset beyond all results → empty (expectedCount = 0 so we don't wait)
+            var datasets = queryCatalogWithFilter(CATALOG_QUERY_URL, query, 0);
+            assertThat(datasets).isEmpty();
+        }
+
+        // ── helpers ──────────────────────────────────────────────────────────
+
+        private static jakarta.json.JsonObject querySpec(jakarta.json.JsonObject body) {
+            return body;
+        }
+
+        private static jakarta.json.JsonObjectBuilder criterion(String left, String op, Object right) {
+            var b = Json.createObjectBuilder()
+                    .add("operandLeft",  left)
+                    .add("operator",     op);
+            if (right instanceof String s) {
+                b.add("operandRight", s);
+            } else if (right instanceof jakarta.json.JsonArrayBuilder arr) {
+                b.add("operandRight", arr);
+            }
+            return b;
+        }
+
+        private static String getDatasetId(jakarta.json.JsonObject dataset) {
+            return dataset.getString("@id",
+                   dataset.getString(ID, null));
         }
     }
 

@@ -9,7 +9,6 @@
  *
  *  Contributors:
  *       Amadeus IT Group - initial API and implementation
- *
  */
 
 package org.eclipse.edc.dse.common.lib;
@@ -19,6 +18,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.eclipse.edc.connector.controlplane.catalog.spi.Catalog;
 import org.eclipse.edc.connector.controlplane.catalog.spi.Dataset;
 import org.eclipse.edc.policy.model.Policy;
+import org.eclipse.edc.util.reflection.ReflectionException;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -31,457 +31,425 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+/**
+ * Verifies {@link DseReflectionUtil#getFieldValue(String, Object)} against the two {@link Dataset}s
+ * loaded from {@code catalog-test-data.json}: {@code dataset1} ("Order Created Event") and
+ * {@code dataset2} ("Booking Confirmed Event").
+ *
+ * <p>Every path here is resolved directly against a single {@link Dataset} instance (not the
+ * {@link Catalog}), so paths start with {@code properties.'<propertyUri>'} — no {@code datasets.}
+ * prefix and no {@code [n]} array indexer into {@code datasets}, per how a caller would query one
+ * dataset at a time.
+ *
+ * <p>Generic attributes (title, type, keyword, id/createdAt/updatedAt, hasVersion, etc.) share the
+ * same JSON-LD shape across both datasets, so they are verified against {@code dataset1} only.
+ *
+ * <p>{@code dcat:distribution} and {@code dcat:themeTaxonomy} are the two properties that differ in
+ * shape between the datasets, so they are verified against both:
+ * <ul>
+ *     <li>{@code dataset1}: both are a single JSON object (Map).</li>
+ *     <li>{@code dataset2}: both are a JSON array (List) of two objects.</li>
+ * </ul>
+ * This confirms {@link DseReflectionUtil} resolves the same path correctly regardless of which shape
+ * is present, without ever hardcoding an array index — the Map/List-aware branches of
+ * {@code getFieldValue} handle the difference transparently.
+ */
 class DseReflectionUtilTest {
 
-    private static Catalog catalog;
+    private static Dataset dataset1;
+    private static Dataset dataset2;
 
     @BeforeAll
+    @SuppressWarnings("unchecked")
     static void setUp() throws IOException {
         var objectMapper = new ObjectMapper();
         try (var inputStream = DseReflectionUtilTest.class.getResourceAsStream("/catalog-test-data.json")) {
             assertThat(inputStream).as("catalog-test-data.json not found on classpath").isNotNull();
-            var catalogData = objectMapper.readValue(inputStream, new TypeReference<Map<String, Object>>() {});
+            var catalogData = objectMapper.readValue(inputStream, new TypeReference<Map<String, Object>>() {
+            });
 
-            var catalogBuilder = Catalog.Builder.newInstance()
-                    .id((String) catalogData.get("id"))
-                    .participantId((String) catalogData.get("participantId"));
-
-            // Load datasets
-            @SuppressWarnings("unchecked")
             var datasetsData = (List<Map<String, Object>>) catalogData.get("datasets");
-            for (var datasetData : datasetsData) {
-                var datasetBuilder = Dataset.Builder.newInstance()
-                        .id((String) datasetData.get("id"));
+            assertThat(datasetsData).as("expected at least 2 datasets in catalog-test-data.json").hasSizeGreaterThanOrEqualTo(2);
 
-                // Load offers
-                @SuppressWarnings("unchecked")
-                var offers = (Map<String, Object>) datasetData.get("offers");
-                if (offers != null) {
-                    offers.forEach((offerId, policyData) ->
-                            datasetBuilder.offer(offerId, Policy.Builder.newInstance().build()));
-                }
-
-                // Load properties
-                @SuppressWarnings("unchecked")
-                var properties = (Map<String, Object>) datasetData.get("properties");
-                if (properties != null) {
-                    properties.forEach(datasetBuilder::property);
-                }
-
-                catalogBuilder.dataset(datasetBuilder.build());
-            }
-
-            catalog = catalogBuilder.build();
+            dataset1 = buildDataset(datasetsData.get(0));
+            dataset2 = buildDataset(datasetsData.get(1));
         }
     }
 
-    @Nested
-    @DisplayName("datasets.properties.dcterms:* — simple string values")
-    class SimpleStringProperties {
+    @SuppressWarnings("unchecked")
+    private static Dataset buildDataset(Map<String, Object> datasetData) {
+        var datasetBuilder = Dataset.Builder.newInstance()
+                .id((String) datasetData.get("id"));
 
-        @Test
-        @DisplayName("datasets.properties.dcterms:title — collects title from all datasets")
-        void getFieldValue_title() {
-            var value = DseReflectionUtil.getFieldValue("datasets.properties.dcterms:title", catalog);
-
-            assertThat(value).isInstanceOf(List.class);
-            assertThat((List<String>) value).containsExactly("Order Created Event", "Flight Offer Data");
+        var offers = (Map<String, Object>) datasetData.get("offers");
+        if (offers != null) {
+            offers.forEach((offerId, policyData) ->
+                    datasetBuilder.offer(offerId, Policy.Builder.newInstance().build()));
         }
 
-        @Test
-        @DisplayName("datasets.properties.dcterms:format — collects format value objects from all datasets")
-        void getFieldValue_format() {
-            var value = DseReflectionUtil.getFieldValue("datasets.properties.dcterms:format", catalog);
-
-            assertThat(value).isInstanceOf(List.class);
-            // When a single @value map is at the terminal of a list-iteration path, it remains as a map
-            assertThat((List<?>) value).hasSize(2);
-            var unwrapped = ((List<Map<?, ?>>) value).stream().map(m -> m.get("@value")).toList();
-            assertThat(unwrapped).isEqualTo(List.of("application/json", "text/csv"));
+        var properties = (Map<String, Object>) datasetData.get("properties");
+        if (properties != null) {
+            properties.forEach(datasetBuilder::property);
         }
 
-        @Test
-        @DisplayName("datasets.id — collects all dataset ids")
-        void getFieldValue_ids() {
-            var value = DseReflectionUtil.getFieldValue("datasets.id", catalog);
-
-            assertThat(value).isInstanceOf(List.class);
-            assertThat((List<String>) value).containsExactly("urn:dataset:order-event", "urn:dataset:flight-offer");
-        }
+        return datasetBuilder.build();
     }
 
     @Nested
-    @DisplayName("datasets.properties.dcterms:test.dcterms:data — nested map then list with @value")
-    class NestedMapWithListUnwrap {
+    @DisplayName("properties.* — generic attributes (verified once, shape is identical across datasets)")
+    class GenericAttributes {
 
         @Test
-        @DisplayName("datasets.properties.dcterms:test — collects dcterms:test map from all datasets")
-        void getFieldValue_testMap() {
-            var value = DseReflectionUtil.getFieldValue("datasets.properties.dcterms:test", catalog);
-
-            assertThat(value).isInstanceOf(List.class);
-            assertThat((List<?>) value).hasSize(2);
-        }
-
-        @Test
-        @DisplayName("datasets.properties.dcterms:test.dcterms:data — unwraps @value from nested list")
-        void getFieldValue_testData() {
-            var value = DseReflectionUtil.getFieldValue("datasets.properties.dcterms:test.dcterms:data", catalog);
-
-            assertThat(value).isInstanceOf(List.class);
-            assertThat((List<String>) value).containsExactly("fake", "mock");
-        }
-    }
-
-    @Nested
-    @DisplayName("datasets.properties.dcterms:creator.* — nested object field access")
-    class NestedObjectAccess {
-
-        @Test
-        @DisplayName("datasets.properties.dcterms:creator — collects creator maps from all datasets")
-        void getFieldValue_creator() {
-            var value = DseReflectionUtil.getFieldValue("datasets.properties.dcterms:creator", catalog);
-
-            assertThat(value).isInstanceOf(List.class);
-            assertThat((List<?>) value).hasSize(2);
-        }
-
-        @Test
-        @DisplayName("datasets.properties.dcterms:creator.@id — collects @id from all creators")
-        void getFieldValue_creatorId() {
-            var value = DseReflectionUtil.getFieldValue("datasets.properties.dcterms:creator.@id", catalog);
-
-            assertThat(value).isInstanceOf(List.class);
-            assertThat((List<String>) value).containsExactly("urn:participant:amadeus", "urn:participant:airline");
-        }
-
-        @Test
-        @DisplayName("datasets.properties.dcterms:creator.dcterms:name — collects name lists from all creators")
-        void getFieldValue_creatorName() {
-            var value = DseReflectionUtil.getFieldValue("datasets.properties.dcterms:creator.dcterms:name", catalog);
-
-            assertThat(value).isInstanceOf(List.class);
-            // Each dataset's creator has a dcterms:name list; unwrapping @value yields the name strings
-            assertThat((List<String>) value).containsExactly("Amadeus", "Partner Airline");
-        }
-    }
-
-    @Nested
-    @DisplayName("datasets.properties.dcterms:subject — list of @value objects")
-    class ListOfValueObjects {
-
-        @Test
-        @DisplayName("datasets.properties.dcterms:subject — collects and unwraps @value from subject lists")
-        void getFieldValue_subject() {
-            var value = DseReflectionUtil.getFieldValue("datasets.properties.dcterms:subject", catalog);
-
-            assertThat(value).isInstanceOf(List.class);
-            // Collects all subjects across all datasets, unwrapped from @value
-            assertThat((List<String>) value).contains("booking", "travel", "order", "flights", "availability");
-        }
-    }
-
-    @Nested
-    @DisplayName("datasets.properties.dcterms:description — single-element @value list")
-    class DescriptionAccess {
-
-        @Test
-        @DisplayName("datasets.properties.dcterms:description — collects descriptions with @value unwrap")
-        void getFieldValue_description() {
-            var value = DseReflectionUtil.getFieldValue("datasets.properties.dcterms:description", catalog);
-
-            assertThat(value).isInstanceOf(List.class);
-            assertThat((List<String>) value).containsExactly(
-                    "An event emitted when an order is created",
-                    "Real-time flight availability and pricing"
-            );
-        }
-    }
-
-    @Nested
-    @DisplayName("datasets.properties.dcterms:spatial.dcterms:coverage.dcterms:regions — deeply nested")
-    class DeeplyNestedAccess {
-
-        @Test
-        @DisplayName("datasets.properties.dcterms:spatial — collects spatial maps")
-        void getFieldValue_spatial() {
-            var value = DseReflectionUtil.getFieldValue("datasets.properties.dcterms:spatial", catalog);
-
-            assertThat(value).isInstanceOf(List.class);
-            // Only first dataset has dcterms:spatial
-            assertThat((List<?>) value).hasSize(1);
-        }
-
-        @Test
-        @DisplayName("datasets.properties.dcterms:spatial.dcterms:coverage — accesses coverage")
-        void getFieldValue_spatialCoverage() {
-            var value = DseReflectionUtil.getFieldValue("datasets.properties.dcterms:spatial.dcterms:coverage", catalog);
-
-            assertThat(value).isInstanceOf(List.class);
-            assertThat((List<?>) value).hasSize(1);
-        }
-
-        @Test
-        @DisplayName("datasets.properties.dcterms:spatial.dcterms:coverage.dcterms:regions — accesses regions with @value unwrap")
-        void getFieldValue_spatialCoverageRegions() {
-            var value = DseReflectionUtil.getFieldValue("datasets.properties.dcterms:spatial.dcterms:coverage.dcterms:regions", catalog);
-
-            assertThat(value).isInstanceOf(List.class);
-            assertThat((List<String>) value).contains("EU", "US", "APAC");
-        }
-    }
-
-    @Nested
-    @DisplayName("datasets.properties.dcat:distribution.* — list of complex objects")
-    class DistributionAccess {
-
-        @Test
-        @DisplayName("datasets.properties.dcat:distribution — collects distributions")
-        void getFieldValue_distribution() {
-            var value = DseReflectionUtil.getFieldValue("datasets.properties.dcat:distribution", catalog);
-
-            assertThat(value).isInstanceOf(List.class);
-            // First dataset has 2 distributions, second dataset has none
-            assertThat((List<?>) value).hasSize(2);
-        }
-
-        @Test
-        @DisplayName("datasets.properties.dcat:distribution.dcterms:format — collects format from all distributions")
-        void getFieldValue_distributionFormat() {
-            var value = DseReflectionUtil.getFieldValue("datasets.properties.dcat:distribution.dcterms:format", catalog);
-
-            assertThat(value).isInstanceOf(List.class);
-            var unwrappedFormats = ((List<Map<?, ?>>) value).stream().map(m -> m.get("@value")).toList();
-            assertThat(unwrappedFormats).isEqualTo(List.of("application/json", "application/octet-stream"));
-        }
-
-        @Test
-        @DisplayName("datasets.properties.dcat:distribution.dcat:byteSize — collects byteSize from distributions")
-        void getFieldValue_distributionByteSize() {
-            var value = DseReflectionUtil.getFieldValue("datasets.properties.dcat:distribution.dcat:byteSize", catalog);
-
-            assertThat(value).isInstanceOf(List.class);
-            var unwrappedSizes = ((List<Map<?, ?>>) value).stream().map(m -> m.get("@value")).toList();
-            assertThat(unwrappedSizes).isEqualTo(List.of("2048", "4096"));
-        }
-
-        @Test
-        @DisplayName("datasets.properties.dcat:distribution.dcat:accessURL — collects accessURL @value from distributions")
-        void getFieldValue_distributionAccessUrl() {
-            var value = DseReflectionUtil.getFieldValue("datasets.properties.dcat:distribution.dcat:accessURL", catalog);
-
-            assertThat(value).isInstanceOf(List.class);
-            assertThat((List<String>) value).contains(
-                    "https://api.example.com/orders",
-                    "https://api.example.com/orders/stream"
-            );
-        }
-    }
-
-    @Nested
-    @DisplayName("Error cases")
-    class ErrorCases {
-
-        @Test
-        @DisplayName("Should throw NullPointerException for null property name")
-        void getFieldValue_nullPropertyName() {
-            assertThatThrownBy(() -> DseReflectionUtil.getFieldValue(null, catalog))
-                    .isInstanceOf(NullPointerException.class);
-        }
-
-        @Test
-        @DisplayName("Should throw NullPointerException for null object")
-        void getFieldValue_nullObject() {
-            assertThatThrownBy(() -> DseReflectionUtil.getFieldValue("datasets.id", null))
-                    .isInstanceOf(NullPointerException.class);
-        }
-
-        @Test
-        @DisplayName("datasets.properties.dcterms:nonExistent — returns empty list for missing keys")
-        void getFieldValue_nonExistentKey() {
-            var value = DseReflectionUtil.getFieldValue("datasets.properties.dcterms:nonExistent", catalog);
-
-            assertThat(value).isInstanceOf(List.class);
-            assertThat((List<?>) value).isEmpty();
-        }
-    }
-
-    @Nested
-    @DisplayName("resolveElement — list branch (element is a List, resolves property recursively for each item)")
-    class ResolveElementListBranch {
-
-        @Test
-        @DisplayName("Should resolve property from nested list of @value maps: datasets.properties.dcterms:subject")
-        void getFieldValue_listOfValueMaps() {
-            // dcterms:subject is a List of @value maps — resolveElement iterates and unwraps each
-            var value = DseReflectionUtil.getFieldValue("datasets.properties.dcterms:subject", catalog);
-
-            assertThat(value).isInstanceOf(List.class);
-            assertThat((List<String>) value).contains("booking", "travel", "order");
-        }
-
-        @Test
-        @DisplayName("Should resolve property through nested lists: datasets.properties.dcat:distribution.dcat:accessURL")
-        void getFieldValue_listOfListsProperty() {
-            // dcat:distribution is a List of Maps, each containing dcat:accessURL which is also a List
-            var value = DseReflectionUtil.getFieldValue("datasets.properties.dcat:distribution.dcat:accessURL", catalog);
-
-            assertThat(value).isInstanceOf(List.class);
-            assertThat((List<String>) value).contains(
-                    "https://api.example.com/orders",
-                    "https://api.example.com/orders/stream"
-            );
-        }
-
-        @Test
-        @DisplayName("Should resolve inner list property for each dataset: datasets.properties.dcterms:description")
-        void getFieldValue_listWithSingleElementLists() {
-            // Each dataset has dcterms:description as a single-element list — resolveElement iterates each
-            var value = DseReflectionUtil.getFieldValue("datasets.properties.dcterms:description", catalog);
-
-            assertThat(value).isInstanceOf(List.class);
-            assertThat((List<String>) value).containsExactly(
-                    "An event emitted when an order is created",
-                    "Real-time flight availability and pricing"
-            );
-        }
-
-        @Test
-        @DisplayName("Should flatten nested list results: datasets.properties.dcat:distribution.dcat:byteSize")
-        void getFieldValue_flattenNestedListResults() {
-            // Each distribution has dcat:byteSize as a @value map — resolveElement iterates distributions
-            var value = DseReflectionUtil.getFieldValue("datasets.properties.dcat:distribution.dcat:byteSize", catalog);
-
-            assertThat(value).isInstanceOf(List.class);
-            var unwrapped = ((List<Map<?, ?>>) value).stream().map(m -> m.get("@value")).toList();
-            assertThat(unwrapped).isEqualTo(List.of("2048", "4096"));
-        }
-
-        @Test
-        @DisplayName("Should return empty list when property does not exist in any dataset: datasets.properties.dcterms:nonExistent")
-        void getFieldValue_missingPropertyInList() {
-            var value = DseReflectionUtil.getFieldValue("datasets.properties.dcterms:nonExistent", catalog);
-
-            assertThat(value).isInstanceOf(List.class);
-            assertThat((List<?>) value).isEmpty();
-        }
-    }
-
-    @Nested
-    @DisplayName("Array indexer — field[n] syntax to access specific element in a list")
-    class ArrayIndexerAccess {
-
-        @Test
-        @DisplayName("Should access first dataset by index: datasets[0]")
-        void getFieldValue_firstDatasetByIndex() {
-            Object value = DseReflectionUtil.getFieldValue("datasets[0]", catalog);
-
-            assertThat(value).isNotNull();
-            assertThat(value).isInstanceOf(Dataset.class);
-            assertThat(((Dataset) value).getId()).isEqualTo("urn:dataset:order-event");
-        }
-
-        @Test
-        @DisplayName("Should access second dataset by index: datasets[1]")
-        void getFieldValue_secondDatasetByIndex() {
-            Object value = DseReflectionUtil.getFieldValue("datasets[1]", catalog);
-
-            assertThat(value).isNotNull();
-            assertThat(value).isInstanceOf(Dataset.class);
-            assertThat(((Dataset) value).getId()).isEqualTo("urn:dataset:flight-offer");
-        }
-
-        @Test
-        @DisplayName("Should access dataset id via index and dot notation: datasets[0].id")
-        void getFieldValue_indexedThenField() {
-            String value = DseReflectionUtil.getFieldValue("datasets[0].id", catalog);
-
-            assertThat(value).isEqualTo("urn:dataset:order-event");
-        }
-
-        @Test
-        @DisplayName("Should access nested property via index: datasets[0].properties.dcterms:title")
-        void getFieldValue_indexedThenNestedProperty() {
-            Object value = DseReflectionUtil.getFieldValue("datasets[0].properties.dcterms:title", catalog);
+        @DisplayName("properties.'dc/terms/title' = Order Created Event")
+        void title() {
+            Object value = DseReflectionUtil.getFieldValue("properties.'http://purl.org/dc/terms/title'", dataset1);
 
             assertThat(value).isEqualTo("Order Created Event");
         }
 
         @Test
-        @DisplayName("Should access element from a list property via index: datasets[0].properties.dcterms:subject[0]")
-        void getFieldValue_indexOnNestedListProperty() {
-            Object value = DseReflectionUtil.getFieldValue("datasets[0].properties.dcterms:subject[0]", catalog);
+        @DisplayName("properties.'dc/terms/type' = EVENT")
+        void type() {
+            Object value = DseReflectionUtil.getFieldValue("properties.'http://purl.org/dc/terms/type'", dataset1);
 
-            assertThat(value).isInstanceOf(Map.class);
-            assertThat(((Map<?, ?>) value).get("@value")).isEqualTo("booking");
+            assertThat(value).isEqualTo("EVENT");
         }
 
         @Test
-        @DisplayName("Should access deep path via index: datasets[0].properties.dcterms:test.dcterms:data")
-        void getFieldValue_indexedThenDeepPath() {
-            var value = DseReflectionUtil.getFieldValue("datasets[0].properties.dcterms:test.dcterms:data", catalog);
+        @DisplayName("properties.'dcat#keyword' = BUSINESS")
+        void keyword() {
+            Object value = DseReflectionUtil.getFieldValue("properties.'http://www.w3.org/ns/dcat#keyword'", dataset1);
 
-            assertThat(value).isInstanceOf(List.class);
-            assertThat((List<?>) value).isNotEmpty();
+            assertThat(value).isEqualTo("BUSINESS");
         }
 
         @Test
-        @DisplayName("Should access second dataset title via index: datasets[1].properties.dcterms:title")
-        void getFieldValue_secondDatasetTitle() {
-            Object value = DseReflectionUtil.getFieldValue("datasets[1].properties.dcterms:title", catalog);
+        @DisplayName("properties.'edc/.../id' matches the dataset's own id")
+        void edcId() {
+            Object value = DseReflectionUtil.getFieldValue("properties.'https://w3id.org/edc/v0.0.1/ns/id'", dataset1);
 
-            assertThat(value).isEqualTo("Flight Offer Data");
+            assertThat(value).isEqualTo("https://test.platform.api.amadeus.com/content-management/content-definitions/order-created-event");
         }
 
         @Test
-        @DisplayName("Should throw IndexOutOfBoundsException for out-of-range index: datasets[99]")
-        void getFieldValue_indexOutOfBounds() {
-            assertThatThrownBy(() -> DseReflectionUtil.getFieldValue("datasets[99]", catalog))
-                    .isInstanceOf(IndexOutOfBoundsException.class);
-        }
-    }
+        @DisplayName("properties.'edc/.../createdAt' and 'edc/.../updatedAt' are plain timestamp strings")
+        void timestamps() {
+            Object createdAt = DseReflectionUtil.getFieldValue("properties.'https://w3id.org/edc/v0.0.1/ns/createdAt'", dataset1);
+            Object updatedAt = DseReflectionUtil.getFieldValue("properties.'https://w3id.org/edc/v0.0.1/ns/updatedAt'", dataset1);
 
-    @Nested
-    @DisplayName("Coverage — resolveElement list branch and null/error paths")
-    class CoverageEdgeCases {
-
-        @Test
-        @DisplayName("Should resolve property from element that is a nested list (dcterms:keywords contains lists)")
-        void getFieldValue_elementIsList() {
-            // dcterms:keywords is a list of lists — resolveElement's List branch iterates inner lists
-            var value = DseReflectionUtil.getFieldValue("datasets[0].properties.dcterms:keywords", catalog);
-
-            assertThat(value).isInstanceOf(List.class);
-            assertThat((List<?>) value).hasSize(2);
+            assertThat(createdAt).isEqualTo("2026-07-23T15:38:16.224Z");
+            assertThat(updatedAt).isEqualTo("2026-07-08T13:31:02.821203588Z");
         }
 
         @Test
-        @DisplayName("Should traverse list of lists and resolve @value: datasets[0].properties.dcterms:relatedSets.@value")
-        void getFieldValue_listOfListsResolveProperty() {
-            // dcterms:relatedSets is [[{@value:set-a1},{@value:set-a2}],[{@value:set-b1},{@value:set-b2}]]
-            // Accessing .@value triggers resolveElement with each inner List element,
-            // which hits the `element instanceof List` branch in resolveElement
-            var value = DseReflectionUtil.getFieldValue("datasets[0].properties.dcterms:relatedSets.@value", catalog);
+        @DisplayName("properties.'dc/terms/description' and 'dc/terms/issued' are present")
+        void descriptionAndIssued() {
+            Object description = DseReflectionUtil.getFieldValue("properties.'http://purl.org/dc/terms/description'", dataset1);
+            Object issued = DseReflectionUtil.getFieldValue("properties.'http://purl.org/dc/terms/issued'", dataset1);
 
-            assertThat(value).isInstanceOf(List.class);
-            assertThat((List<String>) value).contains("set-a1", "set-a2", "set-b1", "set-b2");
+            assertThat(description).isEqualTo("Event emitted when a new order is created in the order management system. Contains complete order details including items, customer information, and payment status.");
+            assertThat(issued).isEqualTo("2023-11-19");
         }
 
         @Test
-        @DisplayName("Should return null when intermediate path resolves to null: datasets[0].properties.dcterms:nullableRef.dcterms:inner.something")
-        void getFieldValue_nullIntermediatePath() {
-            // dcterms:nullableRef.dcterms:inner is null, so traversing deeper should return null
-            var value = DseReflectionUtil.getFieldValue("datasets[0].properties.dcterms:nullableRef.dcterms:inner.something", catalog);
+        @DisplayName("properties.'dc/terms/description' is absent on dataset2 (returns null)")
+        void descriptionIsAbsentOnDataset2() {
+            Object value = DseReflectionUtil.getFieldValue("properties.'http://purl.org/dc/terms/description'", dataset2);
 
             assertThat(value).isNull();
         }
 
         @Test
-        @DisplayName("Should throw ReflectionException when field does not exist on object")
-        void getFieldValue_fieldNotExistOnObject() {
-            // Accessing a non-existent field directly on catalog (not via Map) throws ReflectionException
-            assertThatThrownBy(() -> DseReflectionUtil.getFieldValue("nonExistentField", catalog))
-                    .isInstanceOf(org.eclipse.edc.util.reflection.ReflectionException.class);
+        @DisplayName("properties.'dc/terms/test'.'dc/terms/data' unwraps a nested @value list to a plain String")
+        void nestedValueUnwrap() {
+            Object value = DseReflectionUtil.getFieldValue(
+                    "properties.'http://purl.org/dc/terms/test'.'http://purl.org/dc/terms/data'", dataset1);
+
+            assertThat(value).isInstanceOf(List.class);
+            assertThat((List<String>) value).containsExactly("fake");
+        }
+
+        @Test
+        @DisplayName("properties.'dcat#hasVersion.@id' collects two version @id references")
+        void hasVersionIds() {
+            Object value = DseReflectionUtil.getFieldValue("properties.'http://www.w3.org/ns/dcat#hasVersion'.'@id'", dataset1);
+
+            assertThat(value).isInstanceOf(List.class);
+            assertThat((List<String>) value).containsExactly(
+                    "urn:amadeus:platform:content-management:nevio:content-definitions:order-created-event:versions:v1.0.0",
+                    "urn:amadeus:platform:content-management:nevio:content-definitions:order-created-event:versions:v1.1.0"
+            );
+        }
+    }
+
+    @Nested
+    @DisplayName("properties.'dcat#qualifiedAttribution' — provenance attribution")
+    class QualifiedAttribution {
+
+        private static final String QUALIFIED_ATTRIBUTION_PATH = "properties.'http://www.w3.org/ns/prov#qualifiedAttribution'";
+
+        @Test
+        @DisplayName("agent.foaf:name unwraps to AF")
+        void agentName() {
+            Object value = DseReflectionUtil.getFieldValue(
+                    QUALIFIED_ATTRIBUTION_PATH + ".'http://www.w3.org/ns/prov#agent'.'foaf:name'", dataset1);
+
+            assertThat(value).isInstanceOf(List.class);
+            assertThat((List<String>) value).containsExactly("AF");
+        }
+
+        @Test
+        @DisplayName("hadRole.@id is present on dataset1")
+        void hadRolePresentOnDataset1() {
+            Object value = DseReflectionUtil.getFieldValue(
+                    QUALIFIED_ATTRIBUTION_PATH + ".'http://www.w3.org/ns/prov#hadRole'.'@id'", dataset1);
+
+            assertThat(value).isInstanceOf(List.class);
+            assertThat((List<String>) value).containsExactly("urn:amadeus:platform:content-management:role:owner");
+        }
+
+        @Test
+        @DisplayName("hadRole is absent on dataset2 (returns null, since qualifiedAttribution is a plain Map)")
+        void hadRoleAbsentOnDataset2() {
+            Object value = DseReflectionUtil.getFieldValue(
+                    QUALIFIED_ATTRIBUTION_PATH + ".'http://www.w3.org/ns/prov#hadRole'.'@id'", dataset2);
+
+            assertThat(value).isNull();
+        }
+    }
+
+    @Nested
+    @DisplayName("properties.'dcat#distribution' — differs in shape between datasets (Map vs List)")
+    class DistributionAccess {
+
+        private static final String DISTRIBUTION_PATH = "properties.'http://www.w3.org/ns/dcat#distribution'";
+
+        @Test
+        @DisplayName("dataset1 (single Map): accessService.@type resolves without an array indexer")
+        void dataset1_accessServiceType() {
+            Object value = DseReflectionUtil.getFieldValue(
+                    DISTRIBUTION_PATH + ".'http://www.w3.org/ns/dcat#accessService'.'@type'", dataset1);
+
+            assertThat(value).isInstanceOf(List.class);
+            assertThat((List<String>) value).containsExactly("http://www.w3.org/ns/dcat#DataService");
+        }
+
+        @Test
+        @DisplayName("dataset1 (single Map): accessService.conformsTo.title unwraps a deeply nested @value")
+        void dataset1_conformsToTitle() {
+            Object value = DseReflectionUtil.getFieldValue(
+                    DISTRIBUTION_PATH + ".'http://www.w3.org/ns/dcat#accessService'.'http://purl.org/dc/terms/conformsTo'.'http://purl.org/dc/terms/title'",
+                    dataset1);
+
+            assertThat(value).isInstanceOf(List.class);
+            assertThat((List<String>) value).containsExactly("Binding Kafka-specific information on AsyncAPI");
+        }
+
+        @Test
+        @DisplayName("dataset1 (single Map): accessService.mediaType unwraps to the media type string")
+        void dataset1_mediaType() {
+            Object value = DseReflectionUtil.getFieldValue(
+                    DISTRIBUTION_PATH + ".'http://www.w3.org/ns/dcat#accessService'.'http://www.w3.org/ns/dcat#mediaType'", dataset1);
+
+            assertThat(value).isInstanceOf(List.class);
+            assertThat((List<String>) value).containsExactly("https://www.iana.org/assignments/media-types/application/json");
+        }
+
+        @Test
+        @DisplayName("dataset2 (List of 2): @type resolves across both distributions without an array indexer")
+        void dataset2_distributionType() {
+            Object value = DseReflectionUtil.getFieldValue(DISTRIBUTION_PATH + ".'@type'", dataset2);
+
+            assertThat(value).isInstanceOf(List.class);
+            assertThat((List<String>) value).containsExactly(
+                    "http://www.w3.org/ns/dcat#Distribution",
+                    "http://www.w3.org/ns/dcat#Distribution"
+            );
+        }
+
+        @Test
+        @DisplayName("dataset2 (List of 2): accessService.@id collects ids from both distributions")
+        void dataset2_accessServiceIds() {
+            Object value = DseReflectionUtil.getFieldValue(
+                    DISTRIBUTION_PATH + ".'http://www.w3.org/ns/dcat#accessService'.'@id'", dataset2);
+
+            assertThat(value).isInstanceOf(List.class);
+            assertThat((List<String>) value).containsExactly(
+                    "urn:amadeus:platform:content-management:nevio:content-distributions:booking-confirmed-event:kafka:service",
+                    "urn:amadeus:platform:content-management:nevio:content-distributions:booking-confirmed-event:http:service"
+            );
+        }
+
+        @Test
+        @DisplayName("dataset2 (List of 2): mediaType is present only on the first (Kafka) distribution")
+        void dataset2_mediaTypeOnlyOnFirstDistribution() {
+            Object value = DseReflectionUtil.getFieldValue(
+                    DISTRIBUTION_PATH + ".'http://www.w3.org/ns/dcat#accessService'.'http://www.w3.org/ns/dcat#mediaType'", dataset2);
+
+            assertThat(value).isInstanceOf(List.class);
+            assertThat((List<String>) value).containsExactly("application/json");
+        }
+    }
+
+    @Nested
+    @DisplayName("properties.'dcat#themeTaxonomy' — differs in shape between datasets (Map vs List)")
+    class ThemeTaxonomyAccess {
+
+        private static final String THEME_TAXONOMY_PATH = "properties.'http://www.w3.org/ns/dcat#themeTaxonomy'";
+        private static final String TOP_CONCEPT_KEY = "'http://www.w3.org/2004/02/skos/core#hasTopConcept'";
+        private static final String PREF_LABEL_KEY = "'http://www.w3.org/2004/02/skos/core#prefLabel'";
+        private static final String NOTATION_KEY = "'http://www.w3.org/2004/02/skos/core#notation'";
+        private static final String NARROWER_KEY = "'http://www.w3.org/2004/02/skos/core#narrower'";
+
+        @Test
+        @DisplayName("dataset1 (single Map): title unwraps to Enterprise Domain Taxonomy")
+        void dataset1_title() {
+            Object value = DseReflectionUtil.getFieldValue(THEME_TAXONOMY_PATH + ".'http://purl.org/dc/terms/title'", dataset1);
+
+            assertThat(value).isInstanceOf(List.class);
+            assertThat((List<String>) value).containsExactly("Enterprise Domain Taxonomy");
+        }
+
+        @Test
+        @DisplayName("dataset1 (single Map): hasTopConcept.prefLabel = Airline Order")
+        void dataset1_topConceptPrefLabel() {
+            Object value = DseReflectionUtil.getFieldValue(
+                    THEME_TAXONOMY_PATH + "." + TOP_CONCEPT_KEY + "." + PREF_LABEL_KEY, dataset1);
+
+            assertThat(value).isInstanceOf(List.class);
+            assertThat((List<String>) value).containsExactly("Airline Order");
+        }
+
+        @Test
+        @DisplayName("dataset1 (single Map): hasTopConcept.notation = 50")
+        void dataset1_topConceptNotation() {
+            Object value = DseReflectionUtil.getFieldValue(
+                    THEME_TAXONOMY_PATH + "." + TOP_CONCEPT_KEY + "." + NOTATION_KEY, dataset1);
+
+            assertThat(value).isInstanceOf(List.class);
+            assertThat((List<String>) value).containsExactly("50");
+        }
+
+        @Test
+        @DisplayName("dataset1 (single Map): hasTopConcept.narrower.prefLabel = Order Management System")
+        void dataset1_narrowerConceptPrefLabel() {
+            Object value = DseReflectionUtil.getFieldValue(
+                    THEME_TAXONOMY_PATH + "." + TOP_CONCEPT_KEY + "." + NARROWER_KEY + "." + PREF_LABEL_KEY, dataset1);
+
+            assertThat(value).isInstanceOf(List.class);
+            assertThat((List<String>) value).containsExactly("Order Management System");
+        }
+
+        @Test
+        @DisplayName("dataset2 (List of 2): title collects titles from both taxonomies without an array indexer")
+        void dataset2_title() {
+            Object value = DseReflectionUtil.getFieldValue(THEME_TAXONOMY_PATH + ".'http://purl.org/dc/terms/title'", dataset2);
+
+            assertThat(value).isInstanceOf(List.class);
+            assertThat((List<String>) value).containsExactly("Booking Domain Taxonomy", "Payments Domain Taxonomy");
+        }
+
+        @Test
+        @DisplayName("dataset2 (List of 2): hasTopConcept.prefLabel collects labels from both taxonomies")
+        void dataset2_topConceptPrefLabel() {
+            Object value = DseReflectionUtil.getFieldValue(
+                    THEME_TAXONOMY_PATH + "." + TOP_CONCEPT_KEY + "." + PREF_LABEL_KEY, dataset2);
+
+            assertThat(value).isInstanceOf(List.class);
+            assertThat((List<String>) value).containsExactly("Booking Management", "Payment Processing");
+        }
+
+        @Test
+        @DisplayName("dataset2 (List of 2): hasTopConcept.notation collects notations from both taxonomies")
+        void dataset2_topConceptNotation() {
+            Object value = DseReflectionUtil.getFieldValue(
+                    THEME_TAXONOMY_PATH + "." + TOP_CONCEPT_KEY + "." + NOTATION_KEY, dataset2);
+
+            assertThat(value).isInstanceOf(List.class);
+            assertThat((List<String>) value).containsExactly("60", "70");
+        }
+
+        @Test
+        @DisplayName("dataset2: hasTopConcept.narrower is absent on both taxonomies (returns empty list)")
+        void dataset2_narrowerIsAbsent() {
+            Object value = DseReflectionUtil.getFieldValue(
+                    THEME_TAXONOMY_PATH + "." + TOP_CONCEPT_KEY + "." + NARROWER_KEY, dataset2);
+
+            assertThat(value).isInstanceOf(List.class);
+            assertThat((List<?>) value).isEmpty();
+        }
+    }
+
+    @Nested
+    @DisplayName("Error and edge cases — closes remaining DseReflectionUtil branch coverage")
+    class ErrorAndEdgeCases {
+
+        @Test
+        @DisplayName("Null propertyName argument throws NullPointerException")
+        void nullPropertyName_throwsNpe() {
+            assertThatThrownBy(() -> DseReflectionUtil.getFieldValue(null, dataset1))
+                    .isInstanceOf(NullPointerException.class);
+        }
+
+        @Test
+        @DisplayName("Null object argument throws NullPointerException")
+        void nullObject_throwsNpe() {
+            assertThatThrownBy(() -> DseReflectionUtil.getFieldValue("properties.'http://purl.org/dc/terms/title'", null))
+                    .isInstanceOf(NullPointerException.class);
+        }
+
+        @Test
+        @DisplayName("Missing property key returns null")
+        void missingPropertyKey_returnsNull() {
+            Object value = DseReflectionUtil.getFieldValue("properties.'http://purl.org/dc/terms/doesNotExist'", dataset1);
+
+            assertThat(value).isNull();
+        }
+
+        @Test
+        @DisplayName("Non-existent field on the Dataset object throws ReflectionException")
+        void nonExistentFieldOnObject_throwsReflectionException() {
+            assertThatThrownBy(() -> DseReflectionUtil.getFieldValue("nonExistentField", dataset1))
+                    .isInstanceOf(ReflectionException.class);
+        }
+
+        @Test
+        @DisplayName("Array indexer out of bounds throws IndexOutOfBoundsException")
+        void arrayIndexerOnNonList_throws() {
+            assertThatThrownBy(() -> DseReflectionUtil.getFieldValue("properties.'http://www.w3.org/ns/dcat#hasVersion'[99]", dataset1))
+                    .isInstanceOf(IndexOutOfBoundsException.class);
+        }
+
+        @Test
+        @DisplayName("Array indexer: properties.'dcat#hasVersion'[0].'@id' resolves the first version reference by index")
+        void arrayIndexer_resolvesElementThenNestedPath() {
+            Object value = DseReflectionUtil.getFieldValue(
+                    "properties.'http://www.w3.org/ns/dcat#hasVersion'[0].'@id'", dataset1);
+
+            assertThat(value).isEqualTo("urn:amadeus:platform:content-management:nevio:content-definitions:order-created-event:versions:v1.0.0");
+        }
+
+        @Test
+        @DisplayName("Null intermediate path segment short-circuits to null instead of traversing further")
+        void nullIntermediatePathSegment_shortCircuitsToNull() {
+            Object value = DseReflectionUtil.getFieldValue(
+                    "properties.'http://purl.org/dc/terms/doesNotExist'.'http://purl.org/dc/terms/deeper'", dataset1);
+
+            assertThat(value).isNull();
+        }
+
+        @Test
+        @DisplayName("List-of-lists: resolveElement's List branch is exercised via a minimal hand-built structure")
+        void listOfLists_resolvesElementRecursively() {
+            // dcat:themeTaxonomy is never a list-of-lists in the fixture; this minimal structure
+            // covers resolveElement's `element instanceof List` branch directly.
+            var innerList = List.<Object>of(Map.of("@value", "first"), Map.of("@value", "second"));
+            var data = Map.<String, Object>of("outer", List.of(innerList));
+
+            Object value = DseReflectionUtil.getFieldValue("outer.@value", data);
+
+            assertThat(value).isInstanceOf(List.class);
+            assertThat((List<String>) value).containsExactly("first", "second");
         }
     }
 }

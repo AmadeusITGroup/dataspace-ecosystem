@@ -1,9 +1,13 @@
 package org.eclipse.edc.test.system;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.restassured.RestAssured;
+import jakarta.json.Json;
 import jakarta.json.JsonArray;
 import jakarta.json.JsonObject;
 import jakarta.json.JsonValue;
+
+import static io.restassured.RestAssured.given;
 import org.eclipse.edc.jsonld.JsonLdExtension;
 import org.eclipse.edc.jsonld.spi.JsonLd;
 import org.eclipse.edc.jsonld.util.JacksonJsonLd;
@@ -47,6 +51,62 @@ public class AbstractEndToEndTests {
                 });
 
         return datasets.get();
+    }
+
+    /**
+     * Queries the federated catalog directly (authority's {@code /v1alpha/catalog/query}) with a
+     * full {@code QuerySpec} body supporting {@code filterExpression}, {@code sortField},
+     * {@code sortOrder}, {@code offset}, and {@code limit}.
+     *
+     * <p>The returned list contains the flat dataset JSON objects extracted from the
+     * response catalogs (all catalogs are flattened into a single dataset list).</p>
+     *
+     * <p>Retries up to {@link #TEST_TIMEOUT} so that the FC crawler has time to crawl
+     * new assets before the assertion is evaluated.</p>
+     *
+     * @param catalogQueryUrl the full URL of the authority's catalog query endpoint,
+     *                        typically {@code AUTHORITY.catalogUrl() + "/v1alpha/catalog/query"}
+     * @param querySpec       JSON body with filter / sort / pagination fields
+     * @param expectedCount   minimum number of datasets expected (used as the await condition)
+     */
+    protected List<JsonObject> queryCatalogWithFilter(String catalogQueryUrl,
+                                                      jakarta.json.JsonObject querySpec,
+                                                      int expectedCount) {
+        AtomicReference<List<JsonObject>> result = new AtomicReference<>(List.of());
+        await().atMost(TEST_TIMEOUT)
+                .pollInterval(TEST_POLL_INTERVAL)
+                .untilAsserted(() -> {
+                    var body = given()
+                            .baseUri(catalogQueryUrl)
+                            .contentType("application/json")
+                            .body(querySpec.toString())
+                            .when()
+                            .post()
+                            .then()
+                            .statusCode(200)
+                            .extract().body().asString();
+
+                    jakarta.json.JsonArray catalogs;
+                    try (var reader = Json.createReader(new java.io.StringReader(body))) {
+                        catalogs = reader.readArray();
+                    }
+                    var datasets = catalogs.stream()
+                            .map(JsonValue::asJsonObject)
+                            .flatMap(catalog -> {
+                                var ds = catalog.get("dcat:dataset");
+                                if (ds == null) ds = catalog.get("dataset");
+                                if (ds == null) return java.util.stream.Stream.empty();
+                                if (ds instanceof JsonArray arr) {
+                                    return arr.stream().map(JsonValue::asJsonObject);
+                                }
+                                return java.util.stream.Stream.of(ds.asJsonObject());
+                            })
+                            .toList();
+
+                    assertThat(datasets).hasSizeGreaterThanOrEqualTo(expectedCount);
+                    result.set(datasets);
+                });
+        return result.get();
     }
 
     protected String negotiationContractAndStartTransfer(AbstractParticipant consumer, AbstractParticipant provider, String assetId) {
