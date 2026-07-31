@@ -211,6 +211,12 @@ spec:
           value: {{.Values.issuerservice.did.web.useHttps | required ".Values.issuerservice.did.web.useHttps is required" | quote}}
         - name: "EDC_ISSUER_STATUSLIST_SIGNING_KEY_ALIAS"
           value: {{.Values.issuerservice.keys.statuslist.privateKeyAlias | required ".Values.issuerservice.keys.statuslist.privateKeyAlias is required" | quote}}
+        {{- with .Values.issuerservice.statuslist}}
+        {{- if .callbackAddress}}
+        - name: "EDC_STATUSLIST_CALLBACK_ADDRESS"
+          value: {{.callbackAddress | quote}}
+        {{- end}}
+        {{- end}}
 
         #######
         # API #

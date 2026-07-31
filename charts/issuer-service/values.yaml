@@ -78,6 +78,18 @@ issuerservice:
       # -- path for incoming api calls
       path: /api/statuslist
 
+  # -- status list configuration
+  statuslist:
+    # -- Address advertised in the `credentialStatus.statusListCredential` field of every issued
+    # verifiable credential. Consumers resolve this URL to perform the revocation check, so it must
+    # be reachable from other participants' connectors.
+    # The in-cluster address (service name + statuslist port) is not always routable: non-standard
+    # ports may be blocked by NetworkPolicy. In that case set this to the externally reachable
+    # ingress address, e.g.
+    # "https://<release>-issuerservice-<namespace>.app.<cluster>.example.com/api/statuslist".
+    # When left empty, no explicit address is set and the runtime default applies.
+    callbackAddress: ""
+
   # -- api configuration
   api:
     cors:
