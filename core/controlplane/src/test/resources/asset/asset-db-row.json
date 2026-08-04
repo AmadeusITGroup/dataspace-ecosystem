@@ -1,0 +1,34 @@
+{
+  "asset_id": "hello-eonax-v4",
+  "created_at": 1785420688317,
+  "properties": {
+    "http://www.w3.org/ns/dcat#name": "Bharath1",
+    "https://w3id.org/edc/v0.0.1/ns/createdAt": "2026-07-30T14:11:28.317Z",
+    "http://www.w3.org/ns/dcat#theme": {
+      "http://purl.org/dc/terms/name": [
+        {
+          "@value": "order"
+        }
+      ],
+      "http://purl.org/dc/terms/sub": [
+        {
+          "http://purl.org/dc/terms/name": [
+            {
+              "@value": "airline"
+            }
+          ]
+        }
+      ]
+    },
+    "https://w3id.org/edc/v0.0.1/ns/updatedAt": "2026-07-30T14:35:00.364603642Z",
+    "https://w3id.org/edc/v0.0.1/ns/id": "hello-eonax-v4"
+  },
+  "private_properties": {},
+  "data_address": {
+    "https://w3id.org/edc/v0.0.1/ns/proxyPath": "true",
+    "https://w3id.org/edc/v0.0.1/ns/type": "HttpData",
+    "https://w3id.org/edc/v0.0.1/ns/baseUrl": "https://jsonplaceholder.typicode.com/"
+  },
+  "participant_context_id": "did:web:provider-identityhub%3A8383:api:did",
+  "dataplane_metadata": null
+}

@@ -2,6 +2,7 @@ rootProject.name = "dataspace-ecosystem"
 
 include(":core")
 include(":core:common")
+include(":core:controlplane")
 include(":core:telemetry-agent-core")
 include(":core:telemetry-service-core")
 include(":core:common:telemetry-record-store")
@@ -28,6 +29,7 @@ include(":extensions:data-plane:data-plane-public-api-v2")
 include(":extensions:data-plane:data-plane-data-consumption-metrics")
 
 include(":extensions:control-plane:asset-custom-property-subscriber")
+include(":extensions:control-plane:asset-property-lookup")
 include(":extensions:control-plane:transfer-data-plane-signal-kafka")
 include(":extensions:control-plane:control-plane-federated-catalog-filter")
 
