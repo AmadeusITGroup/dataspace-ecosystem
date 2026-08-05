@@ -17,9 +17,6 @@ package org.eclipse.edc.dse.common.lib;
 import org.eclipse.edc.spi.query.PropertyLookup;
 import org.eclipse.edc.util.reflection.ReflectionException;
 
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
 /**
  * Generic {@link PropertyLookup} backed by {@link DseReflectionUtil}.
  *
@@ -29,16 +26,12 @@ import java.util.logging.Logger;
  */
 public class DsePropertyLookup implements PropertyLookup {
 
-    private static final Logger LOGGER = Logger.getLogger(DsePropertyLookup.class.getName());
-
     @Override
     public Object getProperty(String key, Object object) {
         try {
             return DseReflectionUtil.getFieldValue(key, object);
         } catch (ReflectionException e) {
-            LOGGER.log(Level.FINE, "Could not resolve property ''{0}'' on object type {1}",
-                    new Object[] { key, object.getClass().getName() });
-            LOGGER.log(Level.FINER, "Property resolution failure details", e);
+            // normal fallback — next registered PropertyLookup will be tried
             return null;
         }
     }

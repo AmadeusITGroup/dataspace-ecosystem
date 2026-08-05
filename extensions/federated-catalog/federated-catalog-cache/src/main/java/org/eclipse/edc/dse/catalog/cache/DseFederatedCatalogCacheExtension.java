@@ -17,7 +17,6 @@ import org.eclipse.edc.catalog.spi.FederatedCatalogCache;
 import org.eclipse.edc.dse.common.lib.DsePropertyLookup;
 import org.eclipse.edc.query.CriterionOperatorRegistryImpl;
 import org.eclipse.edc.runtime.metamodel.annotation.Extension;
-import org.eclipse.edc.runtime.metamodel.annotation.Inject;
 import org.eclipse.edc.runtime.metamodel.annotation.Provider;
 import org.eclipse.edc.spi.query.CriterionOperatorRegistry;
 import org.eclipse.edc.spi.system.ServiceExtension;
@@ -41,6 +40,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 public class DseFederatedCatalogCacheExtension implements ServiceExtension {
 
     public static final String EXTENSION_NAME = "DSE Federated Catalog Cache";
+    public static final String IN = "in";
 
     @Override
     public String name() {
@@ -50,6 +50,7 @@ public class DseFederatedCatalogCacheExtension implements ServiceExtension {
     public FederatedCatalogCache federatedCatalogCache() {
         var criterionOperatorRegistry = CriterionOperatorRegistryImpl.ofDefaults();
         criterionOperatorRegistry.registerPropertyLookup(new DsePropertyLookup());
+        criterionOperatorRegistry.registerOperatorPredicate(IN, DseInOperatorPredicate.in());
         var lockManager = new LockManager(new ReentrantReadWriteLock());
         var queryResolver = new DatasetAwareQueryResolver(criterionOperatorRegistry);
         return new CustomFederatedCatalogCache(lockManager, queryResolver);

@@ -160,6 +160,31 @@ class DseReflectionUtilTest {
         }
 
         @Test
+        @DisplayName("direct map key returns list values unwrapped via unwrapMapValue list branch")
+        void directMapKey_listValue_unwrappedViaFlatten() {
+            // A property stored as a List of {@value} maps is unwrapped to a List of plain strings
+            var dataset = Dataset.Builder.newInstance()
+                    .id("ds-direct")
+                    .property("dcat:theme", List.of(
+                            Map.of("@value", "theme1"),
+                            Map.of("@value", "theme2")
+                    ))
+                    .build();
+
+            Object value = DseReflectionUtil.getFieldValue("properties.'dcat:theme'", dataset);
+
+            assertThat(value).isInstanceOf(List.class);
+            assertThat((List<String>) value).containsExactly("theme1", "theme2");
+        }
+
+        @Test
+        @DisplayName("missing property key returns null, not exception")
+        void missingKey_returnsNull() {
+            Object value = DseReflectionUtil.getFieldValue("properties.'no-such-key'", dataset1);
+            assertThat(value).isNull();
+        }
+
+        @Test
         @DisplayName("properties.'dc/terms/test'.'dc/terms/data' unwraps a nested @value list to a plain String")
         void nestedValueUnwrap() {
             Object value = DseReflectionUtil.getFieldValue(

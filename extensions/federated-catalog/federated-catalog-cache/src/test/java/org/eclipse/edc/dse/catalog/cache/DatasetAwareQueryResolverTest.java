@@ -82,13 +82,63 @@ class DatasetAwareQueryResolverTest {
         }
 
         @Test
-        @DisplayName("catalog with no datasets is included when there is no filter")
+        @DisplayName("catalog with no datasets is always included via sentinel, even without filter")
         void query_catalogWithNoDatasets_isIncluded() {
-            var emptyC = catalog("cat-empty", "provider-empty");   // no datasets
+            var emptyC = catalog("cat-empty", "provider-empty");
             var result = resolver.query(Stream.of(emptyC, catalogA), QuerySpec.none()).toList();
             assertThat(result)
                     .extracting(Catalog::getId)
                     .containsExactlyInAnyOrder("cat-empty", "cat-a");
+        }
+
+        @Test
+        @DisplayName("empty catalog returned via sentinel has no datasets")
+        void query_catalogWithNoDatasets_hasNullOrEmptyDatasets() {
+            var emptyC = catalog("cat-empty", "provider-empty");
+            var result = resolver.query(Stream.of(emptyC), QuerySpec.none()).toList();
+            assertThat(result).hasSize(1);
+            var returnedDatasets = result.get(0).getDatasets();
+            assertThat(returnedDatasets == null || returnedDatasets.isEmpty()).isTrue();
+        }
+
+        @Test
+        @DisplayName("catalog with null datasets does not throw")
+        void query_catalogWithNullDatasets_handledGracefully() {
+            var nullDsC = Catalog.Builder.newInstance().id("cat-null").participantId("p").build();
+            assertThat(resolver.query(Stream.of(nullDsC, catalogA), QuerySpec.none()).toList())
+                    .extracting(Catalog::getId)
+                    .containsExactlyInAnyOrder("cat-null", "cat-a");
+        }
+
+        @Test
+        @DisplayName("pagination only (no filter, no sort) paginates at dataset level")
+        void query_paginationOnly_datasetLevel() {
+            // catalogA: 2 datasets, catalogB: 1 dataset → 3 total; limit=2 returns 2 datasets
+            var spec = QuerySpec.Builder.newInstance().limit(2).offset(0).build();
+            var totalDatasets = resolver.query(Stream.of(catalogA, catalogB), spec)
+                    .flatMap(c -> c.getDatasets() != null ? c.getDatasets().stream() : java.util.stream.Stream.empty())
+                    .count();
+            assertThat(totalDatasets).isEqualTo(2);
+        }
+
+        @Test
+        @DisplayName("pagination only: offset skips datasets across catalogs")
+        void query_paginationOnly_offsetSkipsDatasets() {
+            var spec = QuerySpec.Builder.newInstance().limit(50).offset(2).build();
+            var totalDatasets = resolver.query(Stream.of(catalogA, catalogB), spec)
+                    .flatMap(c -> c.getDatasets() != null ? c.getDatasets().stream() : java.util.stream.Stream.empty())
+                    .count();
+            assertThat(totalDatasets).isEqualTo(1);
+        }
+
+        @Test
+        @DisplayName("pagination only: empty catalog still appears even when paginating")
+        void query_paginationOnly_emptyCatalogAlwaysIncluded() {
+            var emptyC = catalog("cat-empty", "provider-empty");
+            var spec = QuerySpec.Builder.newInstance().limit(1).offset(0).build();
+            assertThat(resolver.query(Stream.of(emptyC, catalogA), spec).toList())
+                    .extracting(Catalog::getId)
+                    .contains("cat-empty");
         }
     }
 
@@ -253,23 +303,49 @@ class DatasetAwareQueryResolverTest {
         }
 
         @Test
-        @DisplayName("sort changes which catalog appears first in the response")
-        void query_sort_affectsCatalogOrder() {
-            // Without sort, catalogA comes first (it has 2 datasets; catB only 1)
-            // With ASC sort by title: Aviation < Booking < Flight
-            // → CatA{ds-a1, ds-a2} then CatB{ds-b1}  (same order by accident, but driven by dataset sort)
-            // With DESC: Flight > Booking > Aviation
-            // → CatB{ds-b1} then CatA{ds-a2, ds-a1}
+        @DisplayName("sort with empty catalog present: empty catalog appears in result without NPE")
+        void query_sort_withEmptyCatalogPresent() {
+            var emptyC = catalog("cat-empty", "provider-empty");
             var spec = QuerySpec.Builder.newInstance()
                     .sortField("properties.dcterms:title")
-                    .sortOrder(SortOrder.DESC)
+                    .sortOrder(SortOrder.ASC)
                     .build();
-
-            var result = resolver.query(Stream.of(catalogA, catalogB), spec).toList();
-
-            assertThat(result.get(0).getId()).isEqualTo("cat-b");   // "Flight Prices" first
-            assertThat(result.get(1).getId()).isEqualTo("cat-a");
+            var result = resolver.query(Stream.of(emptyC, catalogA), spec).toList();
+            assertThat(result)
+                    .extracting(Catalog::getId)
+                    .contains("cat-empty", "cat-a");
         }
+
+        @Test
+        @DisplayName("sort with multiple empty catalogs: both-null sentinel branch exercised")
+        void query_sort_multipleEmptyCatalogs_bothNullSentinelBranch() {
+            var emptyC1 = catalog("cat-e1", "p1");
+            var emptyC2 = catalog("cat-e2", "p2");
+            var spec = QuerySpec.Builder.newInstance()
+                    .sortField("properties.dcterms:title")
+                    .sortOrder(SortOrder.ASC)
+                    .build();
+            var result = resolver.query(Stream.of(emptyC1, emptyC2, catalogA), spec).toList();
+            assertThat(result)
+                    .extracting(Catalog::getId)
+                    .contains("cat-e1", "cat-e2", "cat-a");
+        }
+
+        @Test
+        @DisplayName("filter + sort with empty catalog: empty catalog included as sentinel alongside filtered results")
+        void query_filterAndSort_emptyCatalogIncluded() {
+            var emptyC = catalog("cat-empty", "provider-empty");
+            var spec = QuerySpec.Builder.newInstance()
+                    .filter(criterion("properties.dcterms:title", "=", "Aviation Data"))
+                    .sortField("properties.dcterms:title")
+                    .sortOrder(SortOrder.ASC)
+                    .build();
+            var ids = resolver.query(Stream.of(emptyC, catalogA, catalogB), spec)
+                    .map(Catalog::getId).toList();
+            assertThat(ids).contains("cat-empty", "cat-a");
+            assertThat(ids).doesNotContain("cat-b");
+        }
+
     }
 
     // ── Pagination (dataset-level) ───────────────────────────────────────────

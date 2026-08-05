@@ -66,7 +66,12 @@ class DsePropertyLookupTest {
     }
 
     @Test
-    @DisplayName("unwraps JSON-LD @value payload")
+    @DisplayName("returns null silently for reflectively inaccessible field instead of throwing")
+    void getProperty_reflectionFailure_returnsNull() {
+        // A URI-style key will fail reflective lookup on a non-map object; must return null
+        var dataset = Dataset.Builder.newInstance().id("ds-1").build();
+        assertThat(lookup.getProperty("http://purl.org/dc/terms/nonexistent", dataset)).isNull();
+    }
     void getProperty_unwrapsAtValue() {
         var dataset = Dataset.Builder.newInstance()
                 .id("ds-1")

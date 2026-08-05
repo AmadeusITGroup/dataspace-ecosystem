@@ -24,6 +24,8 @@ import org.eclipse.edc.spi.types.TypeManager;
 import org.eclipse.edc.transform.spi.TypeTransformerRegistry;
 import org.eclipse.edc.transform.transformer.edc.from.JsonObjectFromCriterionTransformer;
 import org.eclipse.edc.transform.transformer.edc.from.JsonObjectFromQuerySpecTransformer;
+import org.eclipse.edc.transform.transformer.edc.to.JsonObjectToCriterionTransformer;
+import org.eclipse.edc.transform.transformer.edc.to.JsonObjectToQuerySpecTransformer;
 import org.eclipse.edc.util.AuthorityCatalogFilterDidResolver;
 import org.eclipse.edc.util.FederatedCatalogService;
 import org.eclipse.edc.web.jersey.providers.jsonld.JerseyJsonLdInterceptor;

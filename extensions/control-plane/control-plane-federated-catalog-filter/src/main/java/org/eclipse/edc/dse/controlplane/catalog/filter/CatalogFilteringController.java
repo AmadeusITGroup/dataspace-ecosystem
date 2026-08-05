@@ -78,13 +78,12 @@ public class CatalogFilteringController implements FederatedCatalogFilteringApiV
     @POST
     @Path("/query")
     @Override
-    public Response fetchCatalog(JsonObject catalogQuery) {
+    public Response fetchCatalog(QuerySpec querySpec) {
         Result<String> catalogFilterUrlResult = authorityCatalogDidResolver.fetchCatalogFilterUrl();
         if (catalogFilterUrlResult.failed()) {
             throw new EdcException("Could not resolve authority catalog filter url: " +
                     catalogFilterUrlResult.getFailureMessages());
         }
-        QuerySpec querySpec = transformToQuerySpec(catalogQuery);
         String catalogFilterUrl = catalogFilterUrlResult.getContent();
         String filteredCatalog = null;
         List<String> scopes = List.of(READ_ALL_CREDENTIAL_SCOPE);
@@ -123,10 +122,6 @@ public class CatalogFilteringController implements FederatedCatalogFilteringApiV
             return Response.ok(filteredCatalog).build();
         }
         return Response.status(500).build();
-    }
-
-    private QuerySpec transformToQuerySpec(JsonObject catalogQuery) {
-        return catalogQuery != null ? transformerRegistry.transform(catalogQuery, QuerySpec.class).orElseThrow(InvalidRequestException::new) : null;
     }
 
 }
