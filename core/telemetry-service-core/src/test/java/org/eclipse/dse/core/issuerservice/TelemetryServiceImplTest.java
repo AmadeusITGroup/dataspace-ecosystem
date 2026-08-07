@@ -48,7 +48,7 @@ class TelemetryServiceImplTest {
         @Test
         void success() {
             var tokenRepresentation = createToken();
-            var participantAgent = new ParticipantAgent(emptyMap(), emptyMap());
+            var participantAgent = new ParticipantAgent("did:web:test-participant", emptyMap(), emptyMap());
             when(telemetryServiceTokenValidator.verify(eq(tokenRepresentation), any(), any()))
                     .thenReturn(ServiceResult.success(participantAgent));
 
@@ -85,7 +85,7 @@ class TelemetryServiceImplTest {
         @Test
         void policyEvaluationFails_shouldReturnUnauthorized() {
             var tokenRepresentation = createToken();
-            var participantAgent = new ParticipantAgent(emptyMap(), emptyMap());
+            var participantAgent = new ParticipantAgent("did:web:test-participant", emptyMap(), emptyMap());
             when(telemetryServiceTokenValidator.verify(eq(tokenRepresentation), any(), any()))
                     .thenReturn(ServiceResult.success(participantAgent));
 

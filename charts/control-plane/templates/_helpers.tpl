@@ -237,6 +237,24 @@ set, otherwise falls back to global.authority.didWebUrl.
 {{- end }}
 
 {{/*
+Control Plane - AES key vault alias used to encrypt participant-context
+config (required since EDC 0.16.0's encryption-algorithm registry). Falls
+back to global.keys.aesKeyAlias (shared across control-plane, data-plane,
+identity-hub, and telemetry-agent, matching Terraform's "aes_key_alias",
+"<participantName>-aes" convention), which itself derives from
+global.participantName unless explicitly overridden.
+*/}}
+{{- define "dse.controlplane.keys.encryption.aesKeyAlias" -}}
+{{- if .Values.controlplane.keys.encryption.aesKeyAlias -}}
+{{- .Values.controlplane.keys.encryption.aesKeyAlias -}}
+{{- else if .Values.global.keys.aesKeyAlias -}}
+{{- .Values.global.keys.aesKeyAlias -}}
+{{- else -}}
+{{- printf "%s-aes" (required "global.participantName is required when neither controlplane.keys.encryption.aesKeyAlias nor global.keys.aesKeyAlias is set" .Values.global.participantName) -}}
+{{- end -}}
+{{- end }}
+
+{{/*
 Control Plane - OpenTelemetry resource attributes string, matching the
 "tenant_id=...,service.version=...,deployment.environment=..." pattern
 computed by Terraform today.

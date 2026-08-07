@@ -4,9 +4,6 @@ This release deploys the following components of a Dataspace Ecosystem participa
   - Control Plane   ({{ .Release.Name }}-controlplane)
   - Data Plane      ({{ .Release.Name }}-dataplane)
   - Identity Hub    ({{ .Release.Name }}-identityhub)
-{{- if index .Values "kafka-proxy" "enabled" }}
-  - Kafka Proxy K8s Manager ({{ .Release.Name }}-kafka-proxy)
-{{- end }}
 {{- if .Values.telemetryagent.enabled }}
   - Telemetry Agent ({{ .Release.Name }}-telemetryagent)
 {{- end }}

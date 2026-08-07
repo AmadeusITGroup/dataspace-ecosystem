@@ -106,13 +106,6 @@ variable "tls_enabled" {
   default     = true
 }
 
-# TLS Listener Configuration
-variable "tls_listener_enabled" {
-  description = "Enable TLS for proxy listener (clients connect to proxy via TLS)"
-  type        = bool
-  default     = false # Disable by default for testing
-}
-
 # Vault Configuration
 variable "vault_folder" {
   description = "Vault folder for secrets organization. Empty = secret/, 'consumer' = secret/consumer/"

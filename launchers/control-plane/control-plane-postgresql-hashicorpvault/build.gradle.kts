@@ -1,3 +1,5 @@
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+
 plugins {
     `java-library`
     id("application")
@@ -18,7 +20,7 @@ application {
     mainClass.set("org.eclipse.edc.boot.system.runtime.BaseRuntime")
 }
 
-tasks.withType<com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar> {
+tasks.withType<ShadowJar> {
     mergeServiceFiles()
     archiveFileName.set("${project.name}.jar")
     destinationDirectory.set(layout.buildDirectory.dir("shadow"))

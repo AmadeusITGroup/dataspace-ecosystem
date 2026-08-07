@@ -76,11 +76,15 @@
           "properties": {
             "privateKeyAlias": {
               "type": "string",
-              "description": "Vault alias of the shared private key (Terraform's `privatekey_alias`, \"<participantName>-privatekey\") used by data-plane, identity-hub, and telemetry-agent's credential manager."
+              "description": "Vault alias of the shared private key (Terraform's `privatekey_alias`, equal to the participant/authority name itself with no suffix) used by data-plane, identity-hub, and telemetry-agent's credential manager."
             },
             "publicKeyAlias": {
               "type": "string",
-              "description": "Vault alias of the shared public key (Terraform's `publickey_alias`, \"<participantName>-publickey\") used by data-plane and identity-hub. Not used by telemetry-agent, whose public key alias is derived from `global.identityHub.didWebUrl`."
+              "description": "Vault alias of the shared public key (Terraform's `publickey_alias`, \"<participantName>-pub\") used by data-plane and identity-hub. Not used by telemetry-agent, whose public key alias is derived from `global.identityHub.didWebUrl`."
+            },
+            "aesKeyAlias": {
+              "type": "string",
+              "description": "Vault alias of the shared AES key (Terraform's `aes_key_alias`, \"<participantName>-aes\") used to encrypt participant-context config. Required since EDC 0.16.0's encryption-algorithm registry (`edc.encryption.aes.key.alias`). Used by control-plane, data-plane, identity-hub, and telemetry-agent."
             }
           },
           "additionalProperties": false
@@ -131,7 +135,7 @@
         },
         "route": {
           "type": "object",
-          "description": "OpenShift routes (rendered as Ingress resources) reproducing Terraform's per-component kubernetes_ingress_v1 resources for control-plane, data-plane, identity-hub, and kafka-proxy.",
+          "description": "OpenShift routes (rendered as Ingress resources) reproducing Terraform's per-component kubernetes_ingress_v1 resources for control-plane, data-plane, and identity-hub.",
           "properties": {
             "enabled": {
               "type": "boolean",
@@ -147,7 +151,7 @@
             },
             "clusterIssuer": {
               "type": "string",
-              "description": "cert-manager cluster issuer annotation for the control-plane, data-plane, and identity-hub routes (not kafka-proxy)."
+              "description": "cert-manager cluster issuer annotation for the control-plane, data-plane, and identity-hub routes."
             },
             "termination": {
               "type": "string",

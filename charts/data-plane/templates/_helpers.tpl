@@ -288,6 +288,24 @@ which itself derives from global.participantName unless explicitly overridden.
 {{- end }}
 
 {{/*
+Data Plane - AES key vault alias used to encrypt participant-context config
+(required since EDC 0.16.0's encryption-algorithm registry). Falls back to
+global.keys.aesKeyAlias (shared across control-plane, data-plane,
+identity-hub, and telemetry-agent, matching Terraform's "aes_key_alias",
+"<participantName>-aes" convention), which itself derives from
+global.participantName unless explicitly overridden.
+*/}}
+{{- define "dse.dataplane.keys.encryption.aesKeyAlias" -}}
+{{- if .Values.dataplane.keys.encryption.aesKeyAlias -}}
+{{- .Values.dataplane.keys.encryption.aesKeyAlias -}}
+{{- else if .Values.global.keys.aesKeyAlias -}}
+{{- .Values.global.keys.aesKeyAlias -}}
+{{- else -}}
+{{- printf "%s-aes" (required "global.participantName is required when neither dataplane.keys.encryption.aesKeyAlias nor global.keys.aesKeyAlias is set" .Values.global.participantName) -}}
+{{- end -}}
+{{- end }}
+
+{{/*
 Create the name of the service account to use
 */}}
 {{- define "dse.serviceAccountName" -}}

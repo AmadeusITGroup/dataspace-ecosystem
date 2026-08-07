@@ -52,6 +52,13 @@ global:
     # `global.participantName` when unset. Not used by telemetry-agent, whose
     # public key alias is instead derived from `global.identityHub.didWebUrl`.
     publicKeyAlias: ""
+    # -- Vault alias of the shared AES key (Terraform's `aes_key_alias`,
+    # "<participantName>-aes") used to encrypt participant-context config.
+    # Required since EDC 0.16.0's encryption-algorithm registry
+    # (`edc.encryption.aes.key.alias`) — used by control-plane, data-plane,
+    # identity-hub, and telemetry-agent when their own component-level alias
+    # is not set explicitly. Derived from `global.participantName` when unset.
+    aesKeyAlias: ""
   image:
     # -- Base Docker repository prefix (Terraform's `base_docker_image`), used
     # to derive each component's image repository.
@@ -97,8 +104,8 @@ global:
   # -- OpenShift routes (rendered as Ingress resources by the umbrella chart's
   # templates/routes.yaml). Reproduces the standalone `kubernetes_ingress_v1`
   # resources the Terraform reference creates for control-plane, data-plane,
-  # identity-hub, and kafka-proxy (each with fixed path->port maps, an empty
-  # `tls: [{}]` stanza to trigger OpenShift Route TLS, and OpenShift/cert-manager
+  # and identity-hub (each with fixed path->port maps, an empty `tls: [{}]`
+  # stanza to trigger OpenShift Route TLS, and OpenShift/cert-manager
   # annotations). The component subcharts keep `ingress.enabled: false`; these
   # routes are driven entirely from here. The telemetry-agent is intentionally
   # excluded — Terraform exposes it through its own nginx chart ingress, not an
@@ -109,14 +116,14 @@ global:
     # -- printf-style host pattern with two `%s` verbs: participant name then
     # component token (Terraform's `oc_route_pattern`), e.g.
     # "%s-%s.apps.cluster.example.com" -> "acme-controlplane.apps...". Component
-    # tokens are controlplane/dataplane/identityhub/kafkaproxy. Required when
+    # tokens are controlplane/dataplane/identityhub. Required when
     # route.enabled is true.
     hostPattern: ""
     # -- Ingress class name applied to every route (Terraform's
     # `ingress_class_name`).
     className: ""
     # -- cert-manager cluster issuer annotation applied to the control-plane,
-    # data-plane, and identity-hub routes (not kafka-proxy, matching Terraform).
+    # data-plane, and identity-hub routes, matching Terraform.
     clusterIssuer: paas
     # -- route.openshift.io/termination annotation value.
     termination: reencrypt
@@ -156,15 +163,6 @@ identityhub:
     image:
       repository: ""
       tag: ""
-
-# -- Kafka Proxy K8s Manager. Deployed by default; set enabled: false to skip.
-kafka-proxy:
-  enabled: true
-  kafkaProxy:
-    manager:
-      image:
-        repository: ""
-        tag: ""
 
 # -- Telemetry Agent. Optional — mirrors `telemetry_agent_enabled` in the
 # Terraform module. Set enabled: false to skip.

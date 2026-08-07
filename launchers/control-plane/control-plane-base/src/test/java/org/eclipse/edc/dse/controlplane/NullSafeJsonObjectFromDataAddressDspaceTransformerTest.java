@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.eclipse.edc.jsonld.spi.Namespaces.DSPACE_SCHEMA;
+import static org.eclipse.edc.jsonld.spi.Namespaces.DSPACE_2025_1_IRI;
 import static org.eclipse.edc.spi.constants.CoreConstants.JSON_LD;
 import static org.eclipse.edc.transform.transformer.dspace.DataAddressDspaceSerialization.ENDPOINT_PROPERTIES_PROPERTY_TERM;
 import static org.eclipse.edc.transform.transformer.dspace.DataAddressDspaceSerialization.ENDPOINT_PROPERTY_NAME_PROPERTY_TERM;
@@ -46,8 +46,8 @@ class NullSafeJsonObjectFromDataAddressDspaceTransformerTest {
         var result = transformer.transform(address, context);
 
         assertThat(result).isNotNull();
-        assertThat(result.getString(DSPACE_SCHEMA + ENDPOINT_TYPE_PROPERTY_TERM)).isEqualTo("HttpData");
-        assertThat(result.getJsonArray(DSPACE_SCHEMA + ENDPOINT_PROPERTIES_PROPERTY_TERM)).isNotEmpty();
+        assertThat(result.getString(DSPACE_2025_1_IRI + ENDPOINT_TYPE_PROPERTY_TERM)).isEqualTo("HttpData");
+        assertThat(result.getJsonArray(DSPACE_2025_1_IRI + ENDPOINT_PROPERTIES_PROPERTY_TERM)).isNotEmpty();
     }
 
     @Test
@@ -61,11 +61,11 @@ class NullSafeJsonObjectFromDataAddressDspaceTransformerTest {
         var result = transformer.transform(address, context);
 
         assertThat(result).isNotNull();
-        var properties = result.getJsonArray(DSPACE_SCHEMA + ENDPOINT_PROPERTIES_PROPERTY_TERM);
+        var properties = result.getJsonArray(DSPACE_2025_1_IRI + ENDPOINT_PROPERTIES_PROPERTY_TERM);
         // only baseUrl should be present, secret with null value is filtered
         assertThat(properties).hasSize(1);
         var propNames = properties.stream()
-                .map(v -> v.asJsonObject().getString(DSPACE_SCHEMA + "name"))
+                .map(v -> v.asJsonObject().getString(DSPACE_2025_1_IRI + "name"))
                 .toList();
         assertThat(propNames).contains("baseUrl");
         assertThat(propNames).doesNotContain("secret");
@@ -82,7 +82,7 @@ class NullSafeJsonObjectFromDataAddressDspaceTransformerTest {
         var result = transformer.transform(address, context);
 
         assertThat(result).isNotNull();
-        assertThat(result.getJsonArray(DSPACE_SCHEMA + ENDPOINT_PROPERTIES_PROPERTY_TERM)).isEmpty();
+        assertThat(result.getJsonArray(DSPACE_2025_1_IRI + ENDPOINT_PROPERTIES_PROPERTY_TERM)).isEmpty();
     }
 
     @Test
@@ -94,8 +94,8 @@ class NullSafeJsonObjectFromDataAddressDspaceTransformerTest {
         var result = transformer.transform(address, context);
 
         assertThat(result).isNotNull();
-        assertThat(result.getString(DSPACE_SCHEMA + ENDPOINT_TYPE_PROPERTY_TERM)).isEqualTo("AzureStorage");
-        assertThat(result.getJsonArray(DSPACE_SCHEMA + ENDPOINT_PROPERTIES_PROPERTY_TERM)).isEmpty();
+        assertThat(result.getString(DSPACE_2025_1_IRI + ENDPOINT_TYPE_PROPERTY_TERM)).isEqualTo("AzureStorage");
+        assertThat(result.getJsonArray(DSPACE_2025_1_IRI + ENDPOINT_PROPERTIES_PROPERTY_TERM)).isEmpty();
     }
 
     @Test
@@ -110,7 +110,7 @@ class NullSafeJsonObjectFromDataAddressDspaceTransformerTest {
         var result = transformer.transform(address, context);
 
         assertThat(result).isNotNull();
-        var properties = result.getJsonArray(DSPACE_SCHEMA + ENDPOINT_PROPERTIES_PROPERTY_TERM);
+        var properties = result.getJsonArray(DSPACE_2025_1_IRI + ENDPOINT_PROPERTIES_PROPERTY_TERM);
         assertThat(properties).hasSize(3);
     }
 
@@ -124,9 +124,9 @@ class NullSafeJsonObjectFromDataAddressDspaceTransformerTest {
         var result = transformer.transform(address, context);
 
         assertThat(result).isNotNull();
-        var properties = result.getJsonArray(DSPACE_SCHEMA + ENDPOINT_PROPERTIES_PROPERTY_TERM);
+        var properties = result.getJsonArray(DSPACE_2025_1_IRI + ENDPOINT_PROPERTIES_PROPERTY_TERM);
         var propNames = properties.stream()
-                .map(v -> v.asJsonObject().getString(DSPACE_SCHEMA + "name"))
+                .map(v -> v.asJsonObject().getString(DSPACE_2025_1_IRI + "name"))
                 .toList();
         // EDC_DATA_ADDRESS_TYPE_PROPERTY is excluded from endpoint properties
         assertThat(propNames).doesNotContain("https://w3id.org/edc/v0.0.1/ns/type");
@@ -142,8 +142,8 @@ class NullSafeJsonObjectFromDataAddressDspaceTransformerTest {
         JsonObject result = transformer.transform(address, context);
 
         assertThat(result).isNotNull();
-        assertThat(result.containsKey(DSPACE_SCHEMA + ENDPOINT_TYPE_PROPERTY_TERM)).isTrue();
-        assertThat(result.containsKey(DSPACE_SCHEMA + ENDPOINT_PROPERTIES_PROPERTY_TERM)).isTrue();
+        assertThat(result.containsKey(DSPACE_2025_1_IRI + ENDPOINT_TYPE_PROPERTY_TERM)).isTrue();
+        assertThat(result.containsKey(DSPACE_2025_1_IRI + ENDPOINT_PROPERTIES_PROPERTY_TERM)).isTrue();
     }
 
     @Test
@@ -180,13 +180,13 @@ class NullSafeJsonObjectFromDataAddressDspaceTransformerTest {
         var result = localTransformer.transform(address, context);
 
         assertThat(result).isNotNull();
-        var metadataProperty = result.getJsonArray(DSPACE_SCHEMA + ENDPOINT_PROPERTIES_PROPERTY_TERM).stream()
+        var metadataProperty = result.getJsonArray(DSPACE_2025_1_IRI + ENDPOINT_PROPERTIES_PROPERTY_TERM).stream()
                 .map(value -> value.asJsonObject())
-                .filter(value -> value.getString(DSPACE_SCHEMA + ENDPOINT_PROPERTY_NAME_PROPERTY_TERM).equals("metadata"))
+                .filter(value -> value.getString(DSPACE_2025_1_IRI + ENDPOINT_PROPERTY_NAME_PROPERTY_TERM).equals("metadata"))
                 .findFirst()
                 .orElseThrow();
 
-        assertThat(metadataProperty.getJsonObject(DSPACE_SCHEMA + ENDPOINT_PROPERTY_VALUE_PROPERTY_TERM)
+        assertThat(metadataProperty.getJsonObject(DSPACE_2025_1_IRI + ENDPOINT_PROPERTY_VALUE_PROPERTY_TERM)
                 .getString("region")).isEqualTo("eu");
     }
 

@@ -25,9 +25,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.eclipse.edc.connector.controlplane.transfer.spi.types.TransferProcessStates.STARTED;
 import static org.eclipse.edc.jsonld.spi.JsonLdKeywords.VALUE;
-import static org.eclipse.edc.jsonld.spi.Namespaces.DSPACE_SCHEMA;
+import static org.eclipse.edc.jsonld.spi.Namespaces.DSPACE_2025_1_IRI;
 import static org.eclipse.edc.jsonld.spi.PropertyAndTypeNames.DCAT_DATASET_ATTRIBUTE;
-import static org.eclipse.edc.protocol.dsp.spi.type.Dsp2025Constants.DSPACE_SCHEMA_2025_1;
 
 public class AbstractEndToEndTests {
 
@@ -168,11 +167,8 @@ public class AbstractEndToEndTests {
 
     private static Predicate<JsonObject> isCatalogOf(String did) {
         return catalog -> {
-            // Support both DSP v0.8 and DSP 2025/1 namespace for participantId
-            var v08Key = DSPACE_SCHEMA + "participantId";
-            var v2025Key = DSPACE_SCHEMA_2025_1 + "participantId";
-            var key = catalog.containsKey(v2025Key) ? v2025Key : v08Key;
-            var values = catalog.getJsonArray(key);
+            // DSP v0.8 was removed in EDC 0.16.0, only the DSP 2025/1 namespace remains
+            var values = catalog.getJsonArray(DSPACE_2025_1_IRI + "participantId");
             if (values == null) {
                 return false;
             }

@@ -2,7 +2,7 @@ package org.eclipse.dse.identityhub.seed;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.eclipse.edc.iam.did.spi.document.Service;
-import org.eclipse.edc.identityhub.spi.participantcontext.ParticipantContextService;
+import org.eclipse.edc.identityhub.spi.participantcontext.IdentityHubParticipantContextService;
 import org.eclipse.edc.identityhub.spi.participantcontext.model.CreateParticipantContextResponse;
 import org.eclipse.edc.identityhub.spi.participantcontext.model.KeyDescriptor;
 import org.eclipse.edc.identityhub.spi.participantcontext.model.ParticipantManifest;
@@ -49,7 +49,7 @@ public class ParticipantContextSeedExtension implements ServiceExtension {
     private Monitor monitor;
 
     @Inject
-    private ParticipantContextService participantContextService;
+    private IdentityHubParticipantContextService participantContextService;
 
     @Inject
     private ParticipantContextConfigService participantContextConfigService;

@@ -315,6 +315,14 @@ resource "kubernetes_job" "vault-keygen-job" {
 
               vault kv put secret/${var.participant_name} content="$(cat /tmp/privatekey.pem)"
               vault kv put secret/${var.participant_name}-pub content="$(cat /tmp/publickey.pem)"
+
+              # AES-256 key for participant-context config encryption.
+              # Required since EDC 0.16.0: ParticipantContextConfigServicesExtension defaults
+              # edc.participants.config.encryption.algorithm to "aes", and AesEncryptionExtension only
+              # registers that algorithm when edc.encryption.aes.key.alias resolves to a key in the vault.
+              # Without it participant context creation fails and the runtime aborts during boot.
+              # AesEncryptionAlgorithm Base64-decodes the secret into a SecretKeySpec.
+              vault kv put secret/${var.participant_name}-aes content="$(head -c 32 /dev/urandom | base64 | tr -d '\n')"
             EOF
           ]
           env {

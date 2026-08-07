@@ -63,6 +63,11 @@ resource "helm_release" "controlplane" {
           "clientId" : local.did_url,
           "clientSecretAlias" : local.sts_client_secret_alias
         }
+        "keys" : {
+          "encryption" : {
+            "aesKeyAlias" : local.aes_key_alias
+          }
+        }
         "url" : {
           "protocol" : local.protocol_callback_url
         }

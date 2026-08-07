@@ -86,31 +86,6 @@ variable "auth_static_users" {
   sensitive   = true
 }
 
-# TLS Listener Configuration
-variable "tls_listener_enabled" {
-  description = "Enable TLS for proxy listener (clients connect to proxy via TLS)"
-  type        = bool
-  default     = true
-}
-
-variable "tls_listener_cert_secret" {
-  description = "Kubernetes secret name containing the proxy listener TLS certificate"
-  type        = string
-  default     = ""
-}
-
-variable "tls_listener_key_secret" {
-  description = "Kubernetes secret name containing the proxy listener TLS private key"
-  type        = string
-  default     = ""
-}
-
-variable "tls_listener_ca_secret" {
-  description = "Kubernetes secret name containing the proxy listener CA certificate for mutual TLS"
-  type        = string
-  default     = ""
-}
-
 # Vault Configuration
 variable "vault_folder" {
   description = "Vault folder for secrets organization. Empty = secret/, 'consumer' = secret/consumer/"

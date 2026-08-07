@@ -33,7 +33,6 @@ import static org.eclipse.edc.test.system.ParticipantConstants.CLUSTER_HOSTNAME;
 import static org.eclipse.edc.test.system.ParticipantConstants.CONTROL_PLANE_DSP_PORT;
 import static org.eclipse.edc.test.system.ParticipantConstants.IDENTITY_HUB_DID_PORT;
 import static org.eclipse.edc.test.system.ParticipantConstants.SCHEME;
-import static org.eclipse.edc.protocol.dsp.http.spi.types.HttpMessageProtocol.DATASPACE_PROTOCOL_HTTP;
 import static org.eclipse.edc.protocol.dsp.spi.type.Dsp2025Constants.DATASPACE_PROTOCOL_HTTP_V_2025_1;
 import static org.eclipse.edc.protocol.dsp.spi.type.Dsp2025Constants.V_2025_1_PATH;
 
@@ -41,7 +40,6 @@ abstract class AbstractParticipant extends AbstractEntity {
 
     private JsonLd jsonLd;
     private ParticipantClient cachedParticipantClient;
-    private ParticipantClient cachedParticipantClientDsp08;
 
     @Override
     protected String did() {
@@ -64,10 +62,6 @@ abstract class AbstractParticipant extends AbstractEntity {
 
     protected String controlPlaneProtocolUrl() {
         return controlPlaneProtocolBaseUrl() + V_2025_1_PATH;
-    }
-
-    protected String controlPlaneProtocolUrlDsp08() {
-        return controlPlaneProtocolBaseUrl();
     }
 
     protected String controlPlaneManagementUrl() {
@@ -148,7 +142,7 @@ abstract class AbstractParticipant extends AbstractEntity {
                 .contentType(JSON)
                 .body(body)
                 .when()
-                .post("/v3/assets")
+                .post("/assets")
                 .then()
                 .log().ifError()
                 .statusCode(200)
@@ -191,7 +185,7 @@ abstract class AbstractParticipant extends AbstractEntity {
                 .contentType(JSON)
                 .body(requestBody)
                 .when()
-                .post("/v3/policydefinitions")
+                .post("/policydefinitions")
                 .then()
                 .log().ifError()
                 .statusCode(200)
@@ -212,7 +206,7 @@ abstract class AbstractParticipant extends AbstractEntity {
                 .contentType(JSON)
                 .body(requestBody)
                 .when()
-                .post("/v3/secrets")
+                .post("/secrets")
                 .then()
                 .log().ifError()
                 .statusCode(200);
@@ -236,7 +230,9 @@ abstract class AbstractParticipant extends AbstractEntity {
             cachedParticipantClient = ParticipantClient.Builder.newInstance()
                     .name(name())
                     .id(did())
-                    .protocol(DATASPACE_PROTOCOL_HTTP_V_2025_1)
+                    // versionPath is empty because controlPlaneProtocolUrl() already includes V_2025_1_PATH;
+                    // Participant.getProtocolUrl() appends versionPath to the configured protocol URL.
+                    .protocol(DATASPACE_PROTOCOL_HTTP_V_2025_1, "")
                     .jsonLd(jsonLd())
                     .dataPlaneData(dataPlaneDataUrl())
                     .controlPlaneManagement(controlPlaneManagementUrl())
@@ -244,21 +240,6 @@ abstract class AbstractParticipant extends AbstractEntity {
                     .build();
         }
         return cachedParticipantClient;
-    }
-
-    public ParticipantClient participantClientDsp08() {
-        if (cachedParticipantClientDsp08 == null) {
-            cachedParticipantClientDsp08 = ParticipantClient.Builder.newInstance()
-                    .name(name())
-                    .id(did())
-                    .protocol(DATASPACE_PROTOCOL_HTTP)
-                    .jsonLd(jsonLd())
-                    .dataPlaneData(dataPlaneDataUrl())
-                    .controlPlaneManagement(controlPlaneManagementUrl())
-                    .controlPlaneProtocol(controlPlaneProtocolUrlDsp08())
-                    .build();
-        }
-        return cachedParticipantClientDsp08;
     }
 
     private JsonLd jsonLd() {

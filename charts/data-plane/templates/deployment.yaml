@@ -189,6 +189,15 @@ spec:
               value: {{ include "dse.dataplane.url.public" .}}
 
           #################
+          # ENCRYPTION    #
+          #################
+            # -- required since EDC 0.16.0's encryption-algorithm registry
+            # (https://github.com/eclipse-edc/Connector/pull/5423); without it
+            # participant-context creation fails.
+            - name: "EDC_ENCRYPTION_AES_KEY_ALIAS"
+              value: {{ include "dse.dataplane.keys.encryption.aesKeyAlias" . | quote }}
+
+          #################
           # DPF SELECTOR ##
           #################
             - name: "EDC_DPF_SELECTOR_URL"

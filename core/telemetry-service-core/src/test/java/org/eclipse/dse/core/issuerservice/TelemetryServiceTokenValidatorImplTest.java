@@ -47,7 +47,7 @@ class TelemetryServiceTokenValidatorImplTest {
     @Test
     void shouldVerifyToken() {
         var participantId = "participantId";
-        var participantAgent = new ParticipantAgent(emptyMap(), emptyMap());
+        var participantAgent = new ParticipantAgent("did:web:test-participant", emptyMap(), emptyMap());
         var claimToken = ClaimToken.Builder.newInstance().build();
         var policy = Policy.Builder.newInstance().build();
         var tokenRepresentation = TokenRepresentation.Builder.newInstance().build();

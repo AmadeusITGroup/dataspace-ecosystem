@@ -53,7 +53,7 @@ public class FederatedCatalogService {
     }
 
     public Collection<Catalog> fetchAndFilterCatalog(ClaimToken participantVcs, String participantDid, QuerySpec query) throws Exception {
-        CatalogDiscoveryPolicyContext policyContext = createContext(participantVcs);
+        CatalogDiscoveryPolicyContext policyContext = createContext(participantVcs, participantDid);
         Collection<Catalog> catalogs = retrieveCatalog(query);
         if (catalogs == null || catalogs.isEmpty()) {
             monitor.warning("No catalogs retrieved from the remote source");
@@ -114,10 +114,21 @@ public class FederatedCatalogService {
         return true;
     }
 
-    protected CatalogDiscoveryPolicyContext createContext(ClaimToken participantVcs) {
+    /**
+     * Builds the policy evaluation context for the requesting participant.
+     * <p>
+     * Since EDC 0.16.0 {@link ParticipantAgent} requires a non-null identity, so the requesting participant's DID is
+     * passed explicitly rather than relying on the two-argument constructor, which derives the identity from the
+     * attributes map.
+     *
+     * @param participantVcs the verified claims of the requesting participant
+     * @param participantDid the DID of the requesting participant, used as the agent identity
+     * @return the discovery policy context
+     */
+    protected CatalogDiscoveryPolicyContext createContext(ClaimToken participantVcs, String participantDid) {
         Map<String, Object> claims = new HashMap<>();
         claims.put(VC_CLAIMS, participantVcs.getClaim(VC_CLAIMS));
-        ParticipantAgent agent = new ParticipantAgent(claims, Collections.emptyMap());
+        ParticipantAgent agent = new ParticipantAgent(participantDid, claims, Collections.emptyMap());
         return new CatalogDiscoveryPolicyContext(agent);
     }
 

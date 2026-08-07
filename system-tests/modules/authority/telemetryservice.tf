@@ -52,6 +52,11 @@ resource "helm_release" "telemetryservice" {
           "clientId" : local.did_url,
           "clientSecretAlias" : local.sts_client_secret_alias
         }
+        "keys" : {
+          "encryption" : {
+            "aesKeyAlias" : local.aes_key_alias
+          }
+        },
         "did" : {
           "web" : {
             "url" : local.did_url

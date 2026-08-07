@@ -54,6 +54,9 @@ resource "helm_release" "issuerservice" {
           "statuslist" : {
             "privateKeyAlias" : local.privatekey_alias,
           }
+          "encryption" : {
+            "aesKeyAlias" : local.aes_key_alias
+          }
         },
         "did" : {
           "web" : {

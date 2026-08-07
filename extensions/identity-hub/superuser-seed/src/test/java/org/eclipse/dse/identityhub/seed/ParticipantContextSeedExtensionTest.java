@@ -1,9 +1,9 @@
 package org.eclipse.dse.identityhub.seed;
 
 import org.eclipse.edc.iam.did.spi.document.Service;
-import org.eclipse.edc.identityhub.spi.participantcontext.ParticipantContextService;
+import org.eclipse.edc.identityhub.spi.participantcontext.IdentityHubParticipantContextService;
 import org.eclipse.edc.identityhub.spi.participantcontext.model.CreateParticipantContextResponse;
-import org.eclipse.edc.identityhub.spi.participantcontext.model.ParticipantContext;
+import org.eclipse.edc.identityhub.spi.participantcontext.model.IdentityHubParticipantContext;
 import org.eclipse.edc.json.JacksonTypeManager;
 import org.eclipse.edc.junit.extensions.DependencyInjectionExtension;
 import org.eclipse.edc.participantcontext.spi.config.service.ParticipantContextConfigService;
@@ -44,14 +44,14 @@ class ParticipantContextSeedExtensionTest {
 
     private final TypeManager typeManager = new JacksonTypeManager();
     private final List<Service> services = List.of(createService(), createService());
-    private final ParticipantContextService participantContextService = mock();
+    private final IdentityHubParticipantContextService participantContextService = mock();
     private final ParticipantContextConfigService participantContextConfigService = mock();
     private final Vault vault = mock();
     private final Monitor monitor = mock();
 
     @BeforeEach
     void setup(ServiceExtensionContext context) {
-        context.registerService(ParticipantContextService.class, participantContextService);
+        context.registerService(IdentityHubParticipantContextService.class, participantContextService);
         context.registerService(ParticipantContextConfigService.class, participantContextConfigService);
         context.registerService(Vault.class, vault);
         context.registerService(Monitor.class, monitor);
@@ -82,9 +82,10 @@ class ParticipantContextSeedExtensionTest {
         var apiTokenAlias = UUID.randomUUID().toString();
         when(participantContextService.getParticipantContext(PARTICIPANT_ID))
                 .thenReturn(ServiceResult.notFound("not found"))
-                .thenReturn(ServiceResult.success(ParticipantContext.Builder.newInstance()
+                .thenReturn(ServiceResult.success(IdentityHubParticipantContext.Builder.newInstance()
                         .participantContextId(PARTICIPANT_ID)
                         .apiTokenAlias(apiTokenAlias)
+                        .did(PARTICIPANT_ID)
                         .build()));
         var publicKeyPem = UUID.randomUUID().toString();
         when(vault.resolveSecret(PUBLIC_KEY_ALIAS)).thenReturn(publicKeyPem);

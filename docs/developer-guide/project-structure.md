@@ -28,7 +28,6 @@ Provide default implementations:
 ```
 core/
 ├── common/                     # Shared core logic
-├── kafka-proxy-k8s-manager-core/
 ├── telemetry-agent-core/
 └── telemetry-service-core/
 ```
@@ -48,7 +47,6 @@ extensions/
 ├── common/
 ├── control-plane/
 │   ├── asset-custom-property-subscriber/
-│   ├── transfer-data-plane-signal-kafka/
 │   └── control-plane-federated-catalog-filter/
 ├── data-plane/
 │   ├── data-plane-public-api-v2/
@@ -123,8 +121,6 @@ launchers/
 │   ├── telemetry-csv-manager-base/
 │   ├── telemetry-csv-manager-postgresql-hashicorpvault/
 │   └── telemetry-csv-manager-postgresql-azurevault/
-└── kafka-proxy-k8s-manager/
-    └── kafka-proxy-k8s-manager-base/
 ```
 
 **Configuration Variants:**

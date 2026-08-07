@@ -2,8 +2,8 @@
 format.version = "1.1"
 
 [versions]
-edc = "0.15.1"
-edc-build = "1.1.2"
+edc = "0.16.0"
+edc-build = "1.1.5"
 wiremock = "3.0.1"
 
 assertj = "3.27.3"
@@ -19,10 +19,9 @@ rsApi = "4.0.0"
 servletApi = "5.0.2"
 restAssured = "5.5.0"
 httpMockServer = "5.15.0"
-jersey = "3.1.10"
+jersey = "4.0.2"
 jupiter = "5.11.4"
-kafka = "3.7.0"
-postgres = "42.7.3"
+postgres = "42.7.9"
 swagger = "2.2.27"
 micrometer = "1.14.2"
 jjwt = "0.13.0"
@@ -102,7 +101,6 @@ edc-api-control-config = { module = "org.eclipse.edc:control-api-configuration",
 edc-api-management = { module = "org.eclipse.edc:management-api", version.ref = "edc" }
 edc-dpf-api-public-v2 = { module = "org.eclipse.edc:data-plane-public-api-v2", version.ref = "edc" }
 edc-ext-dpf-http = { module = "org.eclipse.edc:data-plane-http", version.ref = "edc" }
-edc-ext-dpf-kafka = { module = "org.eclipse.edc:data-plane-kafka", version.ref = "edc" }
 edc-ext-dpf-util = { module = "org.eclipse.edc:data-plane-util", version.ref = "edc" }
 edc-ext-dpf-core = { module = "org.eclipse.edc:data-plane-core", version.ref = "edc" }
 edc-sql-lease = { module = "org.eclipse.edc:sql-lease", version.ref = "edc" }
@@ -195,7 +193,6 @@ mockserver-netty = { module = "org.mock-server:mockserver-netty", version.ref = 
 junit-jupiter-api = { module = "org.junit.jupiter:junit-jupiter-api", version.ref = "jupiter" }
 junit-jupiter-engine = { module = "org.junit.jupiter:junit-jupiter-engine", version.ref = "jupiter" }
 junit-jupiter-params = { module = "org.junit.jupiter:junit-jupiter-params", version.ref = "jupiter" }
-kafka-clients = { module = "org.apache.kafka:kafka-clients", version.ref = "kafka" }
 postgres = { module = "org.postgresql:postgresql", version.ref = "postgres" }
 azure-messaging-eventhub = { group = "com.azure", name = "azure-messaging-eventhubs", version.ref = "azureMessagingEventHub" }
 azure-identity = { group = "com.azure", name = "azure-identity", version.ref = "azure-identity" }

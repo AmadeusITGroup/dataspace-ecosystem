@@ -222,7 +222,7 @@ class JsonPathCredentialConstraintFunctionTest {
         private final ParticipantAgent agent;
 
         TestPolicyContext(Map<String, Object> claims) {
-            agent = new ParticipantAgent(claims, emptyMap());
+            agent = new ParticipantAgent("did:web:test-participant", claims, emptyMap());
         }
 
         @Override

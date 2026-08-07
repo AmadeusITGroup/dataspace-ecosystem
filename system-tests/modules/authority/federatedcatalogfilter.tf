@@ -44,6 +44,11 @@ resource "helm_release" "federated-catalog-filter" {
           "tag" : "latest"
           "pullPolicy" : local.image_pull_policy
         },
+        "keys" : {
+          "encryption" : {
+            "aesKeyAlias" : local.aes_key_alias
+          }
+        },
         "did" : {
           "web" : {
             "url" : local.did_url,

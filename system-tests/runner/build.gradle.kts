@@ -62,7 +62,5 @@ dependencies {
     testFixturesImplementation(libs.edc.spi.identity.did)
     testFixturesImplementation(libs.edc.dsp.spi.v2025)
     testFixturesImplementation(libs.awaitility)
-    testImplementation(libs.kafka.clients)
-    testFixturesImplementation(libs.kafka.clients)
 
 }

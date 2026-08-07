@@ -158,6 +158,15 @@ spec:
         - name: "EDC_IAM_DID_WEB_USE_HTTPS"
           value: {{.Values.telemetrystorage.did.web.useHttps | required ".Values.telemetrystorage.did.web.useHttps is required" | quote}}
 
+        ################
+        # ENCRYPTION   #
+        ################
+        # -- required since EDC 0.16.0's encryption-algorithm registry
+        # (https://github.com/eclipse-edc/Connector/pull/5423); without it
+        # participant-context creation fails.
+        - name: "EDC_ENCRYPTION_AES_KEY_ALIAS"
+          value: {{.Values.telemetrystorage.keys.encryption.aesKeyAlias | required ".Values.telemetrystorage.keys.encryption.aesKeyAlias is required" | quote}}
+
         #######
         # API #
         #######

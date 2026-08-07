@@ -139,7 +139,7 @@ public class FederatedCatalogFilterServiceTest {
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
-        Collection<Catalog> result = service.filterCatalog(catalogs, service.createContext(tokens), PARTICIPANT_DID);
+        Collection<Catalog> result = service.filterCatalog(catalogs, service.createContext(tokens, PARTICIPANT_DID), PARTICIPANT_DID);
         monitor.warning(result.toString());
         assertFalse(result.isEmpty());
         assertTrue(

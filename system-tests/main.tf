@@ -132,42 +132,6 @@ resource "kubernetes_secret" "nginx_proxy_ssl_ca" {
   }
 }
 
-###########################
-## TLS CERTIFICATES      ##
-###########################
-
-# Generate TLS certificates for consumer kafka-proxy listener
-module "consumer_tls_certificates" {
-  source = "./modules/tls-certificates"
-
-  secret_name = "consumer-kafka-proxy-listener-tls"
-  namespace   = "default"
-  common_name = "consumer-kafka-proxy-listener"
-
-  dns_names = [
-    "localhost",
-    "*.default.svc.cluster.local",
-    "consumer-kafkaproxy-kafka-proxy",
-    "consumer-kafkaproxy-kafka-proxy.default.svc.cluster.local",
-  ]
-}
-
-# Generate TLS certificates for provider kafka-proxy listener
-module "provider_tls_certificates" {
-  source = "./modules/tls-certificates"
-
-  secret_name = "provider-kafka-proxy-listener-tls"
-  namespace   = "default"
-  common_name = "provider-kafka-proxy-listener"
-
-  dns_names = [
-    "localhost",
-    "*.default.svc.cluster.local",
-    "provider-kafkaproxy-kafka-proxy",
-    "provider-kafkaproxy-kafka-proxy.default.svc.cluster.local",
-  ]
-}
-
 ###################
 ## POSTGRESQL DB ##
 ###################
@@ -211,12 +175,6 @@ module "participant" {
   auth_client_id    = var.auth_client_id
   auth_static_users = var.auth_static_users
 
-  # TLS Listener Configuration
-  tls_listener_enabled     = var.tls_listener_enabled
-  tls_listener_cert_secret = var.tls_enabled ? (each.key == "consumer" ? module.consumer_tls_certificates.secret_name : module.provider_tls_certificates.secret_name) : ""
-  tls_listener_key_secret  = var.tls_enabled ? (each.key == "consumer" ? module.consumer_tls_certificates.secret_name : module.provider_tls_certificates.secret_name) : ""
-  tls_listener_ca_secret   = "" # Empty string disables mutual TLS (client certificate verification)
-
   # Vault Configuration
   vault_folder = var.vault_folder
 
@@ -229,8 +187,6 @@ module "participant" {
   ingress_proxy_ssl_ca_secret_name = var.tls_enabled ? kubernetes_secret.nginx_proxy_ssl_ca[0].metadata[0].name : "nginx-proxy-ssl-ca"
 
   depends_on = [
-    module.consumer_tls_certificates,
-    module.provider_tls_certificates,
     kubernetes_secret.internal_service_tls,
     kubernetes_secret.nginx_proxy_ssl_ca
   ]
@@ -256,17 +212,6 @@ module "authority" {
   tls_enabled                      = var.tls_enabled
   internal_tls_secret_name         = var.tls_enabled ? kubernetes_secret.internal_service_tls[0].metadata[0].name : ""
   ingress_proxy_ssl_ca_secret_name = var.tls_enabled ? kubernetes_secret.nginx_proxy_ssl_ca[0].metadata[0].name : "nginx-proxy-ssl-ca"
-}
-
-#####################
-## KAFKA BROKER E2E ##
-#####################
-
-module "broker" {
-  source               = "./modules/broker"
-  environment          = var.environment
-  devbox-registry      = var.devbox-registry
-  devbox-registry-cred = var.devbox-registry-cred
 }
 
 ############################

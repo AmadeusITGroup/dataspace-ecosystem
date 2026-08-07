@@ -1,6 +1,8 @@
 locals {
   privatekey_alias = var.participant_name
   publickey_alias  = "${local.privatekey_alias}-pub"
+  # AES key for participant-context config encryption (required since EDC 0.16.0)
+  aes_key_alias = "${local.privatekey_alias}-aes"
 
   db_name          = "${var.participant_name}db"
   db_user          = var.participant_name

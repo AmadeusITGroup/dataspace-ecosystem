@@ -62,6 +62,9 @@ resource "helm_release" "identity-hub" {
             "privateKeyAlias" : local.privatekey_alias,
             "publicKeyAlias" : local.publickey_alias,
             "publicKeyId" : "${local.did_url}#my-key"
+          },
+          "encryption" : {
+            "aesKeyAlias" : local.aes_key_alias
           }
         },
         "participantcontext" : {

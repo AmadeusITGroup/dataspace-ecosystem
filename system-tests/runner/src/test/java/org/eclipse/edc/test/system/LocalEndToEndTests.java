@@ -67,7 +67,6 @@ import static org.eclipse.dse.iam.policy.PolicyConstants.GENERIC_CLAIM_CONSTRAIN
 import static org.eclipse.dse.iam.policy.PolicyConstants.MEMBERSHIP_CREDENTIAL_TYPE;
 import static org.eclipse.dse.iam.policy.PolicyConstants.RESTRICTED_CATALOG_DISCOVERY_CONSTRAINT;
 import static org.eclipse.edc.connector.controlplane.test.system.utils.PolicyFixtures.atomicConstraint;
-import static org.eclipse.edc.connector.controlplane.transfer.spi.types.TransferProcessStates.STARTED;
 import static org.eclipse.edc.connector.controlplane.transfer.spi.types.TransferProcessStates.TERMINATED;
 import static org.eclipse.edc.jsonld.spi.JsonLdKeywords.ID;
 import static org.eclipse.edc.spi.constants.CoreConstants.EDC_NAMESPACE;
@@ -78,7 +77,6 @@ import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_DCAT_ALPHA;
 import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_DCAT_BETA;
 import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_DCAT_GAMMA;
 import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_FAILURE_REST_API;
-import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_KAFKA_STREAM;
 import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_REST_20_SEC_API;
 import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_REST_API;
 import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_REST_API_DOMAIN;
@@ -105,7 +103,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @EndToEndTest
 public class LocalEndToEndTests extends AbstractEndToEndTests {
 
-    public static final String KAFKA_BROKER_PULL = "KafkaBroker-PULL";
     public static final String AZURE_STORAGE_PUSH = "AzureStorage-PUSH";
     // Default DSE policy prefix -- the hardcoded default of the configurable DseNamespaceConfig.
     private static final String DSE_POLICY_PREFIX = "dse-policy";
@@ -133,7 +130,6 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
     private static SSLContext previousDefaultSslContext;
     private static EventHubConsumerAsyncClient consumer;
 
-    private static String kafkacatPod = null;
     private static final String EVENTHUB_DEBUG_LOG = "/tmp/eventhub-debug.log";
 
     private static void ehLog(String msg) {
@@ -405,35 +401,6 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
                 "proxyQueryParams", Boolean.TRUE.toString()
         ), atomicConstraint("inForceDate", "lteq", "contractAgreement+20s"));
 
-        // Kafka properties
-        JsonObject jsonObject = Json.createObjectBuilder()
-                .add("topic", "my-topic")
-                .add("kafka.bootstrap.servers", "proxy-provider-oauth2:30003")
-                .add("security.protocol", "SASL_SSL")
-                .add("sasl.mechanism", "OAUTHBEARER")
-                .add("tls_ca_secret", "proxy-provider-tls-ca")
-                .add("sasl.jaas.config", "org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginModule required " +
-                        "clientId='<your-client-id>' clientSecret='<your-client-secret>' tenantId='<your-tenant-id>' scope='<your-client-id>/.default'").build();
-        PROVIDER.createEntry(ASSET_ID_KAFKA_STREAM, "Test Asset Kafka", "a basic kafka stream", Map.of(
-                "type", "Kafka",
-                "properties", jsonObject
-        ), genericClaimConstraint(MEMBERSHIP_CREDENTIAL_TYPE, "name", "odrl:eq", "consumer"));
-
-        JsonObject jsonObject2 = Json.createObjectBuilder()
-                .add("topic", "tst-topic")
-                .add("kafka.bootstrap.servers", "proxy-provider:30001")
-                .add("security.protocol", "SASL_SSL")
-                .add("sasl.mechanism", "PLAIN")
-                .add("tls_ca_secret", "proxy-provider-tls-ca")
-                .add("sasl.jaas.config",
-                        "org.apache.kafka.common.security.plain.PlainLoginModule required " +
-                                "username='provider1' password='secret1'")
-                .build();
-        PROVIDER.createEntry(ASSET_ID_KAFKA_STREAM + "-tst-2", "Test Asset Kafka", "a basic kafka stream", Map.of(
-                "type", "Kafka",
-                "properties", jsonObject2
-        ), genericClaimConstraint(MEMBERSHIP_CREDENTIAL_TYPE, "name", "odrl:eq", "consumer"));
-
         PROVIDER.createEntry(ASSET_ID_REST_API_ROUTE_DOMAIN_RESTRICTED, "Test Asset REST", "a basic REST API", Map.of(
                 "type", "HttpData",
                 "baseUrl", "http://provider-backend:8080/api/provider/data",
@@ -563,8 +530,6 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
                     POLICY_RESTRICTED_API,
                     ASSET_ID_REST_20_SEC_API,
                     ASSET_ID_FAILURE_REST_API,
-                    ASSET_ID_KAFKA_STREAM,
-                    ASSET_ID_KAFKA_STREAM + "-tst-2",
                     ASSET_ID_REST_API_ROUTE_DOMAIN_RESTRICTED,
                     ASSET_ID_REST_API_TRAVEL_DOMAIN_RESTRICTED,
                     ASSET_ID_AZURE_BLOB,
@@ -907,71 +872,9 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
             });
         }
 
-        public static String deriveStandardizedServiceName() {
-            return "kp-consumer-service";
-        }
-
-        @Test
-        void transfer_kafka_stream_oauth() {
-            var transferProcessId = negotiationContractAndStartTransfer(CONSUMER, PROVIDER, ASSET_ID_KAFKA_STREAM, KAFKA_BROKER_PULL);
-            getContractIdFromTransferProcess(CONSUMER, transferProcessId);
-            CONSUMER.finishDataTransfer(transferProcessId);
-        }
-
-        @Test
-        void transfer_starts_via_dsp08() {
-            var consumerClient = CONSUMER.participantClientDsp08();
-            var providerClient = PROVIDER.participantClientDsp08();
-
-            var transferProcessId = consumerClient.requestAssetFrom(ASSET_ID_REST_API, providerClient)
-                    .withTransferType(HTTP_DATA_PULL)
-                    .execute();
-
-            try {
-                await().atMost(TEST_TIMEOUT).untilAsserted(() -> {
-                    var state = consumerClient.getTransferProcessState(transferProcessId);
-                    assertThat(state).isEqualTo(STARTED.name());
-                });
-            } finally {
-                CONSUMER.finishDataTransfer(transferProcessId);
-            }
-        }
-
-        private void publishMessagesToKafka() {
-            try {
-                kafkacatPod = discoverPodName("", "kafkacat-");
-                KafkaIntermediary.provider_publish(kafkacatPod);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-
-        @Test
-        void transfer_kafka_stream() throws Exception {
-            var transferProcessId = negotiationContractAndStartTransfer(
-                    CONSUMER, PROVIDER, ASSET_ID_KAFKA_STREAM + "-tst-2", KAFKA_BROKER_PULL
-            );
 
 
-            String serviceName = deriveStandardizedServiceName();
-            int servicePort = 30001;  // Fixed port for the standardized service
-            String topic = "tst-topic";
-            String expectedMessage = "Hello from provider!";
 
-            getContractIdFromTransferProcess(CONSUMER, transferProcessId);
-            // Wait longer to ensure proxy is deployed and ready (discovery + deployment time)
-            Thread.sleep(15000);
-
-            // Publish message on provider side
-            publishMessagesToKafka();
-
-            boolean messageReceived = KafkaIntermediary.waitForKafkaMessage(
-                    serviceName, servicePort, topic, expectedMessage, Duration.ofSeconds(20), kafkacatPod
-            );
-            CONSUMER.finishDataTransfer(transferProcessId);
-            assertTrue(messageReceived,
-                    () -> "Expected message not found in Kafka topic within timeout: " + expectedMessage);
-        }
 
         private static String discoverPodName(String transferId, String filter)
                 throws IOException, InterruptedException {
@@ -1061,7 +964,7 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
             // Get contract agreement from the negotiation
             var contractAgreementId = consumer.participantClient().baseManagementRequest()
                     .when()
-                    .get("/v3/contractnegotiations/" + negotiationId)
+                    .get("/contractnegotiations/" + negotiationId)
                     .then()
                     .statusCode(200)
                     .extract().jsonPath().getString("contractAgreementId");
@@ -1076,7 +979,7 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
                     ),
                     "@type", "TransferRequest",
                     "counterPartyAddress", providerUrl,
-                    "protocol", providerClient.getProtocol(),
+                    "protocol", providerClient.getProtocol().name(),
                     "connectorId", consumerDid,
                     "contractId", contractAgreementId,
                     "transferType", AZURE_STORAGE_PUSH,
@@ -1093,7 +996,7 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
                     .contentType(ContentType.JSON)
                     .body(body)
                     .when()
-                    .post("/v3/transferprocesses")
+                    .post("/transferprocesses")
                     .then()
                     .log().ifError()
                     .statusCode(200)
@@ -1169,7 +1072,7 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
             // Verify negotiation exists before deletion
             CONSUMER.participantClient().baseManagementRequest()
                     .when()
-                    .get("/v3/contractnegotiations/" + negoId)
+                    .get("/contractnegotiations/" + negoId)
                     .then()
                     .log().ifError()
                     .statusCode(200);
@@ -1177,7 +1080,7 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
             // Delete the contract negotiation
             CONSUMER.participantClient().baseManagementRequest()
                     .when()
-                    .delete("/v3/contractnegotiations/" + negoId)
+                    .delete("/contractnegotiations/" + negoId)
                     .then()
                     .log().ifError()
                     .statusCode(204);
@@ -1185,7 +1088,7 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
             // Verify negotiation no longer exists
             CONSUMER.participantClient().baseManagementRequest()
                     .when()
-                    .get("/v3/contractnegotiations/" + negoId)
+                    .get("/contractnegotiations/" + negoId)
                     .then()
                     .log().ifError()
                     .statusCode(404);
@@ -1194,7 +1097,7 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
         public static String getContractIdFromTransferProcess(AbstractParticipant consumer, String transferProcessId) {
             return consumer.participantClient().baseManagementRequest()
                     .when()
-                    .get("/v3/transferprocesses/" + transferProcessId)
+                    .get("/transferprocesses/" + transferProcessId)
                     .then()
                     .statusCode(200)
                     .extract().body().jsonPath().getString("contractId");
@@ -1217,7 +1120,7 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
                             .contentType(ContentType.JSON)
                             .body(body)
                             .when()
-                            .post("/v3/transferprocesses/request")
+                            .post("/transferprocesses/request")
                             .then()
                             .statusCode(200)
                             .extract().body().jsonPath().getString("[0].contractId"),
@@ -1248,7 +1151,7 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
                     ),
                     "@type", "TransferRequest",
                     "counterPartyAddress", providerUrl,
-                    "protocol", providerClient.getProtocol(),
+                    "protocol", providerClient.getProtocol().name(),
                     "connectorId", consumerDid,
                     "contractId", contractId,
                     "transferType", "HttpData-PULL"
@@ -1257,7 +1160,7 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
                     .contentType(ContentType.JSON)
                     .body(body)
                     .when()
-                    .post("/v3/transferprocesses")
+                    .post("/transferprocesses")
                     .then()
                     .log().ifError()
                     .statusCode(200);
@@ -1277,7 +1180,7 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
                     .contentType(ContentType.JSON)
                     .body(body)
                     .when()
-                    .post("/v3/contractagreements/retirements")
+                    .post("/contractagreements/retirements")
                     .then()
                     .log().ifError()
                     .statusCode(204);
@@ -1287,7 +1190,7 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
             participant.participantClient().baseManagementRequest()
                     .contentType(ContentType.JSON)
                     .when()
-                    .delete("/v3/contractagreements/retirements/" + contractId)
+                    .delete("/contractagreements/retirements/" + contractId)
                     .then()
                     .log().ifError()
                     .statusCode(204);

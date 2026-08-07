@@ -40,7 +40,6 @@ import java.util.Map;
 import org.eclipse.edc.jsonld.spi.JsonLdKeywords;
 import org.eclipse.edc.jsonld.spi.Namespaces;
 import org.eclipse.edc.policy.model.OdrlNamespace;
-import org.eclipse.edc.protocol.dsp.spi.type.Dsp2025Constants;
 import org.eclipse.edc.spi.constants.CoreConstants;
 
 
@@ -114,7 +113,7 @@ public class VcCatalogFilterExtension implements ServiceExtension {
         jsonLd.registerNamespace(OdrlNamespace.ODRL_PREFIX, OdrlNamespace.ODRL_SCHEMA, CATALOG_FILTER_SCOPE);
         jsonLd.registerNamespace(Namespaces.DCAT_PREFIX, Namespaces.DCAT_SCHEMA, CATALOG_FILTER_SCOPE);
         jsonLd.registerNamespace(Namespaces.DCT_PREFIX, Namespaces.DCT_SCHEMA, CATALOG_FILTER_SCOPE);
-        jsonLd.registerNamespace(Namespaces.DSPACE_PREFIX, Dsp2025Constants.DSPACE_SCHEMA_2025_1, CATALOG_FILTER_SCOPE);
+        jsonLd.registerNamespace(Namespaces.DSPACE_PREFIX, Namespaces.DSPACE_2025_1_IRI, CATALOG_FILTER_SCOPE);
     }
 
     private void registerTransformers() {

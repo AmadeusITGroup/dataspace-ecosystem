@@ -70,7 +70,6 @@ kubectl wait --namespace ingress-nginx \
       telemetry-agent-postgresql-hashicorpvault:latest \
       telemetry-storage:latest \
       telemetry-csv-manager:latest \
-      kafka-proxy-k8s-manager:latest \
       --name dse-cluster
     ```
 

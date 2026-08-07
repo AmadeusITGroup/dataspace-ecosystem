@@ -7,7 +7,6 @@ Umbrella Helm chart that deploys a full Dataspace Ecosystem **participant**:
 | Control Plane                 | `controlplane`                            | `../control-plane` (this repo)                  |
 | Data Plane                    | `dataplane`                               | `../data-plane` (this repo)                     |
 | Identity Hub                  | `identityhub`                             | `../identity-hub` (this repo)                   |
-| Kafka Proxy K8s Manager        | `kafka-proxy`                             | `../kafka-proxy-k8s-manager` (this repo)        |
 | Telemetry Agent               | `telemetryagent`                          | `../telemetry-agent` (this repo)                |
 
 This mirrors the DSE component set deployed by the `terraform/backend/participant`
@@ -39,7 +38,7 @@ helm upgrade --install <participant-name> ./charts/participant \
   -f my-participant-values.yaml
 ```
 
-Set `dataplane.enabled`, `kafka-proxy.enabled`, or `telemetryagent.enabled`
+Set `dataplane.enabled` or `telemetryagent.enabled`
 to `false` in your values file to skip that component (all default to `true`).
 Disabling `dataplane` also skips its OpenShift route (`global.route`). This
 matches the optionality already present in the Terraform module.
@@ -84,6 +83,12 @@ global:
                               # dataplane/identityhub when unset (telemetryagent's
                               # public key alias is derived from
                               # global.identityHub.didWebUrl instead)
+    aesKeyAlias: ""           # shared AES encryption key vault alias
+                              # (Terraform's "<participantName>-aes"), required
+                              # since EDC 0.16.0's encryption-algorithm registry
+                              # (https://github.com/eclipse-edc/Connector/pull/5423)
+                              # and used by controlplane/dataplane/identityhub/
+                              # telemetryagent when unset
   identityHub:
     didWebUrl: ""            # this participant's Identity Hub DID —
                               # shared as EDC_PARTICIPANT_ID by controlplane/
@@ -115,10 +120,6 @@ section.
   `global.vault.url` to `""`, because a non-empty default there would make
   each subchart's Vault integration block always render, even for standalone
   installs that don't use Vault.
-- `kafka-proxy` does not use `global.vaultProvider` in its image repository
-  formula (Terraform doesn't suffix that component's image name with the
-  vault provider), and derives its `participantId`/`vaultFolder`/
-  `vaultTokenSecret.name` directly from `global.participantName`.
 
 ## Migrating an existing Terraform-deployed participant
 
@@ -133,9 +134,8 @@ require deleting/recreating every Deployment.
 
 To avoid that, every component exposes an `instanceOverride` value
 (`controlplane.controlplane.instanceOverride`, `dataplane.dataplane.instanceOverride`,
-`identityhub.identityhub.instanceOverride`, `telemetryagent.telemetryagent.instanceOverride`,
-`kafka-proxy.kafkaProxy.manager.instanceOverride`) that pins the selector to the
-component's old Terraform release name during cutover:
+`identityhub.identityhub.instanceOverride`, `telemetryagent.telemetryagent.instanceOverride`)
+that pins the selector to the component's old Terraform release name during cutover:
 
 ```yaml
 controlplane:
@@ -150,10 +150,6 @@ identityhub:
 telemetryagent:
   telemetryagent:
     instanceOverride: "<participant>-telemetryagent"
-kafka-proxy:
-  kafkaProxy:
-    manager:
-      instanceOverride: "<participant>-kafka-proxy"
 ```
 
 For the data plane, the chart retains its historical `-dataplane` selector

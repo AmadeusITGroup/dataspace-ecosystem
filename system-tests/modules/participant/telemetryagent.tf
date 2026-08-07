@@ -56,6 +56,9 @@ resource "helm_release" "telemetryagent" {
           "sts" : {
             "privateKeyVaultAlias" : local.privatekey_alias,
             "publicKeyVaultAlias" : "${local.did_url}#my-key"
+          },
+          "encryption" : {
+            "aesKeyAlias" : local.aes_key_alias
           }
         },
         "did" : {

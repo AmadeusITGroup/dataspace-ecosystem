@@ -194,7 +194,6 @@ All Docker-based services use the configurable base image:
 | Telemetry Agent | :material-check: |
 | Telemetry Service | :material-check: |
 | Telemetry CSV Manager | :material-check: |
-| Kafka Proxy K8s Manager | :material-check: |
 
 ## Default Behavior
 

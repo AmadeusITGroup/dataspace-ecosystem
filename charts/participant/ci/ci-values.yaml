@@ -104,9 +104,3 @@ telemetryagent:
       eventhub:
         name: ci-test-eventhub
         namespace: ci-test-eventhub-ns
-
-kafka-proxy:
-  kafkaProxy:
-    manager:
-      image:
-        tag: "1.0.0"

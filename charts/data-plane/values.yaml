@@ -21,6 +21,11 @@ global:
   keys:
     privateKeyAlias: ""
     publicKeyAlias: ""
+    # -- Vault alias of the shared AES key (Terraform's `aes_key_alias`,
+    # "<participantName>-aes") used to encrypt participant-context config,
+    # required since EDC 0.16.0's encryption-algorithm registry. Derived
+    # from `global.participantName` when unset.
+    aesKeyAlias: ""
   image:
     baseRepository: ""
     namePrefix: ""
@@ -195,6 +200,12 @@ dataplane:
     dataplane:
       privateKeyVaultAlias: ""
       publicKeyVaultAlias: ""
+    encryption:
+      # -- Vault alias of the AES key used to encrypt participant-context
+      # config, required since EDC 0.16.0's encryption-algorithm registry
+      # (`edc.encryption.aes.key.alias`). Falls back to
+      # global.keys.aesKeyAlias (participantName-derived default) when unset.
+      aesKeyAlias: ""
 
   service:
     # -- [Service type](https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types) to expose the running application on a set of Pods as a network service.

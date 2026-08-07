@@ -21,7 +21,6 @@ nginx chart ingress, not an OpenShift route).
 {{- $pname := required "global.participantName is required when global.route.enabled is true" .Values.global.participantName }}
 {{- $pattern := required "global.route.hostPattern is required when global.route.enabled is true (two %s verbs: participantName, componentToken)" $rt.hostPattern }}
 {{- $rel := .Release.Name }}
-{{- $kafkaEnabled := index .Values "kafka-proxy" "enabled" }}
 {{- $components := list
       (dict "svc" "controlplane" "token" "controlplane" "certManager" true "enabled" true
             "paths" (list (dict "path" "/api/management" "port" 8181) (dict "path" "/api/dsp" "port" 8282)))
@@ -29,8 +28,6 @@ nginx chart ingress, not an OpenShift route).
             "paths" (list (dict "path" "/api/public" "port" 8181) (dict "path" "/api/data" "port" 8282)))
       (dict "svc" "identityhub" "token" "identityhub" "certManager" true "enabled" true
             "paths" (list (dict "path" "/api/identity" "port" 8181) (dict "path" "/api/credentials" "port" 8282) (dict "path" "/api/did" "port" 8383) (dict "path" "/api/sts" "port" 8484)))
-      (dict "svc" "kafka-proxy" "token" "kafkaproxy" "certManager" false "enabled" $kafkaEnabled
-            "paths" (list (dict "path" "/api" "port" 8080) (dict "path" "/management" "port" 8081)))
 }}
 {{- range $c := $components }}
 {{- if $c.enabled }}

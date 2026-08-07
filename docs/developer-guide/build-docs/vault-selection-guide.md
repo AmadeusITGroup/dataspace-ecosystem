@@ -101,7 +101,6 @@ Most services require a vault for secrets management (key storage, credential si
 | Issuer Service          | :material-check: | :material-check: |
 | Telemetry Agent         | :material-check: | :material-check: |
 | Telemetry Service       | :material-check: | :material-check: |
-| Kafka Proxy K8s Manager | :material-check: | |
 
 ### Vault-Independent Services
 
@@ -127,7 +126,7 @@ Built images follow this naming pattern:
 | Identity Hub | `identity-hub-postgresql-hashicorpvault:latest` | `identity-hub-postgresql-azurevault:latest` |
 
 !!! note
-    Vault-independent services (Telemetry Storage, Telemetry CSV Manager, Kafka Proxy K8s Manager) do not follow this naming convention, as they do not include a vault-specific suffix.
+    Vault-independent services (Telemetry Storage, Telemetry CSV Manager) do not follow this naming convention, as they do not include a vault-specific suffix.
 
 ## Default Behavior
 

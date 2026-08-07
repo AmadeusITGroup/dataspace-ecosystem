@@ -82,7 +82,6 @@ The Dataspace Ecosystem follows a layered module architecture designed for exten
 | Topic | Description |
 |-------|-------------|
 | [Development Setup](setup/development-setup.md) | IDE configuration and local development |
-| [Go Development Setup](setup/go-development-setup.md) | Containerized Go builds for plugins |
 | [Documentation Setup](setup/docs-setup.md) | Serve and build the docs locally |
 | [Base Image Configuration](build-docs/base-image-configuration.md) | Customize Docker base images |
 | [Vault Selection Guide](build-docs/vault-selection-guide.md) | Choose between HashiCorp and Azure vault |

@@ -70,6 +70,9 @@ resource "helm_release" "dataplane" {
           "dataplane" : {
             "privateKeyVaultAlias" : local.privatekey_alias,
             "publicKeyVaultAlias" : local.publickey_alias
+          },
+          "encryption" : {
+            "aesKeyAlias" : local.aes_key_alias
           }
         }
 

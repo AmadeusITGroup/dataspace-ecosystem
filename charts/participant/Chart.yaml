@@ -2,9 +2,9 @@ apiVersion: v2
 name: participant
 description: >
   Umbrella chart deploying the Dataspace Ecosystem components of a participant:
-  Control Plane, Data Plane, Identity Hub, Kafka Proxy K8s Manager, and
-  Telemetry Agent. Mirrors the DSE component set deployed by the
-  `terraform/backend/participant` module in cloud-native-jdf/eonax-iac-workflows.
+  Control Plane, Data Plane, Identity Hub, and Telemetry Agent. Mirrors the
+  DSE component set deployed by the `terraform/backend/participant` module in
+  cloud-native-jdf/eonax-iac-workflows.
   The Content Definition Service (cr-bff) is released and versioned
   independently and is not a dependency of this chart — compose it alongside
   this chart at the Argo CD layer (e.g. a multi-source Application) rather
@@ -28,10 +28,6 @@ dependencies:
   - name: identityhub
     version: "*"
     repository: "file://../identity-hub"
-  - name: kafka-proxy
-    version: "*"
-    repository: "file://../kafka-proxy-k8s-manager"
-    condition: kafka-proxy.enabled
   - name: telemetryagent
     version: "*"
     repository: "file://../telemetry-agent"

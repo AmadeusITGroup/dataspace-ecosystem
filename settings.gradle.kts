@@ -6,7 +6,6 @@ include(":core:controlplane")
 include(":core:telemetry-agent-core")
 include(":core:telemetry-service-core")
 include(":core:common:telemetry-record-store")
-include(":core:kafka-proxy-k8s-manager-core")
 
 include(":extensions")
 include(":extensions:agreements")
@@ -30,7 +29,6 @@ include(":extensions:data-plane:data-plane-data-consumption-metrics")
 
 include(":extensions:control-plane:asset-custom-property-subscriber")
 include(":extensions:control-plane:asset-property-lookup")
-include(":extensions:control-plane:transfer-data-plane-signal-kafka")
 include(":extensions:control-plane:control-plane-federated-catalog-filter")
 
 include(":extensions:issuer-service:membership-attestation-api")
@@ -108,10 +106,6 @@ include(":launchers:telemetry-agent:telemetry-agent-postgresql-azurevault")
 include(":launchers:telemetry-agent:telemetry-agent-postgresql-hashicorpvault")
 
 include(":launchers:telemetry-storage")
-include(":launchers:kafka-proxy-k8s-manager")
-include(":launchers:kafka-proxy-k8s-manager:kafka-proxy-k8s-manager-base")
-
-include(":plugins")
 
 include(":launchers:telemetry-csv-manager")
 

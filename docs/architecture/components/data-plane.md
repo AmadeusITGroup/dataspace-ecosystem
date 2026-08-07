@@ -74,7 +74,6 @@ Connect to various data backends:
 | `HttpData` | HTTP/REST endpoints |
 | `AmazonS3` | AWS S3 buckets |
 | `AzureStorage` | Azure Blob Storage |
-| `Kafka` | Apache Kafka topics |
 | `Database` | SQL databases |
 
 ### Data Sinks

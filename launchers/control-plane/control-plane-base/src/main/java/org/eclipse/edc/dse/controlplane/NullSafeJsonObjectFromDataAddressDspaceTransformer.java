@@ -39,7 +39,7 @@ public class NullSafeJsonObjectFromDataAddressDspaceTransformer extends Abstract
                 .map(it -> endpointProperty(it.getKey(), it.getValue(), context))
                 .collect(JsonCollectors.toJsonArray());
 
-        var schema = Namespaces.DSPACE_SCHEMA;
+        var schema = Namespaces.DSPACE_2025_1_IRI;
         return jsonFactory.createObjectBuilder()
                 .add(JsonLdKeywords.TYPE, schema + DataAddressDspaceSerialization.DSPACE_DATAADDRESS_TYPE_TERM)
                 .add(schema + DataAddressDspaceSerialization.ENDPOINT_TYPE_PROPERTY_TERM, dataAddress.getType())
@@ -48,7 +48,7 @@ public class NullSafeJsonObjectFromDataAddressDspaceTransformer extends Abstract
     }
 
     private JsonObject endpointProperty(String key, Object value, TransformerContext context) {
-        var schema = Namespaces.DSPACE_SCHEMA;
+        var schema = Namespaces.DSPACE_2025_1_IRI;
         var builder = jsonFactory.createObjectBuilder()
                 .add(JsonLdKeywords.TYPE, schema + DataAddressDspaceSerialization.ENDPOINT_PROPERTY_PROPERTY_TYPE_TERM)
                 .add(schema + DataAddressDspaceSerialization.ENDPOINT_PROPERTY_NAME_PROPERTY_TERM, key);

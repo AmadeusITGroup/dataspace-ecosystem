@@ -94,6 +94,5 @@ deactivate
 ## See Also
 
 - [Development Setup](development-setup.md) - IDE and JDK configuration
-- [Go Development Setup](go-development-setup.md) - Containerized Go builds
 - [Contributing](../contributing.md) - Contribution guidelines
 

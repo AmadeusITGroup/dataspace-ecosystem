@@ -207,6 +207,15 @@ spec:
             - name: "EDC_IAM_STS_OAUTH_CLIENT_SECRET_ALIAS"
               value: {{ include "dse.telemetryagent.sts.clientSecretAlias" . | quote }}
 
+            ################
+            # ENCRYPTION   #
+            ################
+            # -- required since EDC 0.16.0's encryption-algorithm registry
+            # (https://github.com/eclipse-edc/Connector/pull/5423); without it
+            # participant-context creation fails.
+            - name: "EDC_ENCRYPTION_AES_KEY_ALIAS"
+              value: {{ include "dse.telemetryagent.keys.encryption.aesKeyAlias" . | quote }}
+
             #######
             # API #
             #######

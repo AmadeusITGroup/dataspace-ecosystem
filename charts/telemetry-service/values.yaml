@@ -135,6 +135,14 @@ telemetryservice:
     clientId: ""
     clientSecretAlias: ""
 
+  # -- Vault key aliases used for cryptographic operations other than the
+  # STS signing key pair.
+  keys:
+    encryption:
+      # -- Vault alias of the AES key used to encrypt participant-context
+      # config, required since EDC 0.16.0's encryption-algorithm registry
+      # (`edc.encryption.aes.key.alias`).
+      aesKeyAlias: ""
 
   service:
     # -- [Service type](https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types) to expose the running application on a set of Pods as a network service.
