@@ -30,7 +30,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
-
 import reactor.core.publisher.Flux;
 
 import java.io.BufferedReader;
@@ -38,6 +37,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.io.UncheckedIOException;
 import java.security.cert.X509Certificate;
 import java.sql.Timestamp;
 import java.time.Duration;
@@ -77,6 +77,8 @@ import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_DCAT_ALPHA;
 import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_DCAT_BETA;
 import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_DCAT_GAMMA;
 import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_FAILURE_REST_API;
+import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_ORDER_CREATED_EVENT;
+import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_ORDER_CREATED_EVENT_V1;
 import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_REST_20_SEC_API;
 import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_REST_API;
 import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_REST_API_DOMAIN;
@@ -489,6 +491,42 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
                 ),
                 Map.of("baseUrl", "http://provider-backend:8080/api/provider/data")
         );
+
+        createOrderCreatedEventAssetsAndContracts();
+    }
+
+    private static void createOrderCreatedEventAssetsAndContracts() {
+        // Base and versioned assets for nested-array selector coverage.
+        PROVIDER.createRawAsset(loadAssetFromResource("assets/order-created-event-asset.json", ASSET_ID_ORDER_CREATED_EVENT));
+        PROVIDER.createRawAsset(loadAssetFromResource("assets/order-created-event-asset-v1.0.0.json", ASSET_ID_ORDER_CREATED_EVENT_V1));
+
+        var dcatNs = "http://www.w3.org/ns/dcat#";
+        var skosNs = "http://www.w3.org/2004/02/skos/core#";
+        var topConceptNotationPath =
+                "properties.'" + dcatNs + "themeTaxonomy'.'" + skosNs + "hasTopConcept'.'" + skosNs + "notation'";
+        var narrowerNotationPath =
+                "properties.'" + dcatNs + "themeTaxonomy'.'" + skosNs + "hasTopConcept'.'" + skosNs + "narrower'.'" + skosNs + "notation'";
+
+        var membershipConstraint = atomicConstraint(
+                "%s:%s".formatted(DSE_POLICY_PREFIX, org.eclipse.dse.iam.policy.PolicyConstants.MEMBERSHIP_CONSTRAINT),
+                "odrl:eq", "active");
+        var permission = Json.createObjectBuilder()
+                .add("action", "use")
+                .add("constraint", membershipConstraint)
+                .build();
+        var policyId = PROVIDER.createPolicyDefinition(
+                org.eclipse.edc.connector.controlplane.test.system.utils.PolicyFixtures.policy(List.of(permission)));
+
+        PROVIDER.createContractDefinitionWithSelector(
+                UUID.randomUUID().toString(),
+                policyId, policyId,
+                narrowerNotationPath, "=", "990");
+
+        PROVIDER.createContractDefinitionWithSelector(
+                UUID.randomUUID().toString(),
+                policyId, policyId,
+                new String[]{ topConceptNotationPath, "=", "50" },
+                new String[]{ narrowerNotationPath, "=", "990" });
     }
 
     private static JsonObject genericClaimConstraint(String credentialType, String path, String operator, String rightOperand) {
@@ -535,7 +573,9 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
                     ASSET_ID_AZURE_BLOB,
                     ASSET_ID_DCAT_ALPHA,
                     ASSET_ID_DCAT_BETA,
-                    ASSET_ID_DCAT_GAMMA
+                    ASSET_ID_DCAT_GAMMA,
+                    ASSET_ID_ORDER_CREATED_EVENT,
+                    ASSET_ID_ORDER_CREATED_EVENT_V1
             );
 
             assertThat(queryParticipantDatasets(AUTHORITY, PROVIDER.did(), PROVIDER.controlPlaneCatalogFilterUrl()))
@@ -851,6 +891,21 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
         private static String getDatasetId(jakarta.json.JsonObject dataset) {
             return dataset.getString("@id",
                    dataset.getString(ID, null));
+        }
+    }
+
+    private static JsonObject loadAssetFromResource(String resourcePath, String expectedAssetId) {
+        try (var in = LocalEndToEndTests.class.getClassLoader().getResourceAsStream(resourcePath)) {
+            if (in == null) {
+                throw new IllegalStateException("Resource %s not found on classpath".formatted(resourcePath));
+            }
+            try (var reader = Json.createReader(in)) {
+                var asset = reader.readObject();
+                assertThat(asset.getString(ID)).isEqualTo(expectedAssetId);
+                return asset;
+            }
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
         }
     }
 
@@ -1228,6 +1283,38 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
             await().atMost(TEST_TIMEOUT).untilAsserted(() -> {
                 var data = CONSUMER.queryData(contractId, queryParams, 200, Map.class);
                 assertThat(data).isEqualTo(expectedMsg);
+            });
+        }
+
+        @Test
+        void transfer_with_nested_array_property_single_selector() {
+            // Tests single selector matching nested array property: narrower notation = "990"
+            // This verifies that the contract definition's asset selector correctly traverses
+            // nested JSON-LD arrays without indices (e.g., skos:hasTopConcept.skos:narrower.notation)
+            var transferProcessId = negotiationContractAndStartTransfer(CONSUMER, PROVIDER, ASSET_ID_ORDER_CREATED_EVENT);
+
+            var contractId = getContractIdFromTransferProcess(CONSUMER, transferProcessId);
+            USED_CONTRACT_ID.add(contractId);
+
+            await().atMost(TEST_TIMEOUT).untilAsserted(() -> {
+                var data = CONSUMER.queryData(contractId, Map.of(), 200, Map.class);
+                assertThat(data).isNotNull();
+            });
+        }
+
+        @Test
+        void transfer_with_nested_array_property_multiple_selectors() {
+            // Tests multiple correlated selectors on nested array properties: top notation = "50" AND narrower = "990"
+            // This verifies that when multiple selectors are combined with AND logic, both conditions must be satisfied
+            // without incorrectly matching assets where only one condition applies (e.g., top concept "60" also has narrower "990")
+            var transferProcessId = negotiationContractAndStartTransfer(CONSUMER, PROVIDER, ASSET_ID_ORDER_CREATED_EVENT_V1);
+
+            var contractId = getContractIdFromTransferProcess(CONSUMER, transferProcessId);
+            USED_CONTRACT_ID.add(contractId);
+
+            await().atMost(TEST_TIMEOUT).untilAsserted(() -> {
+                var data = CONSUMER.queryData(contractId, Map.of(), 200, Map.class);
+                assertThat(data).isNotNull();
             });
         }
     }

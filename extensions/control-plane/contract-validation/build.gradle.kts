@@ -3,21 +3,22 @@ plugins {
 }
 
 dependencies {
-    api(project(":core:common"))
-    api(libs.edc.spi.asset)
+    implementation(project(":core:controlplane"))
+
     api(libs.edc.spi.core)
+    api(libs.edc.spi.asset)
     api(libs.edc.spi.contract)
     api(libs.edc.spi.catalog)
     api(libs.edc.spi.policy.engine)
-    api(libs.edc.spi.participant)
 
-
+    implementation(libs.edc.lib.controlplane.policies)
+    implementation(libs.edc.spi.jsonld)
+    implementation(libs.edc.lib.query)
+    implementation(project(":core:common"))
     implementation(libs.edc.core.controlplane.contract)
 
     testImplementation(libs.edc.core.junit)
     testImplementation(libs.assertj)
-    testImplementation(libs.edc.lib.query)
-    testImplementation(libs.jackson.databind)
 }
 
 edcBuild {

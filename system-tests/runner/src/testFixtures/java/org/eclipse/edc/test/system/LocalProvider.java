@@ -14,6 +14,10 @@ public class LocalProvider extends AbstractParticipant {
     public static final String OAUTH2_CLIENT_SECRET = "supersecret";
     public static final String ASSET_ID_REST_API_ROUTE_DOMAIN_RESTRICTED = "rest-api-route-domain-restricted";
     public static final String ASSET_ID_REST_API_TRAVEL_DOMAIN_RESTRICTED = "rest-api-travel-domain-restricted";
+    public static final String ASSET_ID_ORDER_CREATED_EVENT =
+            "urn:amadeus:platform:content-management:nevio:content-definitions:order-created-event";
+    public static final String ASSET_ID_ORDER_CREATED_EVENT_V1 =
+            "urn:amadeus:platform:content-management:nevio:content-definitions:order-created-event:versions:1.0.0";
 
     // DCAT metadata assets for filter/sort/pagination tests
     public static final String ASSET_ID_DCAT_ALPHA = "dcat-asset-alpha";

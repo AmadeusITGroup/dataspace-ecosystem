@@ -1,0 +1,89 @@
+{
+  "@id": "urn:amadeus:platform:content-management:nevio:content-definitions:order-created-event:versions:1.0.0",
+  "@type": "Asset",
+  "properties": {
+    "dct:title": "Order Created Event - Version 1.0.0",
+    "dct:description": "Version 1.0.0 of the Order Created Event. Event emitted when a new order is created in the order management system. Contains complete order details including items, customer information, and payment status.",
+    "dct:type": "EVENT",
+    "dcat:keyword": "BUSINESS",
+    "dct:issued": "2023-11-19",
+    "dct:isVersionOf": {
+      "@id": "urn:amadeus:platform:content-management:nevio:content-definitions:order-created-event"
+    },
+    "prov:qualifiedAttribution": {
+      "@type": "prov:Attribution",
+      "prov:agent": {
+        "@id": "urn:amadeus:platform:content-management:AF",
+        "@type": "prov:Organization",
+        "foaf:name": "AF"
+      },
+      "prov:hadRole": {
+        "@id": "urn:amadeus:platform:content-management:role:owner",
+        "@type": "prov:Role"
+      }
+    },
+    "dcat:themeTaxonomy": {
+      "@id": "urn:amadeus:platform:content-management:taxonomy",
+      "@type": "skos:ConceptScheme",
+      "dct:title": "Enterprise Domain Taxonomy",
+      "skos:hasTopConcept": [
+        {
+          "@id": "urn:amadeus:platform:content-management:nevio:category:50",
+          "@type": "skos:Concept",
+          "skos:prefLabel": "Airline Order",
+          "skos:definition": "Nevio Order Management System",
+          "skos:notation": "50",
+          "skos:narrower": [
+            {
+              "@id": "urn:amadeus:platform:content-management:nevio:category:990",
+              "@type": "skos:Concept",
+              "skos:prefLabel": "Order Management System",
+              "skos:definition": "List of order items created with associated products/services and their fulfilment status.",
+              "skos:notation": "990"
+            },
+            {
+              "@id": "urn:amadeus:platform:content-management:nevio:category:991",
+              "@type": "skos:Concept",
+              "skos:prefLabel": "Order Cancellation",
+              "skos:definition": "Order cancellation and return management.",
+              "skos:notation": "991"
+            }
+          ]
+        },
+        {
+          "@id": "urn:amadeus:platform:content-management:nevio:category:60",
+          "@type": "skos:Concept",
+          "skos:prefLabel": "Hotel Reservation",
+          "skos:definition": "Hotel Booking System",
+          "skos:notation": "60",
+          "skos:narrower": [
+            {
+              "@id": "urn:amadeus:platform:content-management:nevio:category:990",
+              "@type": "skos:Concept",
+              "skos:prefLabel": "Reservation Management",
+              "skos:definition": "Hotel reservation and management system.",
+              "skos:notation": "990"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "dataAddress": {
+    "@type": "DataAddress",
+    "type": "HttpData",
+    "baseUrl": "http://provider-backend:8080/api/provider/data",
+    "proxyPath": "true"
+  },
+  "@context": {
+    "@vocab": "https://w3id.org/edc/v0.0.1/ns/",
+    "edc": "https://w3id.org/edc/v0.0.1/ns/",
+    "odrl": "http://www.w3.org/ns/odrl/2/",
+    "dcat": "http://www.w3.org/ns/dcat#",
+    "dct": "http://purl.org/dc/terms/",
+    "prov": "http://www.w3.org/ns/prov#",
+    "adms": "http://www.w3.org/ns/adms#",
+    "skos": "http://www.w3.org/2004/02/skos/core#",
+    "foaf": "http://xmlns.com/foaf/0.1/"
+  }
+}

@@ -1,8 +1,8 @@
 rootProject.name = "dataspace-ecosystem"
 
 include(":core")
-include(":core:common")
 include(":core:controlplane")
+include(":core:common")
 include(":core:telemetry-agent-core")
 include(":core:telemetry-service-core")
 include(":core:common:telemetry-record-store")
@@ -30,6 +30,7 @@ include(":extensions:data-plane:data-plane-data-consumption-metrics")
 include(":extensions:control-plane:asset-custom-property-subscriber")
 include(":extensions:control-plane:asset-property-lookup")
 include(":extensions:control-plane:control-plane-federated-catalog-filter")
+include(":extensions:control-plane:contract-validation")
 
 include(":extensions:issuer-service:membership-attestation-api")
 include(":extensions:issuer-service:membership-attestation-store-sql")

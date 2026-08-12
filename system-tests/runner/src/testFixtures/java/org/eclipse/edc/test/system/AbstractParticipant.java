@@ -193,6 +193,121 @@ abstract class AbstractParticipant extends AbstractEntity {
                 .extract().jsonPath().getString(ID);
     }
 
+    /**
+     * Creates an asset from a fully custom JSON-LD body (e.g. one with deeply nested objects
+     * and arrays that {@link #createEntryWithCustomContext} cannot represent).
+     *
+     * @param assetBody the complete {@code Asset} JSON-LD document, including {@code @context},
+     *                  {@code @id}, {@code properties} and {@code dataAddress}
+     * @return the created asset's id
+     */
+    protected String createRawAsset(JsonObject assetBody) {
+        return participantClient().baseManagementRequest()
+                .contentType(JSON)
+                .body(assetBody)
+                .when()
+                .post("/assets")
+                .then()
+                .log().ifError()
+                .statusCode(200)
+                .contentType(JSON)
+                .extract().jsonPath().getString(ID);
+    }
+
+    /**
+     * Creates a contract definition whose {@code assetsSelector} is a single string-based
+     * {@link org.eclipse.edc.spi.query.Criterion} (e.g. a nested asset property path compared against a
+     * string value), instead of the default {@code id = assetId} selector used by
+     * {@link #createEntry}/{@link #createEntryWithCustomContext}. All three criterion parts
+     * ({@code operandLeft}, {@code operator}, {@code operandRight}) are sent as JSON strings, so this
+     * helper cannot represent non-string right operands (numbers, booleans, collections) or
+     * multi-criterion selectors.
+     *
+     * @param contractDefinitionId the contract definition id
+     * @param accessPolicyId       the access policy id
+     * @param contractPolicyId     the contract policy id
+     * @param operandLeft          the assetsSelector criterion's left operand (e.g. a nested property path)
+     * @param operator             the assetsSelector criterion's operator (e.g. {@code "="})
+     * @param operandRight         the assetsSelector criterion's right operand, sent as a JSON string
+     * @return the created contract definition's id
+     */
+    /**
+     * Creates a contract definition with one or more criteria in the asset selector.
+     * Supports filtering by {@link org.eclipse.edc.spi.query.Criterion} (e.g. a nested asset property path
+     * compared against a string value), instead of the default {@code id = assetId} selector used by
+     * {@link #createEntry}/{@link #createEntryWithCustomContext}.
+     *
+     * Usage for single criterion (legacy):
+     * {@code createContractDefinitionWithSelector(defId, policyId, policyId, "prop", "=", "value")}
+     *
+     * Usage for multiple criteria:
+     * {@code createContractDefinitionWithSelector(defId, policyId, policyId, 
+     *        new String[]{"prop1", "=", "val1"}, new String[]{"prop2", "=", "val2"})}
+     *
+     * @param contractDefinitionId the contract definition id
+     * @param accessPolicyId       the access policy id
+     * @param contractPolicyId     the contract policy id
+     * @param criteriaOrOperands   either three strings (operandLeft, operator, operandRight) for single criterion,
+     *                             or arrays of three strings for multiple criteria
+     * @return the created contract definition's id
+     */
+    protected String createContractDefinitionWithSelector(String contractDefinitionId,
+                                                          String accessPolicyId,
+                                                          String contractPolicyId,
+                                                          Object... criteriaOrOperands) {
+        // Build criteria list
+        var criteriaList = new ArrayList<String[]>();
+        
+        if (criteriaOrOperands.length == 3 && 
+            criteriaOrOperands[0] instanceof String && 
+            criteriaOrOperands[1] instanceof String && 
+            criteriaOrOperands[2] instanceof String) {
+            // Single criterion: three string arguments
+            criteriaList.add(new String[]{
+                (String) criteriaOrOperands[0],
+                (String) criteriaOrOperands[1],
+                (String) criteriaOrOperands[2]
+            });
+        } else {
+            // Multiple criteria: array arguments
+            for (var criterion : criteriaOrOperands) {
+                if (criterion instanceof String[]) {
+                    criteriaList.add((String[]) criterion);
+                }
+            }
+        }
+
+        // Build assetsSelector JSON-LD structure
+        var selectorBuilder = jakarta.json.Json.createArrayBuilder();
+        for (var criterion : criteriaList) {
+            selectorBuilder.add(createObjectBuilder()
+                    .add(TYPE, "Criterion")
+                    .add(EDC_NAMESPACE + "operandLeft", criterion[0])
+                    .add(EDC_NAMESPACE + "operator", criterion[1])
+                    .add(EDC_NAMESPACE + "operandRight", criterion[2]));
+        }
+
+        var requestBody = createObjectBuilder()
+                .add(CONTEXT, createObjectBuilder().add(VOCAB, EDC_NAMESPACE))
+                .add(ID, contractDefinitionId)
+                .add(TYPE, "ContractDefinition")
+                .add(EDC_NAMESPACE + "accessPolicyId", accessPolicyId)
+                .add(EDC_NAMESPACE + "contractPolicyId", contractPolicyId)
+                .add(EDC_NAMESPACE + "assetsSelector", selectorBuilder)
+                .build();
+
+        return participantClient().baseManagementRequest()
+                .contentType(JSON)
+                .body(requestBody)
+                .when()
+                .post("/contractdefinitions")
+                .then()
+                .log().ifError()
+                .statusCode(200)
+                .contentType(JSON)
+                .extract().jsonPath().getString(ID);
+    }
+
     protected void createSecret(String key, String value) {
         var requestBodyBuilder = createObjectBuilder()
                 .add(CONTEXT, createObjectBuilder().add(VOCAB, EDC_NAMESPACE))
