@@ -86,7 +86,7 @@ public class FederatedCatalogFilterServiceTest {
     private static final String PARTICIPANT_DID = "did:web:participant";
     private static ParticipantIdMapper participantIdMapper = mock(ParticipantIdMapper.class);
     private static final String CATALOG_REPLY = "/catalogReply.txt";
-    private static TypeTransformerRegistry transformerRegistry = new TypeTransformerRegistryImpl();
+    private static TypeTransformerRegistry transformerRegistry = new TypeTransformerRegistryImpl(mock(Monitor.class));
     private final JsonLd jsonLd = new TitaniumJsonLd(monitor);
     private static HttpClient httpClient = mock(HttpClient.class);
     private static HttpResponse<String> httpResponse = mock(HttpResponse.class);

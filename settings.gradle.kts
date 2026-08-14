@@ -31,6 +31,7 @@ include(":extensions:control-plane:asset-custom-property-subscriber")
 include(":extensions:control-plane:asset-property-lookup")
 include(":extensions:control-plane:control-plane-federated-catalog-filter")
 include(":extensions:control-plane:contract-validation")
+include(":extensions:control-plane:dcat-distribution-transformation")
 
 include(":extensions:issuer-service:membership-attestation-api")
 include(":extensions:issuer-service:membership-attestation-store-sql")
@@ -112,6 +113,7 @@ include(":launchers:telemetry-csv-manager")
 
 include(":system-tests:backend-service-provider")
 include(":system-tests:runner")
+include(":system-tests:dcat-distribution-transformation-test")
 
 pluginManagement {
     repositories {

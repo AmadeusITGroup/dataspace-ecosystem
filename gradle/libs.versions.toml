@@ -2,7 +2,11 @@
 format.version = "1.1"
 
 [versions]
-edc = "0.16.0"
+edc = "0.16.1"
+edc-azure = "0.16.0"
+edc-ih = "0.16.0"
+edc-fc = "0.16.0"
+edc-is = "0.16.0"
 edc-build = "1.1.5"
 wiremock = "3.0.1"
 
@@ -50,7 +54,7 @@ edc-spi-identity-did = { module = "org.eclipse.edc:identity-did-spi", version.re
 edc-spi-identitytrust = { module = "org.eclipse.edc:decentralized-claims-spi", version.ref = "edc" }
 edc-spi-jsonld = { module = "org.eclipse.edc:json-ld-spi", version.ref = "edc" }
 edc-spi-jwt = { module = "org.eclipse.edc:jwt-spi", version.ref = "edc" }
-edc-spi-vc = { module = "org.eclipse.edc:verifiable-credential-spi", version.ref = "edc" }
+edc-spi-vc = { module = "org.eclipse.edc:verifiable-credential-spi", version.ref = "edc-ih" }
 edc-spi-edrstore = { module = "org.eclipse.edc:edr-store-spi", version.ref = "edc" }
 edc-spi-dsp-http = { module = "org.eclipse.edc:dsp-http-spi", version.ref = "edc" }
 edc-spi-policy-context = { module = "org.eclipse.edc:request-policy-context-spi", version.ref = "edc" }
@@ -114,11 +118,11 @@ edc-ext-sql-pool-apache-commons = { module = "org.eclipse.edc:sql-pool-apache-co
 edc-spi-boot = { module = "org.eclipse.edc:web-spi", version.ref = "edc" }
 edc-ext-sql-edrindex = { module = "org.eclipse.edc:edr-index-sql", version.ref = "edc" }
 
-edc-ext-azure-vault = { module = "org.eclipse.edc.azure:vault-azure", version.ref = "edc" }
-edc-ext-azure-blob-core = { module = "org.eclipse.edc.azure:azure-blob-core", version.ref = "edc" }
-edc-ext-azure-data-plane-storage = { module = "org.eclipse.edc.azure:data-plane-azure-storage", version.ref = "edc" }
-edc-ext-azure-data-plane-provision-blob = { module = "org.eclipse.edc.azure:data-plane-provision-blob", version.ref = "edc" }
-edc-ext-azure-test = { module = "org.eclipse.edc.azure:azure-test", version.ref = "edc" }
+edc-ext-azure-vault = { module = "org.eclipse.edc.azure:vault-azure", version.ref = "edc-azure" }
+edc-ext-azure-blob-core = { module = "org.eclipse.edc.azure:azure-blob-core", version.ref = "edc-azure" }
+edc-ext-azure-data-plane-storage = { module = "org.eclipse.edc.azure:data-plane-azure-storage", version.ref = "edc-azure" }
+edc-ext-azure-data-plane-provision-blob = { module = "org.eclipse.edc.azure:data-plane-provision-blob", version.ref = "edc-azure" }
+edc-ext-azure-test = { module = "org.eclipse.edc.azure:azure-test", version.ref = "edc-azure" }
 edc-identitytrust-core = { module = "org.eclipse.edc:decentralized-claims", version.ref = "edc" }
 edc-identitytrust-issuersconfiguration = { module = "org.eclipse.edc:decentralized-claims-issuers-configuration", version.ref = "edc" }
 edc-identity-did-core = { module = "org.eclipse.edc:identity-did-core", version.ref = "edc" }
@@ -143,40 +147,42 @@ wiremock = { module = "org.wiremock:wiremock", version.ref = "wiremock" }
 # Control Plane
 edc-controlplane-api-secrets = { module = "org.eclipse.edc:secrets-api", version.ref = "edc" }
 edc-controlplane-bom = { module = "org.eclipse.edc:controlplane-dcp-bom", version.ref = "edc" }
+edc-controlplane-base-bom = { module = "org.eclipse.edc:controlplane-base-bom", version.ref = "edc" }
 edc-controlplane-sql-bom = { module = "org.eclipse.edc:controlplane-feature-sql-bom", version.ref = "edc" }
 edc-controlplane-core = { module = "org.eclipse.edc:control-plane-core", version.ref = "edc" }
+edc-iam-mock = { module = "org.eclipse.edc:iam-mock", version.ref = "edc" }
 
 # Data Plane
 edc-dataplane-bom = { module = "org.eclipse.edc:dataplane-base-bom", version.ref = "edc" }
 edc-dataplane-sql-bom = { module = "org.eclipse.edc:dataplane-feature-sql-bom", version.ref = "edc" }
 
 # Identity Hub dependencies
-edc-identityhub-spi-participantcontext = { module = "org.eclipse.edc:participant-context-spi", version.ref = "edc" }
-edc-identityhub-spi-core = { module = "org.eclipse.edc:identity-hub-spi", version.ref = "edc" }
-edc-identityhub-spi-did = { module = "org.eclipse.edc:did-spi", version.ref = "edc" }
-edc-identityhub-api-verifiablecredentials = { module = "org.eclipse.edc:verifiable-credentials-api", version.ref = "edc" }
-edc-identityhub-bom = { module = "org.eclipse.edc:identityhub-bom", version.ref = "edc" }
-edc-identityhub-sql-bom = { module = "org.eclipse.edc:identityhub-feature-sql-bom", version.ref = "edc" }
-edc-identityhub-local-statuslist-publisher = { module = "org.eclipse.edc:local-statuslist-publisher", version.ref = "edc" }
+edc-identityhub-spi-participantcontext = { module = "org.eclipse.edc:participant-context-spi", version.ref = "edc-ih" }
+edc-identityhub-spi-core = { module = "org.eclipse.edc:identity-hub-spi", version.ref = "edc-ih" }
+edc-identityhub-spi-did = { module = "org.eclipse.edc:did-spi", version.ref = "edc-ih" }
+edc-identityhub-api-verifiablecredentials = { module = "org.eclipse.edc:verifiable-credentials-api", version.ref = "edc-ih" }
+edc-identityhub-bom = { module = "org.eclipse.edc:identityhub-bom", version.ref = "edc-ih" }
+edc-identityhub-sql-bom = { module = "org.eclipse.edc:identityhub-feature-sql-bom", version.ref = "edc-ih" }
+edc-identityhub-local-statuslist-publisher = { module = "org.eclipse.edc:local-statuslist-publisher", version.ref = "edc-ih" }
 
 # Issuer service
-edc-issuerservice-bom = { module = "org.eclipse.edc:issuerservice-bom", version.ref = "edc" }
-edc-issuerservice-bom-sql = { module = "org.eclipse.edc:issuerservice-feature-sql-bom", version.ref = "edc" }
-edc-issuerservice-spi-holder = { module = "org.eclipse.edc:issuerservice-holder-spi", version.ref = "edc" }
-edc-issuerservice-db-attestations = { module = "org.eclipse.edc:issuerservice-database-attestations", version.ref = "edc" }
-edc-issuerservice-issuance-spi = { module = "org.eclipse.edc:issuerservice-issuance-spi", version.ref = "edc" }
-edc-issuerservice-holder-store-sql = { module = "org.eclipse.edc:issuerservice-holder-store-sql", version.ref = "edc" }
-edc-issuerservice-api-credentialdefinition = { module = "org.eclipse.edc:credential-definition-api", version.ref = "edc" }
-edc-issuerservice-api-attestation = { module = "org.eclipse.edc:attestation-api", version.ref = "edc" }
-edc-issuerservice-api-holder = { module = "org.eclipse.edc:holder-api", version.ref = "edc" }
-edc-issuerservice-api-admin-config = { module = "org.eclipse.edc:issuer-admin-api-configuration", version.ref = "edc" }
+edc-issuerservice-bom = { module = "org.eclipse.edc:issuerservice-bom", version.ref = "edc-is" }
+edc-issuerservice-bom-sql = { module = "org.eclipse.edc:issuerservice-feature-sql-bom", version.ref = "edc-is" }
+edc-issuerservice-spi-holder = { module = "org.eclipse.edc:issuerservice-holder-spi", version.ref = "edc-is" }
+edc-issuerservice-db-attestations = { module = "org.eclipse.edc:issuerservice-database-attestations", version.ref = "edc-is" }
+edc-issuerservice-issuance-spi = { module = "org.eclipse.edc:issuerservice-issuance-spi", version.ref = "edc-is" }
+edc-issuerservice-holder-store-sql = { module = "org.eclipse.edc:issuerservice-holder-store-sql", version.ref = "edc-is" }
+edc-issuerservice-api-credentialdefinition = { module = "org.eclipse.edc:credential-definition-api", version.ref = "edc-is" }
+edc-issuerservice-api-attestation = { module = "org.eclipse.edc:attestation-api", version.ref = "edc-is" }
+edc-issuerservice-api-holder = { module = "org.eclipse.edc:holder-api", version.ref = "edc-is" }
+edc-issuerservice-api-admin-config = { module = "org.eclipse.edc:issuer-admin-api-configuration", version.ref = "edc-is" }
 
-# Federated Catalotg dependencies
-edc-federatedcatalog-spi-core = { module = "org.eclipse.edc:federated-catalog-spi", version.ref = "edc" }
-edc-federatedcatalog-bom = { module = "org.eclipse.edc:federatedcatalog-dcp-bom", version.ref = "edc" }
+# Federated Catalog dependencies
+edc-federatedcatalog-spi-core = { module = "org.eclipse.edc:federated-catalog-spi", version.ref = "edc-fc" }
+edc-federatedcatalog-bom = { module = "org.eclipse.edc:federatedcatalog-dcp-bom", version.ref = "edc-fc" }
 edc-protocol-dsp-catalog = { module = "org.eclipse.edc:dsp-catalog-transform-lib", version.ref = "edc" }
 edc-lib-jerseyproviders = { module = "org.eclipse.edc:jersey-providers-lib", version.ref = "edc" }
-edc-federated-catalog-core = { module = "org.eclipse.edc:federated-catalog-core-2025", version.ref = "edc" }
+edc-federated-catalog-core = { module = "org.eclipse.edc:federated-catalog-core-2025", version.ref = "edc-fc" }
 # Other dependencies
 micrometer = { module = "io.micrometer:micrometer-core", version.ref = "micrometer" }
 assertj = { module = "org.assertj:assertj-core", version.ref = "assertj" }

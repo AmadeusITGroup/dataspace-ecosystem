@@ -82,6 +82,7 @@ The Dataspace Ecosystem follows a layered module architecture designed for exten
 | Topic | Description |
 |-------|-------------|
 | [Development Setup](setup/development-setup.md) | IDE configuration and local development |
+| [Local EDC Development](local-edc-development.md) | Compile EDC Connector locally and link it |
 | [Documentation Setup](setup/docs-setup.md) | Serve and build the docs locally |
 | [Base Image Configuration](build-docs/base-image-configuration.md) | Customize Docker base images |
 | [Vault Selection Guide](build-docs/vault-selection-guide.md) | Choose between HashiCorp and Azure vault |
