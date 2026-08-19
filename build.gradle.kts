@@ -36,6 +36,47 @@ val registryVersionTag = project.findProperty("registryVersionTag")?.toString() 
 // Check if registry configuration is provided (for push to registry workflow)
 val useRegistry = !registryName.isNullOrEmpty() && !registryPort.isNullOrEmpty()
 
+// Local image content fingerprint (not comparable to a registry manifest digest, podman computes those differently).
+fun Project.podmanImageIdOrNull(imageName: String): String? {
+    val output = ByteArrayOutputStream()
+    val result = exec {
+        commandLine("podman", "image", "inspect", imageName, "--format", "{{.Id}}")
+        standardOutput = output
+        isIgnoreExitValue = true
+    }
+    if (result.exitValue != 0) return null
+    return output.toString().trim().ifEmpty { null }
+}
+
+// Queries the registry's v2 HTTP API directly so we check the remote state, not a local record of it.
+fun Project.registryManifestDigestOrNull(repository: String, tag: String): String? {
+    if (registryName.isNullOrEmpty() || registryPort.isNullOrEmpty()) return null
+    val headers = ByteArrayOutputStream()
+    val args = mutableListOf(
+        "curl", "-s", "-D", "-", "-o", "/dev/null",
+        "-H", "Accept: application/vnd.docker.distribution.manifest.v2+json,application/vnd.oci.image.manifest.v1+json"
+    )
+    if (!registryPathToCa.isNullOrEmpty()) {
+        args += listOf("--cacert", registryPathToCa)
+    }
+    if (!registryUsername.isNullOrEmpty() && !registryPassword.isNullOrEmpty()) {
+        args += listOf("-u", "$registryUsername:$registryPassword")
+    }
+    args += "https://$registryName:$registryPort/v2/$repository/manifests/$tag"
+
+    val result = exec {
+        commandLine(args)
+        standardOutput = headers
+        isIgnoreExitValue = true
+    }
+    if (result.exitValue != 0) return null
+    return headers.toString()
+        .lineSequence()
+        .firstOrNull { it.startsWith("Docker-Content-Digest:", ignoreCase = true) }
+        ?.substringAfter(":")
+        ?.trim()
+}
+
 allprojects {
 
     apply(plugin = "${group}.edc-build")
@@ -248,8 +289,27 @@ subprojects {
             val loadToKindTask = tasks.register("loadToKind") {
                 dependsOn(podmanTask)
                 inputs.file(imageTar)
+                inputs.property("useRegistry", useRegistry)
                 val marker = layout.buildDirectory.file("docker/${project.name}-kind-loaded.txt")
                 outputs.file(marker)
+                if (useRegistry) {
+                    val targetTag = "$registryName:$registryPort/${project.name}:$registryVersionTag"
+                    inputs.property("registryTargetTag", targetTag)
+                    // Skip the push only if: the local image hasn't changed since our last successful push (recorded
+                    // image ID matches), AND the registry still reports the exact digest we pushed back then.
+                    outputs.upToDateWhen {
+                        val markerFile = marker.get().asFile
+                        val recorded = markerFile.takeIf { it.exists() }?.readLines()
+                            ?.mapNotNull { line -> line.split(": ", limit = 2).takeIf { it.size == 2 }?.let { it[0] to it[1] } }
+                            ?.toMap()
+                        val currentLocalId = podmanImageIdOrNull(imageName)
+                        val remoteDigest = registryManifestDigestOrNull(project.name, registryVersionTag)
+                        recorded != null && currentLocalId != null && remoteDigest != null &&
+                            recorded["Tag"] == targetTag &&
+                            recorded["LocalImageId"] == currentLocalId &&
+                            recorded["PushedDigest"] == remoteDigest
+                    }
+                }
                 
                 doLast {
                     if (useRegistry) {
@@ -276,14 +336,17 @@ subprojects {
                             commandLine("podman", "tag", imageName, targetTag)
                         }
                         
-                        // Push to registry
+                        // Push to registry, capturing the actual digest podman wrote so we can verify it later.
                         logger.lifecycle("Pushing image to registry...")
+                        val digestFile = layout.buildDirectory.file("docker/${project.name}-pushed.digest").get().asFile
                         exec {
-                            commandLine("podman", "push", targetTag)
+                            commandLine("podman", "push", "--digestfile", digestFile.absolutePath, targetTag)
                         }
                         logger.lifecycle("Successfully pushed image: $targetTag")
                         
-                        marker.get().asFile.writeText("Pushed to registry at ${System.currentTimeMillis()}\nTag: $targetTag")
+                        val localImageId = podmanImageIdOrNull(imageName) ?: "unknown"
+                        val pushedDigest = digestFile.readText().trim()
+                        marker.get().asFile.writeText("Pushed to registry at ${System.currentTimeMillis()}\nTag: $targetTag\nLocalImageId: $localImageId\nPushedDigest: $pushedDigest")
                     } else {
                         // Default behavior: load to Kind cluster
                         logger.lifecycle("No registry configuration detected - loading image to Kind cluster: $kindClusterName")
