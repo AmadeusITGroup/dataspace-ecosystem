@@ -65,3 +65,10 @@ variable "dse_policy_prefix" {
   type        = string
   default     = "dse-policy"
 }
+
+variable "internal_keystore_password" {
+  description = "Passphrase for the internal-TLS PKCS12 keystore/keymanager (system-tests only, not used in production)."
+  type        = string
+  default     = "changeit"
+  sensitive   = true
+}

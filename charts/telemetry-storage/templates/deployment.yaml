@@ -38,7 +38,7 @@ spec:
         securityContext:
           {{- toYaml .Values.telemetrystorage.securityContext | nindent 12}}
         # either use the specified image, or use the default one
-        image: {{.Values.telemetrystorage.image.repository | required ".Values.telemetrystorage.image.repository is required"}}:{{ .Values.telemetrystorage.image.tag | default .Chart.AppVersion }}
+        image: {{ include "dse.telemetrystorage.image.repository" . | trim }}:{{ .Values.telemetrystorage.image.tag | default .Chart.AppVersion }}
         imagePullPolicy: {{.Values.telemetrystorage.image.pullPolicy}}
         ports:
         {{- range $key,$value := .Values.telemetrystorage.endpoints}}
@@ -109,9 +109,21 @@ spec:
         ## ID CONFIGURATION ##
         ######################
         - name: "EDC_PARTICIPANT_ID"
-          value: {{.Values.telemetrystorage.did.web.url | required ".Values.telemetrystorage.did.web.url" | quote}}
+          value: {{ include "dse.telemetrystorage.didWebUrl" . | quote }}
         - name: "EDC_COMPONENT_ID"
           value: {{include "dse.fullname" .}}
+      {{- if .Values.telemetrystorage.internalTls.enabled }}
+        - name: "EDC_WEB_HTTPS_KEYSTORE_PASSWORD"
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.telemetrystorage.internalTls.keystoreSecretName | required ".Values.telemetrystorage.internalTls.keystoreSecretName is required when internalTls.enabled" | quote }}
+              key: {{ .Values.telemetrystorage.internalTls.keystoreSecretPasswordKey | quote }}
+        - name: "EDC_WEB_HTTPS_KEYMANAGER_PASSWORD"
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.telemetrystorage.internalTls.keystoreSecretName | required ".Values.telemetrystorage.internalTls.keystoreSecretName is required when internalTls.enabled" | quote }}
+              key: {{ .Values.telemetrystorage.internalTls.keystoreSecretPasswordKey | quote }}
+      {{- end }}
 
         ##############
         # POSTGRESQL #
@@ -119,44 +131,44 @@ spec:
         - name: "EDC_SQL_SCHEMA_AUTOCREATE"
           value: {{.Values.telemetrystorage.postgresql.schema.autocreate | required ".Values.telemetrystorage.postgresql.schema.autocreate is required" | quote}}
 
-        {{- with .Values.telemetrystorage.postgresql}}
-        {{- if .jdbcUrl}}
+        {{- with .Values.telemetrystorage.postgresql }}
+        {{- if or .jdbcUrl $.Values.global.db.serverFqdn }}
         - name: "EDC_DATASOURCE_DEFAULT_URL"
-          value: {{.jdbcUrl | required ".jdbcUrl is required" | quote}}
+          value: {{ include "dse.telemetrystorage.postgresql.jdbcUrl" $ | quote }}
         - name: "EDC_DATASOURCE_DEFAULT_USER"
           valueFrom:
             secretKeyRef:
-              name: {{.credentials.secret.name | required ".credentials.secret.name is required" | quote}}
-              key: {{.credentials.secret.userKey | required ".credentials.secret.userKey is required" | quote}}
+              name: {{ include "dse.telemetrystorage.postgresql.secretName" $ | quote }}
+              key: {{ .credentials.secret.userKey | required ".credentials.secret.userKey is required" | quote }}
         - name: "EDC_DATASOURCE_DEFAULT_PASSWORD"
           valueFrom:
             secretKeyRef:
-              name: {{.credentials.secret.name | required ".credentials.secret.name is required" | quote}}
-              key: {{.credentials.secret.passwordKey | required ".credentials.secret.passwordKey is required" | quote}}
+              name: {{ include "dse.telemetrystorage.postgresql.secretName" $ | quote }}
+              key: {{ .credentials.secret.passwordKey | required ".credentials.secret.passwordKey is required" | quote }}
         - name: "EDC_DATASOURCE_TELEMETRYEVENT_URL"
-          value: {{.jdbcUrl | required ".jdbcUrl is required" | quote}}
+          value: {{ include "dse.telemetrystorage.postgresql.jdbcUrl" $ | quote }}
         - name: "EDC_DATASOURCE_TELEMETRYEVENT_USER"
           valueFrom:
             secretKeyRef:
-              name: {{.credentials.secret.name | required ".credentials.secret.name is required" | quote}}
-              key: {{.credentials.secret.userKey | required ".credentials.secret.userKey is required" | quote}}
+              name: {{ include "dse.telemetrystorage.postgresql.secretName" $ | quote }}
+              key: {{ .credentials.secret.userKey | required ".credentials.secret.userKey is required" | quote }}
         - name: "EDC_DATASOURCE_TELEMETRYEVENT_PASSWORD"
           valueFrom:
             secretKeyRef:
-              name: {{.credentials.secret.name | required ".credentials.secret.name is required" | quote}}
-              key: {{.credentials.secret.passwordKey | required ".credentials.secret.passwordKey is required" | quote}}
-        {{- end}}
-        {{- end}}
+              name: {{ include "dse.telemetrystorage.postgresql.secretName" $ | quote }}
+              key: {{ .credentials.secret.passwordKey | required ".credentials.secret.passwordKey is required" | quote }}
+        {{- end }}
+        {{- end }}
 
         #############
         # SSI / DID #
         #############
         - name: "EDC_IAM_ISSUER_ID"
-          value: {{.Values.telemetrystorage.did.web.url | required ".Values.telemetrystorage.did.web.url" | quote}}
+          value: {{ include "dse.telemetrystorage.didWebUrl" . | quote }}
         - name: "EDC_IDENTITY_DID_URL"
-          value: {{.Values.telemetrystorage.did.web.url | required ".Values.telemetrystorage.did.web.url" | quote}}
+          value: {{ include "dse.telemetrystorage.didWebUrl" . | quote }}
         - name: "EDC_IAM_DID_WEB_USE_HTTPS"
-          value: {{.Values.telemetrystorage.did.web.useHttps | required ".Values.telemetrystorage.did.web.useHttps is required" | quote}}
+          value: {{ include "dse.telemetrystorage.didWebUseHttps" . | quote }}
 
         ################
         # ENCRYPTION   #
@@ -165,7 +177,7 @@ spec:
         # (https://github.com/eclipse-edc/Connector/pull/5423); without it
         # participant-context creation fails.
         - name: "EDC_ENCRYPTION_AES_KEY_ALIAS"
-          value: {{.Values.telemetrystorage.keys.encryption.aesKeyAlias | required ".Values.telemetrystorage.keys.encryption.aesKeyAlias is required" | quote}}
+          value: {{ include "dse.telemetrystorage.keys.encryption.aesKeyAlias" . | quote }}
 
         #######
         # API #

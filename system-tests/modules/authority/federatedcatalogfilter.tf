@@ -31,7 +31,7 @@ resource "helm_release" "federated-catalog-filter" {
             "imagePullPolicy" : local.image_pull_policy,
             "command" : ["/bin/sh", "-c"],
             "args" : [
-              "cp /etc/pki/ca-trust/extracted/java/cacerts /opt/ca/cacerts && chmod 666 /opt/ca/cacerts && keytool -import -trustcacerts -keystore /opt/ca/cacerts -storepass changeit -noprompt -alias internalCa -file /certs/ca.crt && openssl pkcs12 -export -in /certs/tls.crt -inkey /certs/tls.key -out /opt/ca/keystore.p12 -passout pass:changeit -name service"
+              "cp /etc/pki/ca-trust/extracted/java/cacerts /opt/ca/cacerts && chmod 666 /opt/ca/cacerts && keytool -import -trustcacerts -keystore /opt/ca/cacerts -storepass changeit -noprompt -alias internalCa -file /certs/ca.crt && openssl pkcs12 -export -in /certs/tls.crt -inkey /certs/tls.key -out /opt/ca/keystore.p12 -passout pass:${local.keystore_password} -name service"
             ],
             "volumeMounts" : [
               { "name" : "internal-tls-volume", "mountPath" : "/certs" },
@@ -121,6 +121,15 @@ ${local.tls_config_props}
             "secretName" : var.tls_enabled ? var.ingress_tls_secret_name : ""
           }
         }
+        "postgresql" : {
+          "jdbcUrl" : "jdbc:postgresql://${var.db_server_fqdn}/${local.db_name}",
+          "credentials" : {
+            "secret" : {
+              "name" : kubernetes_secret.db-user-credentials.metadata.0.name
+            }
+          }
+        }
+
         "api" : {
           "cors" : {
             "enabled" : true
@@ -129,6 +138,7 @@ ${local.tls_config_props}
         "internalTls" : {
           "enabled" : var.tls_enabled
           "secretName" : var.tls_enabled ? var.internal_tls_secret_name : ""
+          "keystoreSecretName" : var.tls_enabled ? kubernetes_secret.internal-keystore-credentials[0].metadata.0.name : ""
         }
 
         "vault" : {

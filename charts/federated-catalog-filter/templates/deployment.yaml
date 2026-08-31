@@ -39,7 +39,7 @@ spec:
             {{- toYaml .Values.federatedcatalogfilter.securityContext | nindent 12 }}
 
           # either use the specified image, or use the default one
-          image: {{ .Values.federatedcatalogfilter.image.repository | required ".Values.federatedcatalogfilter.image.repository is required" }}:{{ .Values.federatedcatalogfilter.image.tag | default .Chart.AppVersion }}
+          image: {{ include "dse.federatedcatalogfilter.image.repository" . | trim }}:{{ .Values.federatedcatalogfilter.image.tag | default .Chart.AppVersion }}
           imagePullPolicy: {{ .Values.federatedcatalogfilter.image.pullPolicy }}
           ports:
           {{- range $key,$value := .Values.federatedcatalogfilter.endpoints }}
@@ -109,37 +109,51 @@ spec:
           ## ID CONFIGURATION ##
           ######################
           - name: "EDC_PARTICIPANT_ID"
-            value: {{ .Values.federatedcatalogfilter.did.web.url | required ".Values.federatedcatalogfilter.did.web.url" | quote }}
+            value: {{ include "dse.federatedcatalogfilter.didWebUrl" . | quote }}
           - name: "EDC_COMPONENT_ID"
             value: {{ include "dse.fullname" .}}
+        {{- if .Values.federatedcatalogfilter.internalTls.enabled }}
+          - name: "EDC_WEB_HTTPS_KEYSTORE_PASSWORD"
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.federatedcatalogfilter.internalTls.keystoreSecretName | required ".Values.federatedcatalogfilter.internalTls.keystoreSecretName is required when internalTls.enabled" | quote }}
+                key: {{ .Values.federatedcatalogfilter.internalTls.keystoreSecretPasswordKey | quote }}
+          - name: "EDC_WEB_HTTPS_KEYMANAGER_PASSWORD"
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.federatedcatalogfilter.internalTls.keystoreSecretName | required ".Values.federatedcatalogfilter.internalTls.keystoreSecretName is required when internalTls.enabled" | quote }}
+                key: {{ .Values.federatedcatalogfilter.internalTls.keystoreSecretPasswordKey | quote }}
+        {{- end }}
 
-          {{- with .Values.federatedcatalogfilter.postgresql}}
-          {{- if .jdbcUrl}}
+        {{- with .Values.federatedcatalogfilter.postgresql }}
+        {{- if or .jdbcUrl $.Values.global.db.serverFqdn }}
           - name: "EDC_DATASOURCE_DEFAULT_URL"
-            value: {{.jdbcUrl | required ".jdbcUrl is required" | quote}}
+            value: {{ include "dse.federatedcatalogfilter.postgresql.jdbcUrl" $ | quote }}
           - name: "EDC_DATASOURCE_DEFAULT_USER"
             valueFrom:
               secretKeyRef:
-                name: {{.credentials.secret.name | required ".credentials.secret.name is required" | quote}}
-                key: {{.credentials.secret.userKey | required ".credentials.secret.userKey is required" | quote}}
+                name: {{ include "dse.federatedcatalogfilter.postgresql.secretName" $ | quote }}
+                key: {{ .credentials.secret.userKey | required ".credentials.secret.userKey is required" | quote }}
           - name: "EDC_DATASOURCE_DEFAULT_PASSWORD"
             valueFrom:
               secretKeyRef:
-                name: {{.credentials.secret.name | required ".credentials.secret.name is required" | quote}}
-                key: {{.credentials.secret.passwordKey | required ".credentials.secret.passwordKey is required" | quote}}
-          {{- end}}
-          {{- end}}
+                name: {{ include "dse.federatedcatalogfilter.postgresql.secretName" $ | quote }}
+                key: {{ .credentials.secret.passwordKey | required ".credentials.secret.passwordKey is required" | quote }}
+        {{- end }}
+        {{- end }}
+
           #####################
           ## HASHICORP VAULT ##
           #####################
-          {{- if .Values.federatedcatalogfilter.vault.hashicorp.url }}
+          {{- $vaultUrl := include "dse.federatedcatalogfilter.vault.hashicorp.url" . }}
+          {{- if $vaultUrl }}
           # https://github.com/eclipse-edc/Connector/tree/main/extensions/common/vault/vault-hashicorp
           - name: "EDC_VAULT_HASHICORP_URL"
-            value: {{ .Values.federatedcatalogfilter.vault.hashicorp.url | quote }}
+            value: {{ $vaultUrl | quote }}
           - name: "EDC_VAULT_HASHICORP_TOKEN"
             valueFrom:
               secretKeyRef:
-                name: {{.Values.federatedcatalogfilter.vault.hashicorp.token.secret.name | required ".Values.federatedcatalogfilter.vault.hashicorp.token.secret.name is required" | quote}}
+                name: {{ include "dse.federatedcatalogfilter.vault.hashicorp.tokenSecretName" . | quote }}
                 key: {{.Values.federatedcatalogfilter.vault.hashicorp.token.secret.tokenKey | required ".Values.federatedcatalogfilter.vault.hashicorp.token.secret.tokenKey is required" | quote}}
           - name: "EDC_VAULT_HASHICORP_TOKEN_SCHEDULED-RENEW-ENABLED"
             value: {{ .Values.federatedcatalogfilter.vault.hashicorp.token.renewal.enabled | quote }}
@@ -156,7 +170,7 @@ spec:
           - name: "EDC_VAULT_HASHICORP_API_SECRET_PATH"
             value: {{ .Values.federatedcatalogfilter.vault.hashicorp.paths.secret | quote }}
           - name: "EDC_VAULT_HASHICORP_FOLDER"
-            value: {{.Values.federatedcatalogfilter.vault.hashicorp.paths.folder | quote}}
+            value: {{ include "dse.federatedcatalogfilter.vault.hashicorp.folder" . | quote }}
           - name: "EDC_VAULT_HASHICORP_API_HEALTH_CHECK_PATH"
             value: {{ .Values.federatedcatalogfilter.vault.hashicorp.paths.health | quote }}
           - name: "EDC_VAULT_HASHICORP_ALLOW_FALLBACK"
@@ -166,23 +180,23 @@ spec:
           # DID #
           #######
           - name: "EDC_IAM_ISSUER_ID"
-            value: {{.Values.federatedcatalogfilter.did.web.url | required ".Values.federatedcatalogfilter.did.web.url" | quote}}
+            value: {{ include "dse.federatedcatalogfilter.didWebUrl" . | quote }}
           - name: "EDC_IDENTITY_DID_URL"
-            value: {{.Values.federatedcatalogfilter.did.web.url | required ".Values.federatedcatalogfilter.did.web.url" | quote}}
+            value: {{ include "dse.federatedcatalogfilter.didWebUrl" . | quote }}
           - name: "EDC_IAM_DID_WEB_USE_HTTPS"
-            value: {{.Values.federatedcatalogfilter.did.web.useHttps | required ".Values.federatedcatalogfilter.did.web.useHttps is required" | quote}}
+            value: {{ include "dse.federatedcatalogfilter.didWebUseHttps" . | quote }}
           - name: "DSE_AUTHORITY_DID"
-            value: {{.Values.federatedcatalogfilter.trustedIssuers.authority.did | required ".Values.federatedcatalogfilter.trustedIssuers.authority.did is required" | quote}}
+            value: {{ include "dse.federatedcatalogfilter.authorityDid" . | quote }}
 
           #####################
           # STS REMOTE CONFIG #
           #####################
           - name: "EDC_IAM_STS_OAUTH_TOKEN_URL"
-            value: {{.Values.federatedcatalogfilter.sts.tokenUrl | required ".Values.federatedcatalogfilter.sts.tokenUrl is required" | quote}}
+            value: {{ include "dse.federatedcatalogfilter.sts.tokenUrl" . | quote }}
           - name: "EDC_IAM_STS_OAUTH_CLIENT_ID"
-            value: {{.Values.federatedcatalogfilter.sts.clientId | required ".Values.federatedcatalogfilter.sts.clientId is required" | quote}}
+            value: {{ include "dse.federatedcatalogfilter.sts.clientId" . | quote }}
           - name: "EDC_IAM_STS_OAUTH_CLIENT_SECRET_ALIAS"
-            value: {{.Values.federatedcatalogfilter.sts.clientSecretAlias | required ".Values.federatedcatalogfilter.sts.clientSecretAlias is required" | quote}}
+            value: {{ include "dse.federatedcatalogfilter.sts.clientSecretAlias" . | quote }}
 
           ################
           # ENCRYPTION   #
@@ -191,7 +205,7 @@ spec:
           # (https://github.com/eclipse-edc/Connector/pull/5423); without it
           # participant-context creation fails.
           - name: "EDC_ENCRYPTION_AES_KEY_ALIAS"
-            value: {{.Values.federatedcatalogfilter.keys.encryption.aesKeyAlias | required ".Values.federatedcatalogfilter.keys.encryption.aesKeyAlias is required" | quote}}
+            value: {{ include "dse.federatedcatalogfilter.keys.encryption.aesKeyAlias" . | quote }}
 
           #######
           # API #

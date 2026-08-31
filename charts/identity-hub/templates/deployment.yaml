@@ -114,6 +114,18 @@ spec:
               value: {{ include "dse.identityhub.did.web.url" . }}
             - name: "EDC_COMPONENT_ID"
               value: {{ include "dse.fullname" . }}
+          {{- if .Values.identityhub.internalTls.enabled }}
+            - name: "EDC_WEB_HTTPS_KEYSTORE_PASSWORD"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.identityhub.internalTls.keystoreSecretName | required ".Values.identityhub.internalTls.keystoreSecretName is required when internalTls.enabled" | quote }}
+                  key: {{ .Values.identityhub.internalTls.keystoreSecretPasswordKey | quote }}
+            - name: "EDC_WEB_HTTPS_KEYMANAGER_PASSWORD"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.identityhub.internalTls.keystoreSecretName | required ".Values.identityhub.internalTls.keystoreSecretName is required when internalTls.enabled" | quote }}
+                  key: {{ .Values.identityhub.internalTls.keystoreSecretPasswordKey | quote }}
+          {{- end }}
             #####################
             ## HASHICORP VAULT ##
             #####################

@@ -299,6 +299,10 @@ telemetryagent:
     # -- Enable internal pod-to-pod TLS. When false, HTTP is used for pod-to-pod communication.
     enabled: true
     secretName: "internal-service-tls"
+    # -- Name of the Kubernetes secret containing the PKCS12 keystore/keymanager password. Required when internalTls.enabled is true.
+    keystoreSecretName: ""
+    # -- Key within internalTls.keystoreSecretName holding the keystore/keymanager password
+    keystoreSecretPasswordKey: "password"
   volumeMounts: []
   # -- [volume](https://kubernetes.io/docs/concepts/storage/volumes/) directories
   volumes: []

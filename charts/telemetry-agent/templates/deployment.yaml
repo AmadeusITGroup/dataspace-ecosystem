@@ -107,6 +107,18 @@ spec:
               value: {{ include "dse.telemetryagent.did.web.url" . }}
             - name: "EDC_COMPONENT_ID"
               value: {{ include "dse.fullname" . }}
+          {{- if .Values.telemetryagent.internalTls.enabled }}
+            - name: "EDC_WEB_HTTPS_KEYSTORE_PASSWORD"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.telemetryagent.internalTls.keystoreSecretName | required ".Values.telemetryagent.internalTls.keystoreSecretName is required when internalTls.enabled" | quote }}
+                  key: {{ .Values.telemetryagent.internalTls.keystoreSecretPasswordKey | quote }}
+            - name: "EDC_WEB_HTTPS_KEYMANAGER_PASSWORD"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.telemetryagent.internalTls.keystoreSecretName | required ".Values.telemetryagent.internalTls.keystoreSecretName is required when internalTls.enabled" | quote }}
+                  key: {{ .Values.telemetryagent.internalTls.keystoreSecretPasswordKey | quote }}
+          {{- end }}
             #####################
             ## HASHICORP VAULT ##
             #####################

@@ -2,8 +2,10 @@ ARG REGISTRY_URL="quay.io/centos"
 ARG BASE_IMAGE="centos:latest"
 FROM ${REGISTRY_URL}/${BASE_IMAGE}
 ARG INSTALL_JAVA=true
-RUN if [ "$INSTALL_JAVA" = "true" ]; then yum update -y && yum clean all; fi
-RUN if [ "$INSTALL_JAVA" = "true" ]; then yum install java-21-openjdk curl -y && yum clean all; fi
+RUN if [ "$INSTALL_JAVA" = "true" ]; then yum update -y && yum install java-21-openjdk curl -y && yum clean all; fi
+# newer CentOS base images no longer bundle openssl by default; set INSTALL_OPENSSL=false if the base image already includes it.
+ARG INSTALL_OPENSSL=true
+RUN if [ "$INSTALL_OPENSSL" = "true" ]; then yum update -y && yum install openssl -y && yum clean all; fi
 
 # Optional JVM arguments, such as memory settings
 ARG JVM_ARGS=""

@@ -131,7 +131,19 @@ global:
     # Omitted from the rendered annotations when empty.
     destinationCaCertificateSecret: ""
 
-# -- Control Plane (EDC connector control plane). Always deployed.
+# -- Master toggle for the base participant components (control-plane,
+# data-plane, identity-hub, telemetry-agent). Set to false alongside
+# `authority.enabled: true` to deploy an authority-only release. Individual
+# components can still be overridden independently of this toggle: set
+# `dataplane.enabled` explicitly to skip just that component while keeping the
+# rest of the participant group (falls back to this value when unset). The
+# telemetry-agent has no such per-component switch — use `telemetry.enabled`
+# instead (see below).
+participant:
+  enabled: true
+
+# -- Control Plane (EDC connector control plane). Deployed when
+# participant.enabled is true (the default).
 controlplane:
   controlplane:
     image:
@@ -147,7 +159,6 @@ controlplane:
 # -- Data Plane (EDC connector data plane). Deployed by default; set
 # enabled: false to skip. Depends on controlplane and identityhub being reachable.
 dataplane:
-  enabled: true
   dataplane:
     image:
       repository: ""
@@ -155,7 +166,8 @@ dataplane:
     ingress:
       enabled: false
 
-# -- Identity Hub (EDC Credential Service). Always deployed.
+# -- Identity Hub (EDC Credential Service). Always deployed — shared by both
+# the participant and authority component groups.
 identityhub:
   identityhub:
     ingress:
@@ -165,10 +177,72 @@ identityhub:
       tag: ""
 
 # -- Telemetry Agent. Optional — mirrors `telemetry_agent_enabled` in the
-# Terraform module. Set enabled: false to skip.
+# Terraform module. Set `telemetry.enabled: false` to skip this and, when
+# `authority.enabled` is also true, the authority telemetry components below
+# (telemetryservice, telemetrystorage, telemetrycsvmanager) as well.
 telemetryagent:
-  enabled: true
   telemetryagent:
+    image:
+      repository: ""
+      tag: ""
+
+# -- Shared toggle for telemetry components: telemetryagent (participant
+# group) and, when authority.enabled is also true, telemetryservice/
+# telemetrystorage/telemetrycsvmanager (authority group). Falls back to
+# participant.enabled / authority.enabled respectively when left empty (the
+# default). Set `enabled: false` to remove all telemetry components
+# regardless of which group(s) are otherwise enabled.
+telemetry: {}
+
+# -- Authority add-on mode. When enabled, the participant umbrella also
+# deploys authority-specific components (issuer service, federated catalog,
+# federated catalog filter, telemetry service/storage/csv manager). Set
+# `participant.enabled: false` alongside this to deploy authority components
+# only.
+authority:
+  enabled: false
+
+# -- Issuer Service (authority add-on). Rendered only when authority.enabled=true.
+issuerservice:
+  issuerservice:
+    image:
+      repository: ""
+      tag: ""
+
+# -- Federated Catalog (authority add-on). Rendered only when authority.enabled=true.
+federatedcatalog:
+  federatedcatalog:
+    image:
+      repository: ""
+      tag: ""
+
+# -- Federated Catalog Filter (authority add-on). Rendered only when authority.enabled=true.
+federatedcatalogfilter:
+  federatedcatalogfilter:
+    image:
+      repository: ""
+      tag: ""
+
+# -- Telemetry Service (authority add-on). Rendered only when authority.enabled=true
+# (and telemetry.enabled is not explicitly set to false).
+telemetryservice:
+  telemetryservice:
+    image:
+      repository: ""
+      tag: ""
+
+# -- Telemetry Storage (authority add-on). Rendered only when authority.enabled=true
+# (and telemetry.enabled is not explicitly set to false).
+telemetrystorage:
+  telemetrystorage:
+    image:
+      repository: ""
+      tag: ""
+
+# -- Telemetry CSV Manager (authority add-on). Rendered only when authority.enabled=true
+# (and telemetry.enabled is not explicitly set to false).
+telemetrycsvmanager:
+  telemetrycsvmanager:
     image:
       repository: ""
       tag: ""

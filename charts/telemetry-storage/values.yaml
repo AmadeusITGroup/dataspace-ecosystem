@@ -6,6 +6,33 @@ imagePullSecrets:
 # -- To add some custom labels
 customLabels: {}
 
+# -- Values shared across subcharts when this chart is deployed via an umbrella
+# chart (Helm injects top-level `global` into each subchart).
+global:
+  participantName: ""
+  environment: ""
+  useHttps: null
+  db:
+    serverFqdn: ""
+    name: ""
+    credentials:
+      secret:
+        name: ""
+  keys:
+    privateKeyAlias: ""
+    publicKeyAlias: ""
+    aesKeyAlias: ""
+  image:
+    baseRepository: ""
+    namePrefix: ""
+  vaultProvider: ""
+  identityHub:
+    didWebUrl: ""
+  authority:
+    didWebUrl: ""
+  vault:
+    url: ""
+
 telemetrystorage:
   image:
     # -- Docker repository for the Telemetry Storage image
@@ -169,6 +196,10 @@ telemetrystorage:
     # -- Enable internal pod-to-pod TLS. When false, HTTP is used for pod-to-pod communication.
     enabled: true
     secretName: "internal-service-tls"
+    # -- Name of the Kubernetes secret containing the PKCS12 keystore/keymanager password. Required when internalTls.enabled is true.
+    keystoreSecretName: ""
+    # -- Key within internalTls.keystoreSecretName holding the keystore/keymanager password
+    keystoreSecretPasswordKey: "password"
   # -- declare where to mount [volumes](https://kubernetes.io/docs/concepts/storage/volumes/) into the container
   volumeMounts: []
   # -- [volume](https://kubernetes.io/docs/concepts/storage/volumes/) directories

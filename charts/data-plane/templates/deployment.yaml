@@ -114,6 +114,18 @@ spec:
               value: {{ include "dse.dataplane.identityHubDidWebUrl" . | quote }}
             - name: "EDC_COMPONENT_ID"
               value: {{ include "dse.fullname" .}}
+          {{- if .Values.dataplane.internalTls.enabled }}
+            - name: "EDC_WEB_HTTPS_KEYSTORE_PASSWORD"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.dataplane.internalTls.keystoreSecretName | required ".Values.dataplane.internalTls.keystoreSecretName is required when internalTls.enabled" | quote }}
+                  key: {{ .Values.dataplane.internalTls.keystoreSecretPasswordKey | quote }}
+            - name: "EDC_WEB_HTTPS_KEYMANAGER_PASSWORD"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.dataplane.internalTls.keystoreSecretName | required ".Values.dataplane.internalTls.keystoreSecretName is required when internalTls.enabled" | quote }}
+                  key: {{ .Values.dataplane.internalTls.keystoreSecretPasswordKey | quote }}
+          {{- end }}
 
           #################
           ## CONTROL URL ##

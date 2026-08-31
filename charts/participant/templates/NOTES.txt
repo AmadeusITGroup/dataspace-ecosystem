@@ -1,11 +1,27 @@
 NOTES for {{ .Release.Name }} ({{ .Chart.Name }}-{{ .Chart.Version }})
+{{- $telemetryEnabled := true }}
+{{- if kindIs "bool" .Values.telemetry.enabled }}{{ $telemetryEnabled = .Values.telemetry.enabled }}{{- end }}
+{{- $telemetryagentEnabled := and $telemetryEnabled .Values.participant.enabled }}
+{{- $authorityTelemetryEnabled := and $telemetryEnabled .Values.authority.enabled }}
 
 This release deploys the following components of a Dataspace Ecosystem participant:
+  - Identity Hub    ({{ .Release.Name }}-identityhub)
+{{- if .Values.participant.enabled }}
   - Control Plane   ({{ .Release.Name }}-controlplane)
   - Data Plane      ({{ .Release.Name }}-dataplane)
-  - Identity Hub    ({{ .Release.Name }}-identityhub)
-{{- if .Values.telemetryagent.enabled }}
+{{- end }}
+{{- if $telemetryagentEnabled }}
   - Telemetry Agent ({{ .Release.Name }}-telemetryagent)
+{{- end }}
+{{- if .Values.authority.enabled }}
+  - Issuer Service           ({{ .Release.Name }}-issuerservice)
+  - Federated Catalog        ({{ .Release.Name }}-federatedcatalog)
+  - Federated Catalog Filter ({{ .Release.Name }}-federatedcatalogfilter)
+{{- end }}
+{{- if $authorityTelemetryEnabled }}
+  - Telemetry Service        ({{ .Release.Name }}-telemetryservice)
+  - Telemetry Storage        ({{ .Release.Name }}-telemetrystorage)
+  - Telemetry CSV Manager    ({{ .Release.Name }}-telemetrycsvmanager)
 {{- end }}
 
 Note: the Content Definition Service (cr-bff) is released independently and is

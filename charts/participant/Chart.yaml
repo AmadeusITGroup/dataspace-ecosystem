@@ -2,9 +2,15 @@ apiVersion: v2
 name: participant
 description: >
   Umbrella chart deploying the Dataspace Ecosystem components of a participant:
-  Control Plane, Data Plane, Identity Hub, and Telemetry Agent. Mirrors the
-  DSE component set deployed by the `terraform/backend/participant` module in
-  cloud-native-jdf/eonax-iac-workflows.
+  Control Plane, Data Plane, Identity Hub, and Telemetry Agent (rendered when
+  `participant.enabled=true`, the default) and/or authority components:
+  Issuer Service, Federated Catalog, Federated Catalog Filter, Telemetry
+  Service, Telemetry Storage, and Telemetry CSV Manager (rendered when
+  `authority.enabled=true`). Toggle either group independently, e.g. set
+  `participant.enabled=false` alongside `authority.enabled=true` to deploy an
+  authority-only release.
+  Mirrors the DSE component set deployed by the
+  `terraform/backend/participant` module in cloud-native-jdf/eonax-iac-workflows.
   The Content Definition Service (cr-bff) is released and versioned
   independently and is not a dependency of this chart — compose it alongside
   this chart at the Argo CD layer (e.g. a multi-source Application) rather
@@ -21,14 +27,48 @@ dependencies:
   - name: controlplane
     version: "*"
     repository: "file://../control-plane"
+    condition: participant.enabled
   - name: dataplane
     version: "*"
     repository: "file://../data-plane"
-    condition: dataplane.enabled
+    # dataplane.enabled (if explicitly set) always takes precedence over the
+    # participant.enabled group toggle, so it stays independently skippable.
+    condition: dataplane.enabled,participant.enabled
   - name: identityhub
     version: "*"
     repository: "file://../identity-hub"
+    # Always deployed — both the participant and authority component groups
+    # depend on it (DID, STS, credential issuance), even authority-only.
   - name: telemetryagent
     version: "*"
     repository: "file://../telemetry-agent"
-    condition: telemetryagent.enabled
+    # telemetry.enabled (if explicitly set) always takes precedence over the
+    # participant.enabled group toggle, so telemetry can be skipped on its own.
+    condition: telemetry.enabled,participant.enabled
+  - name: issuerservice
+    version: "*"
+    repository: "file://../issuer-service"
+    condition: authority.enabled
+  - name: federatedcatalog
+    version: "*"
+    repository: "file://../federated-catalog"
+    condition: authority.enabled
+  - name: federatedcatalogfilter
+    version: "*"
+    repository: "file://../federated-catalog-filter"
+    condition: authority.enabled
+  - name: telemetryservice
+    version: "*"
+    repository: "file://../telemetry-service"
+    # telemetry.enabled (if explicitly set) always takes precedence over the
+    # authority.enabled group toggle, so authority's telemetry components can
+    # be removed on their own via the same flag as the participant's telemetryagent.
+    condition: telemetry.enabled,authority.enabled
+  - name: telemetrystorage
+    version: "*"
+    repository: "file://../telemetry-storage"
+    condition: telemetry.enabled,authority.enabled
+  - name: telemetrycsvmanager
+    version: "*"
+    repository: "file://../telemetry-csv-manager"
+    condition: telemetry.enabled,authority.enabled

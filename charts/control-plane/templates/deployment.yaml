@@ -118,6 +118,18 @@ spec:
             value: {{ include "dse.controlplane.identityHubDidWebUrl" . | quote }}
           - name: "EDC_COMPONENT_ID"
             value: {{include "dse.fullname" .}}
+        {{- if .Values.controlplane.internalTls.enabled }}
+          - name: "EDC_WEB_HTTPS_KEYSTORE_PASSWORD"
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.controlplane.internalTls.keystoreSecretName | required ".Values.controlplane.internalTls.keystoreSecretName is required when internalTls.enabled" | quote }}
+                key: {{ .Values.controlplane.internalTls.keystoreSecretPasswordKey | quote }}
+          - name: "EDC_WEB_HTTPS_KEYMANAGER_PASSWORD"
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.controlplane.internalTls.keystoreSecretName | required ".Values.controlplane.internalTls.keystoreSecretName is required when internalTls.enabled" | quote }}
+                key: {{ .Values.controlplane.internalTls.keystoreSecretPasswordKey | quote }}
+        {{- end }}
 
           #######
           # DSP #

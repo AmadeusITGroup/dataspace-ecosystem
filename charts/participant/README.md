@@ -2,21 +2,29 @@
 
 Umbrella Helm chart that deploys a full Dataspace Ecosystem **participant**:
 
-| Component                     | Chart                                    | Source                                         |
-|-------------------------------|-------------------------------------------|-------------------------------------------------|
-| Control Plane                 | `controlplane`                            | `../control-plane` (this repo)                  |
-| Data Plane                    | `dataplane`                               | `../data-plane` (this repo)                     |
-| Identity Hub                  | `identityhub`                             | `../identity-hub` (this repo)                   |
-| Telemetry Agent               | `telemetryagent`                          | `../telemetry-agent` (this repo)                |
+| Component                     | Chart                                    | Source                                         | Toggle                          |
+|-------------------------------|-------------------------------------------|-------------------------------------------------|----------------------------------|
+| Identity Hub                  | `identityhub`                             | `../identity-hub` (this repo)                   | always deployed                 |
+| Control Plane (participant group)  | `controlplane`                       | `../control-plane` (this repo)                  | `participant.enabled` (default `true`) |
+| Data Plane (participant group)     | `dataplane`                           | `../data-plane` (this repo)                     | `participant.enabled` / `dataplane.enabled` |
+| Telemetry Agent (participant group)| `telemetryagent`                      | `../telemetry-agent` (this repo)                | `participant.enabled` / `telemetry.enabled` |
+| Issuer Service (authority group)     | `issuerservice`                     | `../issuer-service` (this repo)                 | `authority.enabled` (default `false`) |
+| Federated Catalog (authority group)  | `federatedcatalog`                  | `../federated-catalog` (this repo)              | `authority.enabled`             |
+| Federated Catalog Filter (authority group) | `federatedcatalogfilter`      | `../federated-catalog-filter` (this repo)       | `authority.enabled`             |
+| Telemetry Service (authority group)  | `telemetryservice`                  | `../telemetry-service` (this repo)              | `authority.enabled` / `telemetry.enabled` |
+| Telemetry Storage (authority group)  | `telemetrystorage`                  | `../telemetry-storage` (this repo)              | `authority.enabled` / `telemetry.enabled` |
+| Telemetry CSV Manager (authority group) | `telemetrycsvmanager`            | `../telemetry-csv-manager` (this repo)          | `authority.enabled` / `telemetry.enabled` |
 
 This mirrors the DSE component set deployed by the `terraform/backend/participant`
 module in [`cloud-native-jdf/eonax-iac-workflows`](https://github.com/cloud-native-jdf/eonax-iac-workflows),
 which is the reference automation used to deploy participants today. It does **not**
-include the Content Definition Service ([`cr-bff`](https://github.com/amadeus-creation-platform/cr-bff)),
-the "authority" components (`federated-catalog`, `federated-catalog-filter`,
-`issuer-service`), or the shared "telemetry backend" components
-(`telemetry-service`, `telemetry-storage`, `telemetry-csv-manager`,
-`charts/telemetry/*`), which are deployed separately per that Terraform layout.
+include the Content Definition Service ([`cr-bff`](https://github.com/amadeus-creation-platform/cr-bff)).
+Identity Hub is always deployed since both groups depend on it (DID, STS,
+credential issuance). The participant group (control-plane, data-plane,
+telemetry-agent) and the authority group are each independently toggled via
+`participant.enabled` (default `true`) and `authority.enabled` (default
+`false`) — set one to `false` and the other to `true` for a single-purpose
+release, or leave both `true` to deploy everything in one release.
 
 cr-bff publishes its own independently versioned Helm chart to a private OCI
 registry (it is not vendored as a dependency here, since its Helm chart is
@@ -38,10 +46,28 @@ helm upgrade --install <participant-name> ./charts/participant \
   -f my-participant-values.yaml
 ```
 
-Set `dataplane.enabled` or `telemetryagent.enabled`
-to `false` in your values file to skip that component (all default to `true`).
-Disabling `dataplane` also skips its OpenShift route (`global.route`). This
-matches the optionality already present in the Terraform module.
+Set `dataplane.enabled` to `false` in your values file to skip the data plane
+(it falls back to `participant.enabled`, which defaults to `true`, when left
+unset). Disabling `dataplane` also skips its OpenShift route
+(`global.route`). This matches the optionality already present in the
+Terraform module.
+
+Set `telemetry.enabled: false` to skip telemetry-agent (participant group)
+and, when `authority.enabled` is also `true`, telemetryservice/
+telemetrystorage/telemetrycsvmanager (authority group) as well — a single
+flag removes telemetry components from whichever group(s) are active. It
+falls back to `participant.enabled` / `authority.enabled` respectively when
+left unset.
+
+Set `participant.enabled: false` to skip the whole base participant group
+(control-plane, data-plane, telemetry-agent) — e.g. together with
+`authority.enabled: true` to deploy an authority-only release. Identity Hub
+is always deployed regardless of either toggle.
+
+Set `authority.enabled: true` when this participant should also run the
+authority stack (`issuerservice`, `federatedcatalog`,
+`federatedcatalogfilter`, `telemetryservice`, `telemetrystorage`,
+`telemetrycsvmanager`).
 
 ## `global.*` values contract
 

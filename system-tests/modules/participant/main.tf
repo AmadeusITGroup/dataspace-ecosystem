@@ -18,9 +18,23 @@ locals {
   tls_config_props = var.tls_enabled ? join("\n", [
     "edc.web.https.keystore.path=/shared/keystore.p12",
     "edc.web.https.keystore.type=PKCS12",
-    "edc.web.https.keystore.password=changeit",
-    "edc.web.https.keymanager.password=changeit",
   ]) : ""
+  # Keystore/keymanager password is sourced from a Kubernetes secret at runtime
+  # (EDC_WEB_HTTPS_KEYSTORE_PASSWORD / EDC_WEB_HTTPS_KEYMANAGER_PASSWORD env vars)
+  # via the chart's internalTls.keystoreSecretName value.
+  keystore_password = var.internal_keystore_password
+}
+
+resource "kubernetes_secret" "internal-keystore-credentials" {
+  count = var.tls_enabled ? 1 : 0
+
+  metadata {
+    name = "${var.participant_name}-internal-keystore-credentials"
+  }
+
+  data = {
+    "password" = local.keystore_password
+  }
 }
 
 module "db" {

@@ -137,6 +137,13 @@ variable "ingress_proxy_ssl_ca_secret_name" {
   default     = "nginx-proxy-ssl-ca"
 }
 
+variable "internal_keystore_password" {
+  description = "Passphrase for the internal-TLS PKCS12 keystore/keymanager (system-tests only, not used in production)."
+  type        = string
+  default     = "changeit"
+  sensitive   = true
+}
+
 # Self-hosted-specific Configuration
 
 variable "selfhosted_did_url" {

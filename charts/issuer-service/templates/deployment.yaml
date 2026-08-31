@@ -38,7 +38,7 @@ spec:
         securityContext:
           {{- toYaml .Values.issuerservice.securityContext | nindent 12}}
         # either use the specified image, or use the default one
-        image: {{.Values.issuerservice.image.repository | required ".Values.issuerservice.image.repository is required"}}:{{ .Values.issuerservice.image.tag | default .Chart.AppVersion }}
+        image: {{ include "dse.issuerservice.image.repository" . | trim }}:{{ .Values.issuerservice.image.tag | default .Chart.AppVersion }}
         imagePullPolicy: {{.Values.issuerservice.image.pullPolicy}}
         ports:
         {{- range $key,$value := .Values.issuerservice.endpoints}}
@@ -113,9 +113,21 @@ spec:
         ## ID CONFIGURATION ##
         ######################
         - name: "EDC_PARTICIPANT_ID"
-          value: {{.Values.issuerservice.did.web.url | required ".Values.issuerservice.did.web.url" | quote}}
+          value: {{ include "dse.issuerservice.didWebUrl" . | quote }}
         - name: "EDC_COMPONENT_ID"
           value: {{include "dse.fullname" .}}
+      {{- if .Values.issuerservice.internalTls.enabled }}
+        - name: "EDC_WEB_HTTPS_KEYSTORE_PASSWORD"
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.issuerservice.internalTls.keystoreSecretName | required ".Values.issuerservice.internalTls.keystoreSecretName is required when internalTls.enabled" | quote }}
+              key: {{ .Values.issuerservice.internalTls.keystoreSecretPasswordKey | quote }}
+        - name: "EDC_WEB_HTTPS_KEYMANAGER_PASSWORD"
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.issuerservice.internalTls.keystoreSecretName | required ".Values.issuerservice.internalTls.keystoreSecretName is required when internalTls.enabled" | quote }}
+              key: {{ .Values.issuerservice.internalTls.keystoreSecretPasswordKey | quote }}
+      {{- end }}
 
         ##############
         # POSTGRESQL #
@@ -123,57 +135,58 @@ spec:
         - name: "EDC_SQL_SCHEMA_AUTOCREATE"
           value: {{.Values.issuerservice.postgresql.schema.autocreate | required ".Values.issuerservice.postgresql.schema.autocreate is required" | quote}}
 
-        {{- with .Values.issuerservice.postgresql}}
-        {{- if .jdbcUrl}}
+        {{- with .Values.issuerservice.postgresql }}
+        {{- if or .jdbcUrl $.Values.global.db.serverFqdn }}
         - name: "EDC_DATASOURCE_DEFAULT_URL"
-          value: {{.jdbcUrl | required ".jdbcUrl is required" | quote}}
+          value: {{ include "dse.issuerservice.postgresql.jdbcUrl" $ | quote }}
         - name: "EDC_DATASOURCE_DEFAULT_USER"
           valueFrom:
             secretKeyRef:
-              name: {{.credentials.secret.name | required ".credentials.secret.name is required" | quote}}
-              key: {{.credentials.secret.userKey | required ".credentials.secret.userKey is required" | quote}}
+              name: {{ include "dse.issuerservice.postgresql.secretName" $ | quote }}
+              key: {{ .credentials.secret.userKey | required ".credentials.secret.userKey is required" | quote }}
         - name: "EDC_DATASOURCE_DEFAULT_PASSWORD"
           valueFrom:
             secretKeyRef:
-              name: {{.credentials.secret.name | required ".credentials.secret.name is required" | quote}}
-              key: {{.credentials.secret.passwordKey | required ".credentials.secret.passwordKey is required" | quote}}
+              name: {{ include "dse.issuerservice.postgresql.secretName" $ | quote }}
+              key: {{ .credentials.secret.passwordKey | required ".credentials.secret.passwordKey is required" | quote }}
         - name: "EDC_DATASOURCE_MEMBERSHIP_URL"
-          value: {{.jdbcUrl | required ".jdbcUrl is required" | quote}}
+          value: {{ include "dse.issuerservice.postgresql.jdbcUrl" $ | quote }}
         - name: "EDC_DATASOURCE_MEMBERSHIP_USER"
           valueFrom:
             secretKeyRef:
-              name: {{.credentials.secret.name | required ".credentials.secret.name is required" | quote}}
-              key: {{.credentials.secret.userKey | required ".credentials.secret.userKey is required" | quote}}
+              name: {{ include "dse.issuerservice.postgresql.secretName" $ | quote }}
+              key: {{ .credentials.secret.userKey | required ".credentials.secret.userKey is required" | quote }}
         - name: "EDC_DATASOURCE_MEMBERSHIP_PASSWORD"
           valueFrom:
             secretKeyRef:
-              name: {{.credentials.secret.name | required ".credentials.secret.name is required" | quote}}
-              key: {{.credentials.secret.passwordKey | required ".credentials.secret.passwordKey is required" | quote}}
+              name: {{ include "dse.issuerservice.postgresql.secretName" $ | quote }}
+              key: {{ .credentials.secret.passwordKey | required ".credentials.secret.passwordKey is required" | quote }}
         - name: "EDC_DATASOURCE_DOMAIN_URL"
-          value: {{.jdbcUrl | required ".jdbcUrl is required" | quote}}
+          value: {{ include "dse.issuerservice.postgresql.jdbcUrl" $ | quote }}
         - name: "EDC_DATASOURCE_DOMAIN_USER"
           valueFrom:
             secretKeyRef:
-              name: {{.credentials.secret.name | required ".credentials.secret.name is required" | quote}}
-              key: {{.credentials.secret.userKey | required ".credentials.secret.userKey is required" | quote}}
+              name: {{ include "dse.issuerservice.postgresql.secretName" $ | quote }}
+              key: {{ .credentials.secret.userKey | required ".credentials.secret.userKey is required" | quote }}
         - name: "EDC_DATASOURCE_DOMAIN_PASSWORD"
           valueFrom:
             secretKeyRef:
-              name: {{.credentials.secret.name | required ".credentials.secret.name is required" | quote}}
-              key: {{.credentials.secret.passwordKey | required ".credentials.secret.passwordKey is required" | quote}}
-        {{- end}}
-        {{- end}}
+              name: {{ include "dse.issuerservice.postgresql.secretName" $ | quote }}
+              key: {{ .credentials.secret.passwordKey | required ".credentials.secret.passwordKey is required" | quote }}
+        {{- end }}
+        {{- end }}
         #####################
         ## HASHICORP VAULT ##
         #####################
-        {{- if .Values.issuerservice.vault.hashicorp.url}}
+        {{- $vaultUrl := include "dse.issuerservice.vault.hashicorp.url" . }}
+        {{- if $vaultUrl }}
         # https://github.com/eclipse-edc/Connector/tree/main/extensions/common/vault/vault-hashicorp
         - name: "EDC_VAULT_HASHICORP_URL"
-          value: {{.Values.issuerservice.vault.hashicorp.url | quote}}
+          value: {{ $vaultUrl | quote }}
         - name: "EDC_VAULT_HASHICORP_TOKEN"
           valueFrom:
             secretKeyRef:
-              name: {{.Values.issuerservice.vault.hashicorp.token.secret.name | required ".Values.issuerservice.vault.hashicorp.token.secret.name is required" | quote}}
+              name: {{ include "dse.issuerservice.vault.hashicorp.tokenSecretName" . | quote }}
               key: {{.Values.issuerservice.vault.hashicorp.token.secret.tokenKey | required ".Values.issuerservice.vault.hashicorp.token.secret.tokenKey is required" | quote}}
         - name: "EDC_VAULT_HASHICORP_TOKEN_SCHEDULED-RENEW-ENABLED"
           value: {{.Values.issuerservice.vault.hashicorp.token.renewal.enabled | quote}}
@@ -190,7 +203,7 @@ spec:
         - name: "EDC_VAULT_HASHICORP_API_SECRET_PATH"
           value: {{.Values.issuerservice.vault.hashicorp.paths.secret | quote}}
         - name: "EDC_VAULT_HASHICORP_FOLDER"
-          value: {{.Values.issuerservice.vault.hashicorp.paths.folder | quote}}
+          value: {{ include "dse.issuerservice.vault.hashicorp.folder" . | quote }}
         - name: "EDC_VAULT_HASHICORP_API_HEALTH_CHECK_PATH"
           value: {{.Values.issuerservice.vault.hashicorp.paths.health | quote}}
         - name: "EDC_VAULT_HASHICORP_ALLOW_FALLBACK"
@@ -204,13 +217,13 @@ spec:
         # SSI / DID #
         #############
         - name: "EDC_IAM_ISSUER_ID"
-          value: {{.Values.issuerservice.did.web.url | required ".Values.issuerservice.did.web.url" | quote}}
+          value: {{ include "dse.issuerservice.didWebUrl" . | quote }}
         - name: "EDC_IDENTITY_DID_URL"
-          value: {{.Values.issuerservice.did.web.url | required ".Values.issuerservice.did.web.url" | quote}}
+          value: {{ include "dse.issuerservice.didWebUrl" . | quote }}
         - name: "EDC_IAM_DID_WEB_USE_HTTPS"
-          value: {{.Values.issuerservice.did.web.useHttps | required ".Values.issuerservice.did.web.useHttps is required" | quote}}
+          value: {{ include "dse.issuerservice.didWebUseHttps" . | quote }}
         - name: "EDC_ISSUER_STATUSLIST_SIGNING_KEY_ALIAS"
-          value: {{.Values.issuerservice.keys.statuslist.privateKeyAlias | required ".Values.issuerservice.keys.statuslist.privateKeyAlias is required" | quote}}
+          value: {{ include "dse.issuerservice.keys.statuslist.privateKeyAlias" . | quote }}
         {{- with .Values.issuerservice.statuslist}}
         {{- if .callbackAddress}}
         - name: "EDC_STATUSLIST_CALLBACK_ADDRESS"
@@ -225,7 +238,7 @@ spec:
         # (https://github.com/eclipse-edc/Connector/pull/5423); without it
         # participant-context creation fails.
         - name: "EDC_ENCRYPTION_AES_KEY_ALIAS"
-          value: {{.Values.issuerservice.keys.encryption.aesKeyAlias | required ".Values.issuerservice.keys.encryption.aesKeyAlias is required" | quote}}
+          value: {{ include "dse.issuerservice.keys.encryption.aesKeyAlias" . | quote }}
 
         #######
         # API #

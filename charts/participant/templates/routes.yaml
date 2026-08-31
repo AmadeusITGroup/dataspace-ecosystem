@@ -21,10 +21,13 @@ nginx chart ingress, not an OpenShift route).
 {{- $pname := required "global.participantName is required when global.route.enabled is true" .Values.global.participantName }}
 {{- $pattern := required "global.route.hostPattern is required when global.route.enabled is true (two %s verbs: participantName, componentToken)" $rt.hostPattern }}
 {{- $rel := .Release.Name }}
+{{- /* dataplane.enabled (if explicitly set) overrides the participant.enabled group toggle */ -}}
+{{- $dataplaneEnabled := .Values.participant.enabled }}
+{{- if kindIs "bool" .Values.dataplane.enabled }}{{ $dataplaneEnabled = .Values.dataplane.enabled }}{{- end }}
 {{- $components := list
-      (dict "svc" "controlplane" "token" "controlplane" "certManager" true "enabled" true
+      (dict "svc" "controlplane" "token" "controlplane" "certManager" true "enabled" .Values.participant.enabled
             "paths" (list (dict "path" "/api/management" "port" 8181) (dict "path" "/api/dsp" "port" 8282)))
-      (dict "svc" "dataplane" "token" "dataplane" "certManager" true "enabled" .Values.dataplane.enabled
+      (dict "svc" "dataplane" "token" "dataplane" "certManager" true "enabled" $dataplaneEnabled
             "paths" (list (dict "path" "/api/public" "port" 8181) (dict "path" "/api/data" "port" 8282)))
       (dict "svc" "identityhub" "token" "identityhub" "certManager" true "enabled" true
             "paths" (list (dict "path" "/api/identity" "port" 8181) (dict "path" "/api/credentials" "port" 8282) (dict "path" "/api/did" "port" 8383) (dict "path" "/api/sts" "port" 8484)))

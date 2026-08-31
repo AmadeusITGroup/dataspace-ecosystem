@@ -285,6 +285,10 @@ controlplane:
     enabled: true
     # -- Name of the Kubernetes secret containing tls.crt, tls.key, ca.crt for pod-to-pod TLS
     secretName: "internal-service-tls"
+    # -- Name of the Kubernetes secret containing the PKCS12 keystore/keymanager password. Required when internalTls.enabled is true.
+    keystoreSecretName: ""
+    # -- Key within internalTls.keystoreSecretName holding the keystore/keymanager password
+    keystoreSecretPasswordKey: "password"
   # -- declare where to mount [volumes](https://kubernetes.io/docs/concepts/storage/volumes/) into the container
   volumeMounts: []
   # -- [volume](https://kubernetes.io/docs/concepts/storage/volumes/) directories
