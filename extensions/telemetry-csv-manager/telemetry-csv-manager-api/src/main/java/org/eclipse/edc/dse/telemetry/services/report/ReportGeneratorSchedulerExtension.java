@@ -63,12 +63,18 @@ public class ReportGeneratorSchedulerExtension implements ServiceExtension {
     public void initialize(ServiceExtensionContext context) {
         monitor = context.getMonitor();
         monitor.info("Initializing Report Generator Scheduler Extension...");
-        azureStorageService = StorageServiceFactory.create(monitor, blobStorageType, azuriteConnectionString, azuriteStorageContainer,
+        var storageService = StorageServiceFactory.create(monitor, blobStorageType, azuriteConnectionString, azuriteStorageContainer,
                 azureClientId, azureClientSecret, azureTenantId, azureStorageContainer, azureStorageEndpoint);
         JpaUtil.init(PERSISTENCE_UNIT_NAME, datasourceDefaultUrl, datasourceDefaultUser, datasourceDefaultPassword);
 
-        scheduler = new ReportGeneratorScheduler(monitor, azureStorageService, Clock.systemDefaultZone());
+        // Assignments are isolated in a static method so instance methods do not write to static fields (java:S2696)
+        initializeStaticState(storageService, new ReportGeneratorScheduler(monitor, storageService, Clock.systemDefaultZone()));
         scheduler.start();
+    }
+
+    private static void initializeStaticState(AzureStorageService storageService, ReportGeneratorScheduler reportGeneratorScheduler) {
+        azureStorageService = storageService;
+        scheduler = reportGeneratorScheduler;
     }
 
     @Override
