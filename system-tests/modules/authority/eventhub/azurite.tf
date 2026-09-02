@@ -138,9 +138,15 @@ resource "kubernetes_stateful_set" "azurite-report-storage" {
   }
 }
 
-resource "kubernetes_job" "create_blob_container" {
+resource "kubernetes_job_v1" "create_blob_container" {
   metadata {
     name = "create-blob-container"
+  }
+
+  wait_for_completion = true
+
+  timeouts {
+    create = "5m"
   }
 
   spec {

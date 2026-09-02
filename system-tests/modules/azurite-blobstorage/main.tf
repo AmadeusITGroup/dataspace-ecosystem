@@ -102,9 +102,15 @@ resource "kubernetes_service" "azurite_blobstorage" {
 }
 
 # Create test containers for provider and consumer
-resource "kubernetes_job" "create_test_containers" {
+resource "kubernetes_job_v1" "create_test_containers" {
   metadata {
     name = "create-blobstorage-containers"
+  }
+
+  wait_for_completion = true
+
+  timeouts {
+    create = "5m"
   }
 
   spec {
