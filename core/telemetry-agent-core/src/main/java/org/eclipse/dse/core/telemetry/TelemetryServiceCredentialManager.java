@@ -5,6 +5,7 @@ import org.eclipse.edc.spi.monitor.Monitor;
 import org.eclipse.edc.spi.system.ExecutorInstrumentation;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -75,7 +76,7 @@ public class TelemetryServiceCredentialManager {
     }
 
 
-    public Future<?> start() {
+    public Future<Void> start() {
         active.set(true);
         return scheduleNextIterationIn(0L);
     }
@@ -93,11 +94,13 @@ public class TelemetryServiceCredentialManager {
         });
     }
 
-    private Runnable loop() {
+    // A Callable (instead of a Runnable) lets schedule() return Future<Void>, avoiding a wildcard return type (java:S1452)
+    private Callable<Void> loop() {
         return () -> {
             if (active.get()) {
                 performLogic();
             }
+            return null;
         };
     }
 
@@ -151,7 +154,7 @@ public class TelemetryServiceCredentialManager {
     }
 
     @NotNull
-    private Future<?> scheduleNextIterationIn(long delaySeconds) {
+    private Future<Void> scheduleNextIterationIn(long delaySeconds) {
         return executor.schedule(loop(), delaySeconds, SECONDS);
     }
 }
