@@ -115,8 +115,26 @@ include(":system-tests:backend-service-provider")
 include(":system-tests:runner")
 include(":system-tests:dcat-distribution-transformation-test")
 
+// Amadeus Artifactory virtual repository (proxies Maven Central). Registered first so CI
+// runners on the Amadeus network avoid repo.maven.apache.org rate limiting (HTTP 429).
+// Credentials are optional: mvn-public allows anonymous reads internally, and when the
+// repo is unreachable (forks, external contributors) Gradle falls back to mavenCentral().
 pluginManagement {
     repositories {
+        maven {
+            name = "AmadeusArtifactory"
+            url = uri("https://repository.rnd.amadeus.net/mvn-public/")
+            val user = providers.environmentVariable("ARTIFACTORY_USERNAME")
+                .orElse(providers.gradleProperty("artifactoryUser")).orNull
+            val password = providers.environmentVariable("ARTIFACTORY_PASSWORD")
+                .orElse(providers.gradleProperty("artifactoryPassword")).orNull
+            if (user != null && password != null) {
+                credentials {
+                    username = user
+                    this.password = password
+                }
+            }
+        }
         mavenLocal()
         gradlePluginPortal()
         mavenCentral()
@@ -125,8 +143,23 @@ pluginManagement {
         }
     }
 }
+
 dependencyResolutionManagement {
     repositories {
+        maven {
+            name = "AmadeusArtifactory"
+            url = uri("https://repository.rnd.amadeus.net/mvn-public/")
+            val user = providers.environmentVariable("ARTIFACTORY_USERNAME")
+                .orElse(providers.gradleProperty("artifactoryUser")).orNull
+            val password = providers.environmentVariable("ARTIFACTORY_PASSWORD")
+                .orElse(providers.gradleProperty("artifactoryPassword")).orNull
+            if (user != null && password != null) {
+                credentials {
+                    username = user
+                    this.password = password
+                }
+            }
+        }
         mavenLocal()
         gradlePluginPortal()
         mavenCentral()
