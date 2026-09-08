@@ -10,7 +10,7 @@ repositories {
 dependencies {
     implementation(libs.edc.core.jersey)
     implementation("org.postgresql:postgresql:42.7.8")
-    implementation("org.hibernate.orm:hibernate-core:7.1.2.Final")
+    implementation("org.hibernate.orm:hibernate-core:7.4.1.Final")
     implementation("io.minio:minio:8.6.0")
     implementation(libs.jjwt.api)
     implementation("com.azure:azure-storage-blob:12.31.3")
@@ -18,7 +18,7 @@ dependencies {
     runtimeOnly(libs.jjwt.impl)
     runtimeOnly(libs.jjwt.jackson)
 
-    testImplementation("org.hibernate.orm:hibernate-core:7.1.2.Final")
+    testImplementation("org.hibernate.orm:hibernate-core:7.4.1.Final")
     testRuntimeOnly("org.hsqldb:hsqldb:2.7.4")
 
     testImplementation(platform("org.junit:junit-bom:6.0.3"))
