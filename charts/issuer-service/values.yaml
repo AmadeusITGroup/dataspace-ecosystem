@@ -32,6 +32,17 @@ global:
     didWebUrl: ""
   vault:
     url: ""
+    azure:
+      name: ""
+      url: ""
+      unsafe: false
+      credentials:
+        secret:
+          name: ""
+          clientIdKey: ""
+          tenantIdKey: ""
+          clientSecretKey: ""
+          clientCertificateKey: ""
 
 issuerservice:
   image:
@@ -168,6 +179,24 @@ issuerservice:
         health: /v1/sys/health
       # -- allow fallback to env-based vault token if participant-context token not available
       allowFallback: false
+
+    # -- Azure Key Vault
+    azure:
+      name: ""
+      url: ""
+      # -- unsafe: false  # optional: uncomment to override global.vault.azure.unsafe; omitted by default so the key stays absent and global.vault.azure.unsafe is inherited
+      credentials:
+        secret:
+          # -- name of the Kubernetes secret containing the Azure Vault credentials
+          name: ""
+          # -- secret key containing the Service Principal ID
+          clientIdKey: ""
+          # -- secret key containing the Tenant ID
+          tenantIdKey: ""
+          # -- secret key containing the Service Principal client secret
+          clientSecretKey: ""
+          # -- secret key containing the Service Principal client certificate
+          clientCertificateKey: ""
 
 
   # -- Private/public keys information

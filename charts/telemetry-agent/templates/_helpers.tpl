@@ -298,3 +298,116 @@ Create the name of the service account to use
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
+{{/*
+Telemetry Agent - Azure Key Vault name. Uses the explicit value if set, otherwise
+falls back to global.vault.azure.name (shared across every component of the
+participant).
+*/}}
+{{- define "dse.telemetryagent.vaultAzureName" -}}
+{{- if .Values.telemetryagent.vault.azure.name -}}
+{{- .Values.telemetryagent.vault.azure.name -}}
+{{- else -}}
+{{- .Values.global.vault.azure.name -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Telemetry Agent - Azure Key Vault URL override. Uses the explicit value if set,
+otherwise falls back to global.vault.azure.url.
+*/}}
+{{- define "dse.telemetryagent.vaultAzureUrl" -}}
+{{- if .Values.telemetryagent.vault.azure.url -}}
+{{- .Values.telemetryagent.vault.azure.url -}}
+{{- else -}}
+{{- .Values.global.vault.azure.url -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Telemetry Agent - Azure Key Vault URL override "unsafe" flag. Uses the explicit
+value if set, otherwise falls back to global.vault.azure.unsafe.
+*/}}
+{{- define "dse.telemetryagent.vaultAzureUnsafe" -}}
+{{- if hasKey .Values.telemetryagent.vault.azure "unsafe" -}}
+{{- .Values.telemetryagent.vault.azure.unsafe -}}
+{{- else -}}
+{{- .Values.global.vault.azure.unsafe -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Telemetry Agent - Azure Key Vault credentials secret name. Uses the explicit value
+if set, otherwise falls back to global.vault.azure.credentials.secret.name
+(shared across every component using the same Service Principal).
+*/}}
+{{- define "dse.telemetryagent.vaultAzureCredentialsSecretName" -}}
+{{- if .Values.telemetryagent.vault.azure.credentials.secret.name -}}
+{{- .Values.telemetryagent.vault.azure.credentials.secret.name -}}
+{{- else -}}
+{{- .Values.global.vault.azure.credentials.secret.name -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Telemetry Agent - Azure Key Vault credentials secret key holding the Service
+Principal client ID. Uses the explicit value if set, otherwise falls back
+to global.vault.azure.credentials.secret.clientIdKey.
+*/}}
+{{- define "dse.telemetryagent.vaultAzureCredentialsClientIdKey" -}}
+{{- if .Values.telemetryagent.vault.azure.credentials.secret.clientIdKey -}}
+{{- .Values.telemetryagent.vault.azure.credentials.secret.clientIdKey -}}
+{{- else -}}
+{{- .Values.global.vault.azure.credentials.secret.clientIdKey -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Telemetry Agent - Azure Key Vault credentials secret key holding the Tenant ID.
+Uses the explicit value if set, otherwise falls back to
+global.vault.azure.credentials.secret.tenantIdKey.
+*/}}
+{{- define "dse.telemetryagent.vaultAzureCredentialsTenantIdKey" -}}
+{{- if .Values.telemetryagent.vault.azure.credentials.secret.tenantIdKey -}}
+{{- .Values.telemetryagent.vault.azure.credentials.secret.tenantIdKey -}}
+{{- else -}}
+{{- .Values.global.vault.azure.credentials.secret.tenantIdKey -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Telemetry Agent - Azure Key Vault credentials secret key holding the Service
+Principal client secret. Uses the explicit value if set, otherwise falls
+back to global.vault.azure.credentials.secret.clientSecretKey.
+*/}}
+{{- define "dse.telemetryagent.vaultAzureCredentialsClientSecretKey" -}}
+{{- if .Values.telemetryagent.vault.azure.credentials.secret.clientSecretKey -}}
+{{- .Values.telemetryagent.vault.azure.credentials.secret.clientSecretKey -}}
+{{- else -}}
+{{- .Values.global.vault.azure.credentials.secret.clientSecretKey -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Telemetry Agent - Azure Key Vault credentials secret key holding the Service
+Principal client certificate. Uses the explicit value if set, otherwise
+falls back to global.vault.azure.credentials.secret.clientCertificateKey.
+*/}}
+{{- define "dse.telemetryagent.vaultAzureCredentialsClientCertificateKey" -}}
+{{- if .Values.telemetryagent.vault.azure.credentials.secret.clientCertificateKey -}}
+{{- .Values.telemetryagent.vault.azure.credentials.secret.clientCertificateKey -}}
+{{- else -}}
+{{- .Values.global.vault.azure.credentials.secret.clientCertificateKey -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Telemetry Agent - whether Azure Key Vault is enabled: either the component sets
+its own vault.azure.name explicitly, or global.vault.azure.name is set
+and global.vaultProvider selects Azure. Centralizes the enablement
+condition so the env-var block and the client-certificate volume/mount
+stay consistent (this is the single source of truth for "is Azure Vault
+active for this component").
+*/}}
+{{- define "dse.telemetryagent.vaultAzureEnabled" -}}
+{{- if or .Values.telemetryagent.vault.azure.name (and .Values.global.vault.azure.name (or (eq .Values.global.vaultProvider "azure") (eq .Values.global.vaultProvider "azurevault"))) -}}true{{- end -}}
+{{- end }}

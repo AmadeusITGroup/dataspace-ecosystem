@@ -185,6 +185,45 @@ spec:
             value: {{ .Values.federatedcatalog.vault.hashicorp.allowFallback | quote }}
           {{- end }}
 
+          ###############
+          # AZURE VAULT #
+          ###############
+          {{- if eq (include "dse.federatedcatalog.vaultAzureEnabled" .) "true" }}
+          - name: "EDC_VAULT_NAME"
+            value: {{ include "dse.federatedcatalog.vaultAzureName" . | required ".Values.federatedcatalog.vault.azure.name or global.vault.azure.name (with global.vaultProvider=azure/azurevault) is required" | quote }}
+            {{- if or .Values.federatedcatalog.vault.azure.url .Values.global.vault.azure.url }}
+          - name: "EDC_VAULT_URL_OVERRIDE"
+            value: {{ include "dse.federatedcatalog.vaultAzureUrl" . | quote }}
+          - name: "EDC_VAULT_URL_OVERRIDE_UNSAFE"
+            value: {{ include "dse.federatedcatalog.vaultAzureUnsafe" . | quote }}
+            {{- end }}
+          - name: "AZURE_CLIENT_ID"
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "dse.federatedcatalog.vaultAzureCredentialsSecretName" . | required ".Values.federatedcatalog.vault.azure.credentials.secret.name or global.vault.azure.credentials.secret.name is required" | quote }}
+                key: {{ include "dse.federatedcatalog.vaultAzureCredentialsClientIdKey" . | required ".Values.federatedcatalog.vault.azure.credentials.secret.clientIdKey or global.vault.azure.credentials.secret.clientIdKey is required" | quote }}
+          - name: "AZURE_TENANT_ID"
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "dse.federatedcatalog.vaultAzureCredentialsSecretName" . | required ".Values.federatedcatalog.vault.azure.credentials.secret.name or global.vault.azure.credentials.secret.name is required" | quote }}
+                key: {{ include "dse.federatedcatalog.vaultAzureCredentialsTenantIdKey" . | required ".Values.federatedcatalog.vault.azure.credentials.secret.tenantIdKey or global.vault.azure.credentials.secret.tenantIdKey is required" | quote }}
+            {{- if or .Values.federatedcatalog.vault.azure.credentials.secret.clientSecretKey .Values.global.vault.azure.credentials.secret.clientSecretKey }}
+          - name: "AZURE_CLIENT_SECRET"
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "dse.federatedcatalog.vaultAzureCredentialsSecretName" . | quote }}
+                key: {{ include "dse.federatedcatalog.vaultAzureCredentialsClientSecretKey" . | quote }}
+            {{- end }}
+            {{- if or .Values.federatedcatalog.vault.azure.credentials.secret.clientCertificateKey .Values.global.vault.azure.credentials.secret.clientCertificateKey }}
+          - name: "AZURE_CLIENT_CERTIFICATE_PATH"
+            # AzureVaultExtension/ClientCertificateCredential reads this as a
+            # file path, not raw cert content, so the cert is mounted as a
+            # volume (azure-vault-cert-volume, below) instead of injected via
+            # secretKeyRef.
+            value: {{ printf "/azure-vault-cert/%s" (include "dse.federatedcatalog.vaultAzureCredentialsClientCertificateKey" .) | quote }}
+            {{- end }}
+          {{- end }}
+
             #############################
             # FEDERATED CATALOG CRAWLER #
             #############################
@@ -269,6 +308,11 @@ spec:
             - name: internal-tls-volume
               mountPath: /internal-certs
 {{- end }}
+{{- if and (eq (include "dse.federatedcatalog.vaultAzureEnabled" .) "true") (or .Values.federatedcatalog.vault.azure.credentials.secret.clientCertificateKey .Values.global.vault.azure.credentials.secret.clientCertificateKey) }}
+            - name: azure-vault-cert-volume
+              readOnly: true
+              mountPath: /azure-vault-cert
+{{- end }}
       volumes:
         - name: config
           configMap:
@@ -286,6 +330,14 @@ spec:
         - name: internal-tls-volume
           secret:
             secretName: {{ .Values.federatedcatalog.internalTls.secretName }}
+{{- end }}
+{{- if and (eq (include "dse.federatedcatalog.vaultAzureEnabled" .) "true") (or .Values.federatedcatalog.vault.azure.credentials.secret.clientCertificateKey .Values.global.vault.azure.credentials.secret.clientCertificateKey) }}
+        - name: azure-vault-cert-volume
+          secret:
+            secretName: {{ include "dse.federatedcatalog.vaultAzureCredentialsSecretName" . | quote }}
+            items:
+              - key: {{ include "dse.federatedcatalog.vaultAzureCredentialsClientCertificateKey" . | quote }}
+                path: {{ include "dse.federatedcatalog.vaultAzureCredentialsClientCertificateKey" . | quote }}
 {{- end }}
 
       {{- with .Values.federatedcatalog.nodeSelector }}

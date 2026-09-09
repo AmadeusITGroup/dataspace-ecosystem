@@ -160,6 +160,45 @@ spec:
               value: {{ .Values.identityhub.vault.hashicorp.allowFallback | quote }}
           {{- end }}
 
+          ###############
+          # AZURE VAULT #
+          ###############
+          {{- if eq (include "dse.identityhub.vaultAzureEnabled" .) "true" }}
+            - name: "EDC_VAULT_NAME"
+              value: {{ include "dse.identityhub.vaultAzureName" . | required ".Values.identityhub.vault.azure.name or global.vault.azure.name (with global.vaultProvider=azure/azurevault) is required" | quote }}
+            {{- if or .Values.identityhub.vault.azure.url .Values.global.vault.azure.url }}
+            - name: "EDC_VAULT_URL_OVERRIDE"
+              value: {{ include "dse.identityhub.vaultAzureUrl" . | quote }}
+            - name: "EDC_VAULT_URL_OVERRIDE_UNSAFE"
+              value: {{ include "dse.identityhub.vaultAzureUnsafe" . | quote }}
+            {{- end }}
+            - name: "AZURE_CLIENT_ID"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "dse.identityhub.vaultAzureCredentialsSecretName" . | required ".Values.identityhub.vault.azure.credentials.secret.name or global.vault.azure.credentials.secret.name is required" | quote }}
+                  key: {{ include "dse.identityhub.vaultAzureCredentialsClientIdKey" . | required ".Values.identityhub.vault.azure.credentials.secret.clientIdKey or global.vault.azure.credentials.secret.clientIdKey is required" | quote }}
+            - name: "AZURE_TENANT_ID"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "dse.identityhub.vaultAzureCredentialsSecretName" . | required ".Values.identityhub.vault.azure.credentials.secret.name or global.vault.azure.credentials.secret.name is required" | quote }}
+                  key: {{ include "dse.identityhub.vaultAzureCredentialsTenantIdKey" . | required ".Values.identityhub.vault.azure.credentials.secret.tenantIdKey or global.vault.azure.credentials.secret.tenantIdKey is required" | quote }}
+            {{- if or .Values.identityhub.vault.azure.credentials.secret.clientSecretKey .Values.global.vault.azure.credentials.secret.clientSecretKey }}
+            - name: "AZURE_CLIENT_SECRET"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "dse.identityhub.vaultAzureCredentialsSecretName" . | quote }}
+                  key: {{ include "dse.identityhub.vaultAzureCredentialsClientSecretKey" . | quote }}
+            {{- end }}
+            {{- if or .Values.identityhub.vault.azure.credentials.secret.clientCertificateKey .Values.global.vault.azure.credentials.secret.clientCertificateKey }}
+            - name: "AZURE_CLIENT_CERTIFICATE_PATH"
+              # AzureVaultExtension/ClientCertificateCredential reads this as
+              # a file path, not raw cert content, so the cert is mounted as
+              # a volume (azure-vault-cert-volume, below) instead of injected
+              # via secretKeyRef.
+              value: {{ printf "/azure-vault-cert/%s" (include "dse.identityhub.vaultAzureCredentialsClientCertificateKey" .) | quote }}
+            {{- end }}
+          {{- end }}
+
             ##############
             # POSTGRESQL #
             ##############
@@ -267,6 +306,11 @@ spec:
             - name: internal-tls-volume
               mountPath: /internal-certs
 {{- end }}
+{{- if and (eq (include "dse.identityhub.vaultAzureEnabled" .) "true") (or .Values.identityhub.vault.azure.credentials.secret.clientCertificateKey .Values.global.vault.azure.credentials.secret.clientCertificateKey) }}
+            - name: azure-vault-cert-volume
+              readOnly: true
+              mountPath: /azure-vault-cert
+{{- end }}
       volumes:
         - name: config
           configMap:
@@ -284,6 +328,14 @@ spec:
         - name: internal-tls-volume
           secret:
             secretName: {{ .Values.identityhub.internalTls.secretName }}
+{{- end }}
+{{- if and (eq (include "dse.identityhub.vaultAzureEnabled" .) "true") (or .Values.identityhub.vault.azure.credentials.secret.clientCertificateKey .Values.global.vault.azure.credentials.secret.clientCertificateKey) }}
+        - name: azure-vault-cert-volume
+          secret:
+            secretName: {{ include "dse.identityhub.vaultAzureCredentialsSecretName" . | quote }}
+            items:
+              - key: {{ include "dse.identityhub.vaultAzureCredentialsClientCertificateKey" . | quote }}
+                path: {{ include "dse.identityhub.vaultAzureCredentialsClientCertificateKey" . | quote }}
 {{- end }}
 
       {{- with .Values.identityhub.nodeSelector }}

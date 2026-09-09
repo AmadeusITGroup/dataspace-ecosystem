@@ -242,3 +242,116 @@ false
 {{- printf "%s-aes" (required "global.participantName is required when federatedcatalog.keys.encryption.aesKeyAlias is not set" .Values.global.participantName) -}}
 {{- end -}}
 {{- end }}
+{{/*
+Federated Catalog - Azure Key Vault name. Uses the explicit value if set, otherwise
+falls back to global.vault.azure.name (shared across every component of the
+participant).
+*/}}
+{{- define "dse.federatedcatalog.vaultAzureName" -}}
+{{- if .Values.federatedcatalog.vault.azure.name -}}
+{{- .Values.federatedcatalog.vault.azure.name -}}
+{{- else -}}
+{{- .Values.global.vault.azure.name -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Federated Catalog - Azure Key Vault URL override. Uses the explicit value if set,
+otherwise falls back to global.vault.azure.url.
+*/}}
+{{- define "dse.federatedcatalog.vaultAzureUrl" -}}
+{{- if .Values.federatedcatalog.vault.azure.url -}}
+{{- .Values.federatedcatalog.vault.azure.url -}}
+{{- else -}}
+{{- .Values.global.vault.azure.url -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Federated Catalog - Azure Key Vault URL override "unsafe" flag. Uses the explicit
+value if set, otherwise falls back to global.vault.azure.unsafe.
+*/}}
+{{- define "dse.federatedcatalog.vaultAzureUnsafe" -}}
+{{- if hasKey .Values.federatedcatalog.vault.azure "unsafe" -}}
+{{- .Values.federatedcatalog.vault.azure.unsafe -}}
+{{- else -}}
+{{- .Values.global.vault.azure.unsafe -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Federated Catalog - Azure Key Vault credentials secret name. Uses the explicit value
+if set, otherwise falls back to global.vault.azure.credentials.secret.name
+(shared across every component using the same Service Principal).
+*/}}
+{{- define "dse.federatedcatalog.vaultAzureCredentialsSecretName" -}}
+{{- if .Values.federatedcatalog.vault.azure.credentials.secret.name -}}
+{{- .Values.federatedcatalog.vault.azure.credentials.secret.name -}}
+{{- else -}}
+{{- .Values.global.vault.azure.credentials.secret.name -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Federated Catalog - Azure Key Vault credentials secret key holding the Service
+Principal client ID. Uses the explicit value if set, otherwise falls back
+to global.vault.azure.credentials.secret.clientIdKey.
+*/}}
+{{- define "dse.federatedcatalog.vaultAzureCredentialsClientIdKey" -}}
+{{- if .Values.federatedcatalog.vault.azure.credentials.secret.clientIdKey -}}
+{{- .Values.federatedcatalog.vault.azure.credentials.secret.clientIdKey -}}
+{{- else -}}
+{{- .Values.global.vault.azure.credentials.secret.clientIdKey -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Federated Catalog - Azure Key Vault credentials secret key holding the Tenant ID.
+Uses the explicit value if set, otherwise falls back to
+global.vault.azure.credentials.secret.tenantIdKey.
+*/}}
+{{- define "dse.federatedcatalog.vaultAzureCredentialsTenantIdKey" -}}
+{{- if .Values.federatedcatalog.vault.azure.credentials.secret.tenantIdKey -}}
+{{- .Values.federatedcatalog.vault.azure.credentials.secret.tenantIdKey -}}
+{{- else -}}
+{{- .Values.global.vault.azure.credentials.secret.tenantIdKey -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Federated Catalog - Azure Key Vault credentials secret key holding the Service
+Principal client secret. Uses the explicit value if set, otherwise falls
+back to global.vault.azure.credentials.secret.clientSecretKey.
+*/}}
+{{- define "dse.federatedcatalog.vaultAzureCredentialsClientSecretKey" -}}
+{{- if .Values.federatedcatalog.vault.azure.credentials.secret.clientSecretKey -}}
+{{- .Values.federatedcatalog.vault.azure.credentials.secret.clientSecretKey -}}
+{{- else -}}
+{{- .Values.global.vault.azure.credentials.secret.clientSecretKey -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Federated Catalog - Azure Key Vault credentials secret key holding the Service
+Principal client certificate. Uses the explicit value if set, otherwise
+falls back to global.vault.azure.credentials.secret.clientCertificateKey.
+*/}}
+{{- define "dse.federatedcatalog.vaultAzureCredentialsClientCertificateKey" -}}
+{{- if .Values.federatedcatalog.vault.azure.credentials.secret.clientCertificateKey -}}
+{{- .Values.federatedcatalog.vault.azure.credentials.secret.clientCertificateKey -}}
+{{- else -}}
+{{- .Values.global.vault.azure.credentials.secret.clientCertificateKey -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Federated Catalog - whether Azure Key Vault is enabled: either the component sets
+its own vault.azure.name explicitly, or global.vault.azure.name is set
+and global.vaultProvider selects Azure. Centralizes the enablement
+condition so the env-var block and the client-certificate volume/mount
+stay consistent (this is the single source of truth for "is Azure Vault
+active for this component").
+*/}}
+{{- define "dse.federatedcatalog.vaultAzureEnabled" -}}
+{{- if or .Values.federatedcatalog.vault.azure.name (and .Values.global.vault.azure.name (or (eq .Values.global.vaultProvider "azure") (eq .Values.global.vaultProvider "azurevault"))) -}}true{{- end -}}
+{{- end }}

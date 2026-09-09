@@ -126,6 +126,19 @@ global:
     url: "https://vault:8200" # convenience default; only set at this (umbrella)
                                # level — do NOT duplicate a non-empty default in
                                # any subchart's own values.yaml (see Notes below)
+    azure:
+      name: ""                 # Azure Key Vault name, shared by every component
+                                # when global.vaultProvider is "azure"/"azurevault"
+      url: ""                  # optional vault URL override
+      unsafe: false             # optional vault URL override "unsafe" flag
+      credentials:
+        secret:
+          name: ""             # K8s secret containing the shared Azure Vault
+                                # Service Principal credentials
+          clientIdKey: ""      # secret key containing the Service Principal ID
+          tenantIdKey: ""      # secret key containing the Tenant ID
+          clientSecretKey: ""  # secret key containing the client secret
+          clientCertificateKey: "" # secret key containing the client certificate
   telemetry:
     enabled: false            # enables OTEL_RESOURCE_ATTRIBUTES on every component
 ```
@@ -146,6 +159,11 @@ section.
   `global.vault.url` to `""`, because a non-empty default there would make
   each subchart's Vault integration block always render, even for standalone
   installs that don't use Vault.
+- `global.vault.azure.*` mirrors the same convenience pattern as
+  `global.vault.url`, but for Azure Key Vault: set it once here instead of
+  repeating `vault.azure.*` under every component's own values. It only takes
+  effect for a component when `global.vaultProvider` is `"azure"` or
+  `"azurevault"` **and** that component's own `vault.azure.name` is unset.
 
 ## Migrating an existing Terraform-deployed participant
 

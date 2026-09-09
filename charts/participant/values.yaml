@@ -89,6 +89,29 @@ global:
     # default there would make each subchart always render its Vault
     # integration block even when Vault isn't wanted for standalone use.
     url: "https://vault:8200"
+    # -- Azure Key Vault, shared by every component when
+    # global.vaultProvider is "azure"/"azurevault". Lets a single set of
+    # values configure Azure Key Vault for the whole participant instead of
+    # repeating them under each component's own `vault.azure` section. Any
+    # component-specific `vault.azure.*` value set explicitly always takes
+    # precedence over what is derived from here.
+    azure:
+      name: ""
+      url: ""
+      unsafe: false
+      credentials:
+        secret:
+          # -- name of the Kubernetes secret containing the Azure Vault
+          # credentials, shared by every component
+          name: ""
+          # -- secret key containing the Service Principal ID
+          clientIdKey: ""
+          # -- secret key containing the Tenant ID
+          tenantIdKey: ""
+          # -- secret key containing the Service Principal client secret
+          clientSecretKey: ""
+          # -- secret key containing the Service Principal client certificate
+          clientCertificateKey: ""
   telemetry:
     # -- Enables OpenTelemetry on the control-plane, data-plane, and
     # identity-hub: turns on the otel javaagent, OTLP gRPC exporter,

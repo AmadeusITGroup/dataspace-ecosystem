@@ -115,6 +115,56 @@
             "url": {
               "type": "string",
               "description": "Hashicorp Vault URL shared by all components."
+            },
+            "azure": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Azure Key Vault name, shared by every component when global.vaultProvider is \"azure\"/\"azurevault\"."
+                },
+                "url": {
+                  "type": "string",
+                  "description": "Optional Azure Key Vault URL override, shared by every component."
+                },
+                "unsafe": {
+                  "type": "boolean",
+                  "description": "Optional Azure Key Vault URL override \"unsafe\" flag, shared by every component."
+                },
+                "credentials": {
+                  "type": "object",
+                  "properties": {
+                    "secret": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string",
+                          "description": "Name of the Kubernetes secret containing the shared Azure Vault Service Principal credentials."
+                        },
+                        "clientIdKey": {
+                          "type": "string",
+                          "description": "Secret key containing the Service Principal ID."
+                        },
+                        "tenantIdKey": {
+                          "type": "string",
+                          "description": "Secret key containing the Tenant ID."
+                        },
+                        "clientSecretKey": {
+                          "type": "string",
+                          "description": "Secret key containing the Service Principal client secret."
+                        },
+                        "clientCertificateKey": {
+                          "type": "string",
+                          "description": "Secret key containing the Service Principal client certificate."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
             }
           },
           "additionalProperties": false
