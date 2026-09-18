@@ -67,3 +67,12 @@ openapi-spec/
 
 # Generated OpenAPI spec placed under docs/ for the MkDocs site — produced at CI time, never committed
 docs/assets/openapi/
+
+# Skills — GitHub Awesome skills (e.g. from github/awesome-copilot, installed
+# via `gh skill install --dir .agents/skills`) live under .agents/skills/ and
+# are ignored wholesale so developers always pull the latest upstream version
+# instead of a stale committed copy. Custom, repo-authored skills (e.g.
+# eclipse-edc-question-answering) live under .github/skills/ instead, which
+# is NOT covered by this rule and stays fully tracked — see
+# .github/skills/README.md for the full policy.
+.agents/skills/
