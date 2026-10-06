@@ -11,10 +11,25 @@ import org.eclipse.edc.spi.result.Result;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
+
+import static org.eclipse.dse.iam.policy.CatalogDiscoveryPolicyContext.CATALOG_DISCOVERY_SCOPE;
+import static org.eclipse.edc.connector.controlplane.catalog.spi.policy.CatalogPolicyContext.CATALOG_SCOPE;
 
 public abstract class AbstractDynamicCredentialConstraintFunction<C extends ParticipantAgentPolicyContext> implements DynamicAtomicConstraintRuleFunction<Permission, C> {
     public static final String VC_CLAIM = "vc";
     protected static final Collection<Operator> EQUALITY_OPERATORS = List.of(Operator.EQ, Operator.NEQ);
+    private static final Set<String> VISIBILITY_BYPASS_SCOPES = Set.of(CATALOG_SCOPE, CATALOG_DISCOVERY_SCOPE);
+    private final VisibilityCredentialValidator visibilityCredentialValidator = new VisibilityCredentialValidator();
+
+    protected boolean canBypassWithAllVisibility(C context) {
+        if (!VISIBILITY_BYPASS_SCOPES.contains(context.scope())) {
+            return false;
+        }
+        return getCredentialList(context.participantAgent())
+                .map(visibilityCredentialValidator::hasAllVisibility)
+                .orElse(failure -> false);
+    }
 
     protected boolean checkOperator(Operator actual, PolicyContext context, Collection<Operator> expectedOperators) {
         if (!expectedOperators.contains(actual)) {

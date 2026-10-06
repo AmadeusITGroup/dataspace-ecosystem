@@ -5,6 +5,7 @@ import org.eclipse.edc.dse.common.DseNamespaceConfig;
 public class PolicyConstants {
     public static final String MEMBERSHIP_CREDENTIAL_TYPE = "MembershipCredential";
     public static final String DOMAIN_CREDENTIAL_TYPE = "DomainCredential";
+    public static final String VISIBILITY_CREDENTIAL_TYPE = "VisibilityCredential";
 
     public static final String MEMBERSHIP_CONSTRAINT = "Membership";
     public static final String GENERIC_CLAIM_CONSTRAINT = "GenericClaim";

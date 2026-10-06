@@ -15,6 +15,7 @@ import java.util.List;
 
 import static io.restassured.RestAssured.given;
 import static io.restassured.http.ContentType.JSON;
+import static org.apache.http.HttpStatus.SC_CONFLICT;
 import static org.hamcrest.Matchers.anyOf;
 import static org.hamcrest.Matchers.is;
 
@@ -38,7 +39,7 @@ abstract class AbstractEntity {
                 .when()
                 .post("/v1alpha/participants/%s/credentials/request".formatted(toBase64(did())))
                 .then()
-                .statusCode(isStatus2xx());
+                .statusCode(isStatus2xxOrConflict());
     }
 
     public List<JsonObject> getCredentials(ObjectMapper mapper) throws JsonProcessingException {
@@ -60,6 +61,10 @@ abstract class AbstractEntity {
 
     protected AnyOf<Integer> isStatus2xx() {
         return anyOf(is(200), is(201), is(204));
+    }
+
+    protected AnyOf<Integer> isStatus2xxOrConflict() {
+        return anyOf(is(200), is(201), is(204), is(SC_CONFLICT));
     }
 
 }

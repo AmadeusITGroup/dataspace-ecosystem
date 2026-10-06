@@ -22,9 +22,11 @@ import org.eclipse.edc.connector.dataplane.spi.response.TransferErrorResponse;
 import org.eclipse.edc.junit.annotations.EndToEndTest;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.ClassOrderer;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestClassOrder;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -66,6 +68,7 @@ import static org.eclipse.dse.iam.policy.PolicyConstants.DOMAIN_CREDENTIAL_TYPE;
 import static org.eclipse.dse.iam.policy.PolicyConstants.GENERIC_CLAIM_CONSTRAINT;
 import static org.eclipse.dse.iam.policy.PolicyConstants.MEMBERSHIP_CREDENTIAL_TYPE;
 import static org.eclipse.dse.iam.policy.PolicyConstants.RESTRICTED_CATALOG_DISCOVERY_CONSTRAINT;
+import static org.eclipse.dse.iam.policy.PolicyConstants.VISIBILITY_CREDENTIAL_TYPE;
 import static org.eclipse.edc.connector.controlplane.test.system.utils.PolicyFixtures.atomicConstraint;
 import static org.eclipse.edc.connector.controlplane.transfer.spi.types.TransferProcessStates.TERMINATED;
 import static org.eclipse.edc.jsonld.spi.JsonLdKeywords.ID;
@@ -103,6 +106,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @EndToEndTest
+@TestClassOrder(ClassOrderer.OrderAnnotation.class)
 public class LocalEndToEndTests extends AbstractEndToEndTests {
 
     public static final String AZURE_STORAGE_PUSH = "AzureStorage-PUSH";
@@ -1564,6 +1568,30 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
                     .then()
                     .log().ifError()
                     .statusCode(404);
+        }
+    }
+
+    @Nested
+    @Order(Integer.MAX_VALUE)
+    class VisibilityCredentialTest {
+
+        @Test
+        void consumer_withAllVisibilityCredential_shouldSeeButNotNegotiateTravelDomainAsset() {
+            AUTHORITY.defineVisibilityCredential();
+            AUTHORITY.createParticipantVisibilityAttestation(CONSUMER.did());
+            CONSUMER.requestCredential(AUTHORITY.did(), VISIBILITY_CREDENTIAL_TYPE, "visibility-credential-def-1");
+            getVisibilityCredential(CONSUMER);
+
+            await().atMost(TEST_TIMEOUT).untilAsserted(() ->
+                    assertThat(queryParticipantDatasets(AUTHORITY, PROVIDER.did(), CONSUMER.controlPlaneCatalogFilterUrl()))
+                            .anyMatch(dataset -> ASSET_ID_REST_API_TRAVEL_DOMAIN_RESTRICTED.equals(dataset.getString(ID))));
+
+            var negotiationId = CONSUMER.participantClient().initContractNegotiation(
+                    PROVIDER.participantClient(), ASSET_ID_REST_API_TRAVEL_DOMAIN_RESTRICTED);
+
+            await().atMost(TEST_TIMEOUT).untilAsserted(() ->
+                    assertThat(CONSUMER.participantClient().getContractNegotiationState(negotiationId))
+                            .isEqualTo(ContractNegotiationStates.TERMINATED.name()));
         }
     }
 }

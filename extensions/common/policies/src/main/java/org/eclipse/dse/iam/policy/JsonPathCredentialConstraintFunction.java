@@ -28,6 +28,10 @@ public class JsonPathCredentialConstraintFunction<C extends ParticipantAgentPoli
 
     @Override
     public boolean evaluate(Object leftOperand, Operator operator, Object rightOperand, Permission rule, C policyContext) {
+        if (canBypassWithAllVisibility(policyContext)) {
+            return true;
+        }
+
         if (!checkOperator(operator, policyContext, SUPPORTED_OPERATORS)) {
             return false;
         }

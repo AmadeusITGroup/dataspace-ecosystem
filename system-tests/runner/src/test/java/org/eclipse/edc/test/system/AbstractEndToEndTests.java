@@ -21,6 +21,7 @@ import java.util.function.Predicate;
 import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
+import static org.eclipse.dse.iam.policy.PolicyConstants.VISIBILITY_CREDENTIAL_TYPE;
 import static org.eclipse.edc.connector.controlplane.transfer.spi.types.TransferProcessStates.STARTED;
 import static org.eclipse.edc.jsonld.spi.JsonLdKeywords.VALUE;
 import static org.eclipse.edc.jsonld.spi.Namespaces.DSPACE_2025_1_IRI;
@@ -127,6 +128,10 @@ public class AbstractEndToEndTests {
         await().atMost(TEST_TIMEOUT).untilAsserted(() -> assertCredentialsPresent(participant));
     }
 
+    protected static void getVisibilityCredential(AbstractEntity participant) {
+        await().atMost(TEST_TIMEOUT).untilAsserted(() -> assertVisibilityCredentialPresent(participant));
+    }
+
     private static void assertCredentialsPresent(AbstractEntity participant) throws Exception {
         boolean hasMembershipCredential = false;
         boolean hasDomainCredential = false;
@@ -150,6 +155,20 @@ public class AbstractEndToEndTests {
         assert hasDomainCredential : "Missing DomainCredential type";
     }
 
+    private static void assertVisibilityCredentialPresent(AbstractEntity participant) throws Exception {
+        var credential = participant.getCredentials(MAPPER).stream()
+                .map(container -> container.getJsonObject("verifiableCredential").getJsonObject("credential"))
+                .filter(candidate -> candidate.getJsonArray("type").contains(Json.createValue(VISIBILITY_CREDENTIAL_TYPE)))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("Missing VisibilityCredential type"));
+
+        var subjectValue = credential.get("credentialSubject");
+        var credentialSubject = subjectValue instanceof JsonArray subjectArray
+                ? subjectArray.getJsonObject(0)
+                : (JsonObject) subjectValue;
+        assertThat(credentialSubject.getString("visibility_scope")).isEqualTo("ALL");
+    }
+
     private static void assertMembershipCredentialSubject(JsonObject credential) {
         var subjectValue = credential.get("credentialSubject");
         assertThat(subjectValue).isNotNull();
@@ -160,7 +179,7 @@ public class AbstractEndToEndTests {
             credentialSubject = (JsonObject) subjectValue;
         }
         assertThat(credentialSubject).containsKey("companySegment");
-        assertThat(credentialSubject.getString("companySegment", null)).isEqualTo("Airlines");
+        assertThat(credentialSubject.getString("companySegment")).isEqualTo("Airlines");
     }
 
     private static Predicate<JsonObject> isCatalogOf(String did) {

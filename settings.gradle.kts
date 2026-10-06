@@ -39,6 +39,8 @@ include(":extensions:issuer-service:json-database-attestation")
 
 include(":extensions:issuer-service:domain-attestation-api")
 include(":extensions:issuer-service:domain-attestation-store-sql")
+include(":extensions:issuer-service:visibility-attestation-api")
+include(":extensions:issuer-service:visibility-attestation-store-sql")
 
 include(":extensions:federated-catalog:participant-registry-node-directory")
 include(":extensions:federated-catalog:filter")

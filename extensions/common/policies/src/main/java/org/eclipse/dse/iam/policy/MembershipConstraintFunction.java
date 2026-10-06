@@ -19,6 +19,10 @@ public class MembershipConstraintFunction<C extends ParticipantAgentPolicyContex
     @Override
     public boolean evaluate(Object leftOperand, Operator operator, Object rightOperand, Permission rule, C context) {
 
+        if (canBypassWithAllVisibility(context)) {
+            return true;
+        }
+
         if (!ACTIVE.equals(rightOperand)) {
             context.reportProblem("Right-operand must be equal to '%s', but was '%s'".formatted(ACTIVE, rightOperand));
             return false;
