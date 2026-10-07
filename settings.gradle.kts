@@ -16,6 +16,7 @@ include(":extensions:agreements:retirement-evaluation-store-sql")
 
 include(":extensions:common:policies")
 include(":extensions:common:odrl-policy-did-validation")
+include(":extensions:common:dcat-distribution-transformers")
 include(":extensions:common:metrics:custom-micrometer")
 include(":extensions:common:store:sql:telemetry-store-sql")
 include(":extensions:common:participant-context-config-seed")
