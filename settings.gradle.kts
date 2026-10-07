@@ -62,6 +62,7 @@ include(":extensions:telemetry-csv-manager:telemetry-csv-manager-api")
 
 include(":spi")
 include(":spi:common-spi")
+include(":spi:dcat-distribution-spi")
 include(":spi:telemetry-agent-spi")
 include(":spi:issuer-service-spi")
 include(":spi:telemetry-service-spi")

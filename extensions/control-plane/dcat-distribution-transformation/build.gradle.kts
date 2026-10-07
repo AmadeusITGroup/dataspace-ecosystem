@@ -4,6 +4,7 @@ plugins {
 
 dependencies {
     // Extension dependencies
+    api(project(":spi:dcat-distribution-spi"))
     implementation(libs.edc.spi.core)
     implementation(libs.edc.spi.catalog)
     implementation(libs.edc.spi.transform)
