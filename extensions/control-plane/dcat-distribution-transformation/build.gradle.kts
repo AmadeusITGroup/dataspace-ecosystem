@@ -6,7 +6,6 @@ dependencies {
     // Extension dependencies
     api(project(":extensions:common:dcat-distribution-transformers"))
     implementation(libs.edc.spi.core)
-    implementation(libs.edc.spi.catalog)
     implementation(libs.edc.spi.transform)
     implementation(libs.edc.spi.jsonld)
     implementation(libs.edc.dsp.spi.v2025)
