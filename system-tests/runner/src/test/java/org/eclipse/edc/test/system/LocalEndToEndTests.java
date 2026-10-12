@@ -42,6 +42,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.io.StringReader;
 import java.io.UncheckedIOException;
 import java.security.cert.X509Certificate;
 import java.sql.Timestamp;
@@ -55,6 +56,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.crypto.SecretKey;
@@ -847,6 +849,7 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
 
         private static final String CATALOG_QUERY_URL =
                 AUTHORITY.catalogUrl() + "/v1alpha/catalog/query";
+        private static final String CATALOG_COUNT_URL = CATALOG_QUERY_URL + "/count";
 
         // ── Filter tests ─────────────────────────────────────────────────────
 
@@ -1081,6 +1084,38 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
             assertThat(datasets).isEmpty();
         }
 
+        // ── Count tests ─────────────────────────────────────────────────────
+
+        @Test
+        void catalog_count_applies_filters_and_ignores_sort_and_pagination() {
+            var query = querySpec(
+                    Json.createObjectBuilder()
+                            .add("@context", Json.createObjectBuilder().add("@vocab", EDC_NS))
+                            .add("filterExpression", Json.createArrayBuilder().add(
+                                    criterion(PROP_PUBLISHER, "=", "publisher-alpha")))
+                            .add("sortField", PROP_IDENTIFIER)
+                            .add("sortOrder", "DESC")
+                            .add("limit", 1)
+                            .add("offset", 1)
+                            .build()
+            );
+
+            assertCatalogCounts(query, CatalogFilterSortPaginationTest::assertCatalogCountResponse);
+        }
+
+        @Test
+        void catalog_count_omits_catalogs_without_matching_assets() {
+            var query = querySpec(
+                    Json.createObjectBuilder()
+                            .add("@context", Json.createObjectBuilder().add("@vocab", EDC_NS))
+                            .add("filterExpression", Json.createArrayBuilder().add(
+                                    criterion(PROP_IDENTIFIER, "=", "missing-dataset")))
+                            .build()
+            );
+
+            assertCatalogCounts(query, counts -> assertThat(counts).isEmpty());
+        }
+
         // ── helpers ──────────────────────────────────────────────────────────
 
         private static jakarta.json.JsonObject querySpec(jakarta.json.JsonObject body) {
@@ -1102,6 +1137,38 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
         private static String getDatasetId(jakarta.json.JsonObject dataset) {
             return dataset.getString("@id",
                    dataset.getString(ID, null));
+        }
+
+        private static void assertCatalogCountResponse(JsonArray counts) {
+            assertThat(counts).hasSize(1);
+            var response = counts.getJsonObject(0);
+            assertThat(response.getString("@type")).isEqualTo("Catalog");
+            assertThat(response.getString("participantId")).isEqualTo(PROVIDER.did());
+            assertThat(response.getInt("dse:datasetCount")).isEqualTo(2);
+        }
+
+        private static void assertCatalogCounts(JsonObject query, Consumer<JsonArray> assertion) {
+            await().atMost(TEST_TIMEOUT)
+                    .pollInterval(Duration.ofMillis(500))
+                    .untilAsserted(() -> {
+                        var body = given()
+                                .baseUri(CATALOG_COUNT_URL)
+                                .contentType(JSON)
+                                .body(query.toString())
+                                .when()
+                                .post()
+                                .then()
+                                .statusCode(200)
+                                .extract().body().asString();
+
+                        assertion.accept(readCatalogCountResponse(body));
+                    });
+        }
+
+        private static JsonArray readCatalogCountResponse(String body) {
+            try (var reader = Json.createReader(new StringReader(body))) {
+                return reader.readArray();
+            }
         }
     }
 

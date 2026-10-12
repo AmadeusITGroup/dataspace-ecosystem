@@ -47,6 +47,7 @@ include(":extensions:issuer-service:visibility-attestation-store-sql")
 include(":extensions:federated-catalog:participant-registry-node-directory")
 include(":extensions:federated-catalog:filter")
 include(":extensions:federated-catalog:federated-catalog-cache")
+include(":extensions:federated-catalog:asset-count-api")
 include(":extensions:federated-catalog:federated-catalog-dcat-distribution-transformation")
 
 include(":extensions:telemetry-agent")
