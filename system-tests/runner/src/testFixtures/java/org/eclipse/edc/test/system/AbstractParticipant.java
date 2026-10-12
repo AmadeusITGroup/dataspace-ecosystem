@@ -13,6 +13,7 @@ import org.eclipse.edc.junit.extensions.TestServiceExtensionContext;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
@@ -212,6 +213,13 @@ abstract class AbstractParticipant extends AbstractEntity {
                 .statusCode(200)
                 .contentType(JSON)
                 .extract().jsonPath().getString(ID);
+    }
+
+    protected void createRawAssetWithDefaultContract(JsonObject assetBody) {
+        var assetId = createRawAsset(assetBody);
+        var constraint = atomicConstraint("%s:%s".formatted(DSE_POLICY_PREFIX, MEMBERSHIP_CONSTRAINT), "odrl:eq", "active");
+        var policy = createPolicyDefinition(PolicyFixtures.policy(List.of(createPermission(constraint))));
+        participantClient().createContractDefinition(assetId, UUID.randomUUID().toString(), policy, policy);
     }
 
     /**

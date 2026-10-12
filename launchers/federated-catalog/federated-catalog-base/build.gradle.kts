@@ -3,6 +3,7 @@ plugins {
 }
 
 dependencies {
+    runtimeOnly(project(":extensions:federated-catalog:federated-catalog-dcat-distribution-transformation"))
     runtimeOnly(project(":extensions:common:policies"))
     runtimeOnly(project(":extensions:common:metrics:custom-micrometer"))
     runtimeOnly(project(":extensions:federated-catalog:participant-registry-node-directory"))

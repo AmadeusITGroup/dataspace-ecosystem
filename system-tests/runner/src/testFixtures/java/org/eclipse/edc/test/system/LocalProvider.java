@@ -23,6 +23,7 @@ public class LocalProvider extends AbstractParticipant {
     public static final String ASSET_ID_DCAT_ALPHA = "dcat-asset-alpha";
     public static final String ASSET_ID_DCAT_BETA = "dcat-asset-beta";
     public static final String ASSET_ID_DCAT_GAMMA = "dcat-asset-gamma";
+    public static final String ASSET_ID_DCAT_DISTRIBUTION = "dcat-distribution-asset";
 
     // Azure Blob Storage constants
     public static final String ASSET_ID_AZURE_BLOB = "azure-blob-storage";

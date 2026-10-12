@@ -17,7 +17,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 
 public class EnrichedDistribution extends Distribution {
 
@@ -47,7 +46,7 @@ public class EnrichedDistribution extends Distribution {
     }
 
     @Override
-    public DataService getDataService() {
+    public @Nullable DataService getDataService() {
         return dataService;
     }
 
@@ -100,8 +99,8 @@ public class EnrichedDistribution extends Distribution {
             return this;
         }
 
-        public Builder dataService(@NotNull DataService dataService) {
-            this.dataService = Objects.requireNonNull(dataService, "dataService cannot be null");
+        public Builder dataService(@Nullable DataService dataService) {
+            this.dataService = dataService;
             return this;
         }
 
@@ -116,7 +115,7 @@ public class EnrichedDistribution extends Distribution {
         }
 
         public EnrichedDistribution build() {
-            return new EnrichedDistribution(format, Objects.requireNonNull(dataService, "dataService is required"), properties);
+            return new EnrichedDistribution(format, dataService, properties);
         }
     }
 }

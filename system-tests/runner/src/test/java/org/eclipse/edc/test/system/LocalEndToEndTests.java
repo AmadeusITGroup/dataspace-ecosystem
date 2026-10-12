@@ -16,7 +16,10 @@ import io.restassured.config.SSLConfig;
 import io.restassured.http.ContentType;
 import io.restassured.response.Response;
 import jakarta.json.Json;
+import jakarta.json.JsonArray;
 import jakarta.json.JsonObject;
+import jakarta.json.JsonString;
+import jakarta.json.JsonValue;
 import org.eclipse.edc.connector.controlplane.contract.spi.types.negotiation.ContractNegotiationStates;
 import org.eclipse.edc.connector.dataplane.spi.response.TransferErrorResponse;
 import org.eclipse.edc.junit.annotations.EndToEndTest;
@@ -78,6 +81,7 @@ import static org.eclipse.edc.test.system.AbstractAuthority.DOMAIN_TRAVEL;
 import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_AZURE_BLOB;
 import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_DCAT_ALPHA;
 import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_DCAT_BETA;
+import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_DCAT_DISTRIBUTION;
 import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_DCAT_GAMMA;
 import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_FAILURE_REST_API;
 import static org.eclipse.edc.test.system.LocalProvider.ASSET_ID_ORDER_CREATED_EVENT;
@@ -496,6 +500,55 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
                 Map.of("baseUrl", "http://provider-backend:8080/api/provider/data")
         );
 
+        var customDistribution = Json.createObjectBuilder()
+                .add("@id", "urn:amadeus:platform:content-management:nevio:content-distributions:order-created-event")
+                .add("@type", "dcat:Distribution")
+                .add("dcat:accessService", Json.createObjectBuilder()
+                        .add("@id", "urn:amadeus:platform:content-management:nevio:content-distributions:order-created-event:service")
+                        .add("@type", "dcat:DataService")
+                        .add("dcterms:conformsTo", Json.createArrayBuilder()
+                                .add(Json.createObjectBuilder()
+                                        .add("@id", "https://www.asyncapi.com/docs/reference/bindings/kafka")
+                                        .add("dcterms:title", "Binding Kafka-specific information on AsyncAPI")))
+                        .add("dcat:mediaType", "https://www.iana.org/assignments/media-types/application/json"))
+                .build();
+        var serviceLessCustomDistribution = Json.createObjectBuilder()
+                .add("@id", "urn:amadeus:platform:content-management:nevio:content-documents:contract-asyncapi-001")
+                .add("@type", Json.createArrayBuilder()
+                        .add("dcat:Distribution")
+                        .add("https://example.com/AsyncApiDistribution"))
+                .add("dcterms:title", "Order Created Event AsyncAPI Specification")
+                .add("dcat:mediaType", "application/yaml")
+                .add("dcat:accessURL", "https://test.platform.api.amadeus.com/v1/content-management/content-documents/file/905")
+                .add("dcterms:modified", "2023-11-19T04:54:00Z")
+                .add("dcterms:conformsTo", Json.createObjectBuilder()
+                        .add("@id", "https://datatracker.ietf.org/doc/html/rfc4648"))
+                .add("dcterms:type", "ASYNC_API_SPECIFICATION")
+                .build();
+        var distributionAsset = Json.createObjectBuilder()
+                .add("@context", Json.createObjectBuilder()
+                        .add("@vocab", EDC_NAMESPACE)
+                        .add("dcat", "http://www.w3.org/ns/dcat#")
+                        .add("dcterms", "http://purl.org/dc/terms/"))
+                .add("@id", ASSET_ID_DCAT_DISTRIBUTION)
+                .add("@type", "Asset")
+                .add("properties", Json.createObjectBuilder()
+                        .add("version", "1.0")
+                        .add("name", "Data Tourisme")
+                        .add("description", "Data tourisme files")
+                        .add("id", ASSET_ID_DCAT_DISTRIBUTION)
+                        .add("contenttype", "application/json")
+                        .add("dcat:distribution", Json.createArrayBuilder()
+                                .add(customDistribution)
+                                .add(serviceLessCustomDistribution)))
+                .add("dataAddress", Json.createObjectBuilder()
+                        .add("@type", "DataAddress")
+                        .add("type", "HttpData")
+                        .add("baseUrl", "https://jsonplaceholder.typicode.com/")
+                        .add("proxyPath", "true"))
+                .build();
+        PROVIDER.createRawAssetWithDefaultContract(distributionAsset);
+
         createOrderCreatedEventAssetsAndContracts();
     }
 
@@ -578,6 +631,7 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
                     ASSET_ID_DCAT_ALPHA,
                     ASSET_ID_DCAT_BETA,
                     ASSET_ID_DCAT_GAMMA,
+                    ASSET_ID_DCAT_DISTRIBUTION,
                     ASSET_ID_ORDER_CREATED_EVENT,
                     ASSET_ID_ORDER_CREATED_EVENT_V1
             );
@@ -600,6 +654,159 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
         }
     }
 
+    @Nested
+    class DcatDistributionPropagationTest {
+
+        private static final String DCAT_DISTRIBUTION = "http://www.w3.org/ns/dcat#distribution";
+        private static final String DCAT_ACCESS_SERVICE = "http://www.w3.org/ns/dcat#accessService";
+        private static final String DCAT_ACCESS_URL = "http://www.w3.org/ns/dcat#accessURL";
+        private static final String DCAT_MEDIA_TYPE = "http://www.w3.org/ns/dcat#mediaType";
+        private static final String DCT_CONFORMS_TO = "http://purl.org/dc/terms/conformsTo";
+        private static final String DCT_MODIFIED = "http://purl.org/dc/terms/modified";
+        private static final String DCT_TITLE = "http://purl.org/dc/terms/title";
+        private static final String DCT_TYPE = "http://purl.org/dc/terms/type";
+        private static final String CUSTOM_DISTRIBUTION_TYPE = "https://example.com/AsyncApiDistribution";
+        private static final String CUSTOM_DISTRIBUTION_ID = "urn:amadeus:platform:content-management:nevio:content-distributions:order-created-event";
+        private static final String SERVICE_LESS_DISTRIBUTION_ID = "urn:amadeus:platform:content-management:nevio:content-documents:contract-asyncapi-001";
+
+        @Test
+        void participantCatalog_containsGeneratedAndCustomDistributions() {
+            var datasets = queryParticipantDatasets(AUTHORITY, PROVIDER.did(), PROVIDER.controlPlaneCatalogFilterUrl());
+            assertDistributionSet(findDataset(datasets));
+        }
+
+        @Test
+        void federatedCatalog_preservesGeneratedAndCustomDistributions() {
+            var query = Json.createObjectBuilder()
+                    .add("@context", Json.createObjectBuilder()
+                            .add("@vocab", "https://w3id.org/edc/v0.0.1/ns/"))
+                    .add("filterExpression", Json.createArrayBuilder()
+                            .add(Json.createObjectBuilder()
+                                    .add("operandLeft", "id")
+                                    .add("operator", "=")
+                                    .add("operandRight", ASSET_ID_DCAT_DISTRIBUTION)))
+                    .add("limit", 100)
+                    .add("offset", 0)
+                    .build();
+            var datasets = queryCatalogWithFilter(AUTHORITY.catalogUrl() + "/v1alpha/catalog/query", query, 1);
+            assertDistributionSet(datasets.stream()
+                    .filter(dataset -> ASSET_ID_DCAT_DISTRIBUTION.equals(dataset.getString(ID)))
+                    .findFirst()
+                    .orElseThrow());
+        }
+
+        private JsonObject findDataset(List<JsonObject> datasets) {
+            return datasets.stream()
+                    .filter(dataset -> ASSET_ID_DCAT_DISTRIBUTION.equals(dataset.getString(ID)))
+                    .findFirst()
+                    .orElseThrow();
+        }
+
+        private void assertDistributionSet(JsonObject dataset) {
+            var distributions = getArray(dataset, DCAT_DISTRIBUTION, "distribution");
+            assertThat(distributions.size()).isGreaterThanOrEqualTo(3);
+            assertThat(distributions).anySatisfy(value ->
+                    assertThat(value.asJsonObject().containsKey("http://purl.org/dc/terms/format") ||
+                            value.asJsonObject().containsKey("dct:format") ||
+                            value.asJsonObject().containsKey("format")).isTrue());
+
+            var custom = distributions.stream()
+                    .map(JsonValue::asJsonObject)
+                    .filter(value -> CUSTOM_DISTRIBUTION_ID.equals(value.getString("@id", null)))
+                    .findFirst()
+                    .orElseThrow();
+            var service = getObject(custom, DCAT_ACCESS_SERVICE, "accessService");
+            assertThat(service.getString("@id")).isEqualTo(CUSTOM_DISTRIBUTION_ID + ":service");
+            assertThat(getString(service, DCAT_MEDIA_TYPE, "dcat:mediaType"))
+                    .isEqualTo("https://www.iana.org/assignments/media-types/application/json");
+            var conformsTo = getArray(service, DCT_CONFORMS_TO, "dct:conformsTo");
+            assertThat(conformsTo).singleElement()
+                    .satisfies(value -> assertThat(getString(value.asJsonObject(), DCT_TITLE, "dct:title"))
+                            .isEqualTo("Binding Kafka-specific information on AsyncAPI"));
+
+            var serviceLessDistribution = distributions.stream()
+                    .map(JsonValue::asJsonObject)
+                    .filter(value -> SERVICE_LESS_DISTRIBUTION_ID.equals(value.getString("@id", null)))
+                    .findFirst()
+                    .orElseThrow();
+            assertThat(serviceLessDistribution)
+                    .doesNotContainKeys(DCAT_ACCESS_SERVICE, "dcat:accessService", "accessService");
+            assertThat(hasType(serviceLessDistribution, CUSTOM_DISTRIBUTION_TYPE)).isTrue();
+            assertThat(getString(serviceLessDistribution, DCAT_MEDIA_TYPE, "dcat:mediaType"))
+                    .isEqualTo("application/yaml");
+            assertThat(getString(serviceLessDistribution, DCAT_ACCESS_URL, "dcat:accessURL"))
+                    .isEqualTo("https://test.platform.api.amadeus.com/v1/content-management/content-documents/file/905");
+            assertThat(getString(serviceLessDistribution, DCT_TITLE, "dct:title"))
+                    .isEqualTo("Order Created Event AsyncAPI Specification");
+            assertThat(getString(serviceLessDistribution, DCT_MODIFIED, "dct:modified"))
+                    .isEqualTo("2023-11-19T04:54:00Z");
+            assertThat(getString(serviceLessDistribution, DCT_CONFORMS_TO, "dct:conformsTo"))
+                    .isEqualTo("https://datatracker.ietf.org/doc/html/rfc4648");
+            assertThat(getString(serviceLessDistribution, DCT_TYPE, "dct:type"))
+                    .isEqualTo("ASYNC_API_SPECIFICATION");
+        }
+
+        private JsonObject getObject(JsonObject object, String expandedKey, String compactKey) {
+            var value = object.get(expandedKey);
+            if (value == null) {
+                value = object.get(compactKey);
+            }
+            if (value.getValueType() == JsonValue.ValueType.ARRAY) {
+                return value.asJsonArray().getJsonObject(0);
+            }
+            return value.asJsonObject();
+        }
+
+        private String getString(JsonObject object, String expandedKey, String compactKey) {
+            var value = object.get(expandedKey);
+            if (value == null) {
+                value = object.get(compactKey);
+            }
+            if (value.getValueType() == JsonValue.ValueType.ARRAY) {
+                var array = value.asJsonArray();
+                return array.isEmpty() ? null : getStringValue(array.get(0));
+            }
+            return getStringValue(value);
+        }
+
+        private String getStringValue(JsonValue value) {
+            if (value.getValueType() == JsonValue.ValueType.STRING) {
+                return ((JsonString) value).getString();
+            }
+            if (value.getValueType() == JsonValue.ValueType.OBJECT) {
+                var object = value.asJsonObject();
+                var literal = object.get("@value");
+                if (literal != null) {
+                    return getStringValue(literal);
+                }
+                var identifier = object.get("@id");
+                if (identifier != null) {
+                    return getStringValue(identifier);
+                }
+            }
+            return null;
+        }
+
+        private boolean hasType(JsonObject object, String type) {
+            var value = object.get("@type");
+            if (value.getValueType() == JsonValue.ValueType.ARRAY) {
+                return value.asJsonArray().stream().anyMatch(item -> type.equals(getStringValue(item)));
+            }
+            return type.equals(getStringValue(value));
+        }
+
+        private JsonArray getArray(JsonObject object, String expandedKey, String compactKey) {
+            var value = object.get(expandedKey);
+            if (value == null) {
+                value = object.get(compactKey);
+            }
+            if (value.getValueType() == JsonValue.ValueType.OBJECT) {
+                return Json.createArrayBuilder().add(value).build();
+            }
+            return value.asJsonArray();
+        }
+    }
+
     /**
      * End-to-end tests for the {@code CustomFederatedCatalogCache} filter / sort / pagination
      * capabilities introduced via {@code DatasetAwareQueryResolver}.
@@ -607,7 +814,7 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
         * <p>Three assets are seeded in {@code seedData()} with DCAT metadata:
      * <pre>
         *   dcat-asset-alpha  dct:identifier=dataset-alpha  publisher=publisher-alpha  type=DATASET  dcat:theme.identifier=theme-a  dcat:theme.dcat:theme.identifier=sub-a
-        *   dcat-asset-beta   dct:identifier=dataset-beta   publisher=publisher-beta   type=EVENT    dcat:theme.identifier=theme-b  dcat:theme.dcat:theme.identifier=sub-b
+        *   dcat-asset-beta   dct:identifier=dataset-beta   publisher=publisher-beta  type=EVENT    dcat:theme.identifier=theme-b  dcat:theme.dcat:theme.identifier=sub-b
         *   dcat-asset-gamma  dct:identifier=dataset-gamma  publisher=publisher-alpha  type=DATASET  dcat:theme.identifier=theme-c  dcat:theme.dcat:theme.identifier=sub-c
      * </pre>
      *

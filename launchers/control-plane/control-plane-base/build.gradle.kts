@@ -15,6 +15,7 @@ dependencies {
     runtimeOnly(project(":extensions:control-plane:asset-property-lookup"))
     runtimeOnly(project(":extensions:control-plane:control-plane-federated-catalog-filter"))
     runtimeOnly(project(":extensions:control-plane:contract-validation"))
+    runtimeOnly(project(":extensions:control-plane:dcat-distribution-transformation"))
     runtimeOnly(libs.edc.controlplane.api.secrets)
     runtimeOnly(libs.bundles.connector)
     runtimeOnly(libs.edc.controlplane.bom) {

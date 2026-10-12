@@ -103,6 +103,31 @@ class JsonObjectFromEnrichedDistributionTransformerTest {
     }
 
     @Test
+    void transform_enrichedDistribution_preservesCustomTypesAndAddsDistributionType() {
+        var customType = "https://example.com/AsyncApiDistribution";
+        var distribution = new EnrichedDistribution(null, null, Map.of(TYPE, List.of(customType)));
+
+        var result = transformer.transform(distribution, context);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getJsonArray(TYPE))
+                .extracting(value -> value.toString().replace("\"", ""))
+                .containsExactly(customType, DCAT_DISTRIBUTION_TYPE);
+    }
+
+    @Test
+    void transform_enrichedDistribution_doesNotDuplicateDistributionType() {
+        var customType = "https://example.com/AsyncApiDistribution";
+        var distribution = new EnrichedDistribution(null, null,
+                Map.of(TYPE, List.of(DCAT_DISTRIBUTION_TYPE, customType, DCAT_DISTRIBUTION_TYPE)));
+
+        var result = transformer.transform(distribution, context);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getJsonArray(TYPE)).hasSize(2);
+    }
+
+    @Test
     void transform_enrichedDistribution_preservesNumericPrecision() {
         var distribution = new EnrichedDistribution(null, null, Map.of(
                 "bigInteger", new BigInteger("9223372036854775808"),

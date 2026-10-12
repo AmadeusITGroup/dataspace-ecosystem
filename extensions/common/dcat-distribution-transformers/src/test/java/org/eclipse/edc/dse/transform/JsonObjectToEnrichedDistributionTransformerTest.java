@@ -15,6 +15,8 @@ import jakarta.json.JsonValue;
 import org.eclipse.edc.transform.spi.TransformerContext;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.eclipse.edc.jsonld.spi.JsonLdKeywords.ID;
 import static org.eclipse.edc.jsonld.spi.JsonLdKeywords.TYPE;
@@ -23,10 +25,10 @@ import static org.eclipse.edc.jsonld.spi.PropertyAndTypeNames.DCAT_ACCESS_SERVIC
 import static org.eclipse.edc.jsonld.spi.PropertyAndTypeNames.DCAT_DISTRIBUTION_TYPE;
 import static org.eclipse.edc.jsonld.spi.PropertyAndTypeNames.DCT_FORMAT_ATTRIBUTE;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class JsonObjectToEnrichedDistributionTransformerTest {
@@ -54,10 +56,13 @@ class JsonObjectToEnrichedDistributionTransformerTest {
     }
 
     @Test
-    void transform_keepsDistributionIdAndSkipsOtherKeywords() {
+    void transform_keepsDistributionIdAndTypes() {
+        var customType = "https://example.com/AsyncApiDistribution";
         var json = Json.createObjectBuilder()
                 .add(ID, "urn:distribution:1")
-                .add(TYPE, Json.createArrayBuilder().add(DCAT_DISTRIBUTION_TYPE))
+                .add(TYPE, Json.createArrayBuilder()
+                        .add(DCAT_DISTRIBUTION_TYPE)
+                        .add(customType))
                 .add(DCAT_ACCESS_SERVICE_ATTRIBUTE, Json.createObjectBuilder().add(ID, "service-id"))
                 .build();
 
@@ -66,7 +71,7 @@ class JsonObjectToEnrichedDistributionTransformerTest {
         assertThat(result).isInstanceOfSatisfying(EnrichedDistribution.class, distribution ->
                 assertThat(distribution.getProperties())
                         .containsEntry(ID, "urn:distribution:1")
-                        .doesNotContainKey(TYPE));
+                        .containsEntry(TYPE, List.of(DCAT_DISTRIBUTION_TYPE, customType)));
     }
 
     @Test
@@ -88,14 +93,18 @@ class JsonObjectToEnrichedDistributionTransformerTest {
     }
 
     @Test
-    void transform_withoutAccessService_reportsProblem() {
+    void transform_withoutAccessService_returnsEnrichedDistribution() {
         var json = Json.createObjectBuilder()
                 .add(ID, "urn:distribution:1")
+                .add(TYPE, Json.createArrayBuilder().add(DCAT_DISTRIBUTION_TYPE))
                 .build();
 
         var result = transformer.transform(json, context);
 
-        assertThat(result).isNull();
-        verify(context).reportProblem(contains("dataService is required"));
+        assertThat(result).isInstanceOf(EnrichedDistribution.class);
+        var distribution = (EnrichedDistribution) result;
+        assertThat(distribution.getDataService()).isNull();
+        assertThat(distribution.getProperties()).containsEntry(ID, "urn:distribution:1");
+        verifyNoInteractions(context);
     }
 }

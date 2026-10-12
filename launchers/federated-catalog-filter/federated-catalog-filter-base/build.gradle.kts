@@ -4,6 +4,7 @@ plugins {
 
 dependencies {
     runtimeOnly(project(":extensions:federated-catalog:filter"))
+    runtimeOnly(project(":extensions:federated-catalog:federated-catalog-dcat-distribution-transformation"))
     runtimeOnly(project(":extensions:common:participant-context-config-seed"))
     runtimeOnly(project(":extensions:common:policies"))
     runtimeOnly(project(":extensions:agreements"))

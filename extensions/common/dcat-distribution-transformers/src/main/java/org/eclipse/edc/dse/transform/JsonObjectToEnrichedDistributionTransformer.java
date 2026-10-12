@@ -11,6 +11,7 @@
 package org.eclipse.edc.dse.transform;
 
 import jakarta.json.JsonObject;
+import jakarta.json.JsonString;
 import jakarta.json.JsonValue;
 import org.eclipse.edc.connector.controlplane.catalog.spi.DataService;
 import org.eclipse.edc.connector.controlplane.catalog.spi.Distribution;
@@ -19,7 +20,10 @@ import org.eclipse.edc.transform.spi.TransformerContext;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.List;
+
 import static org.eclipse.edc.jsonld.spi.JsonLdKeywords.ID;
+import static org.eclipse.edc.jsonld.spi.JsonLdKeywords.TYPE;
 import static org.eclipse.edc.jsonld.spi.PropertyAndTypeNames.DCAT_ACCESS_SERVICE_ATTRIBUTE;
 import static org.eclipse.edc.jsonld.spi.PropertyAndTypeNames.DCT_FORMAT_ATTRIBUTE;
 
@@ -37,8 +41,20 @@ public class JsonObjectToEnrichedDistributionTransformer extends AbstractJsonLdT
         if (object.containsKey(ID)) {
             builder.property(ID, nodeId(object));
         }
+        if (object.containsKey(TYPE)) {
+            builder.property(TYPE, transformTypes(object.get(TYPE)));
+        }
         visitProperties(object, (key, value) -> transformProperties(key, value, builder, context));
         return builderResult(builder::build, context);
+    }
+
+    private List<String> transformTypes(JsonValue value) {
+        var values = value.getValueType() == JsonValue.ValueType.ARRAY ? value.asJsonArray() : List.of(value);
+        return values.stream()
+                .filter(JsonString.class::isInstance)
+                .map(JsonString.class::cast)
+                .map(JsonString::getString)
+                .toList();
     }
 
     private void transformProperties(String key, JsonValue value, EnrichedDistribution.Builder builder, TransformerContext context) {

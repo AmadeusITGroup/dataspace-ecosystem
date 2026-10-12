@@ -104,6 +104,16 @@ abstract class AbstractAuthority extends AbstractEntity {
         var catalogs = given()
                 .baseUri(catalogUrl)
                 .contentType(JSON)
+                .body("""
+                        {
+                            "@context": {
+                                "@vocab": "https://w3id.org/edc/v0.0.1/ns/"
+                            },
+                            "filterExpression": [],
+                            "limit": 100,
+                            "offset": 0
+                        }
+                        """)
                 .when()
                 .post()
                 .then()

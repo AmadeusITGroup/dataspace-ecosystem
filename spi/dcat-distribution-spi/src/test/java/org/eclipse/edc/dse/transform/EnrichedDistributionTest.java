@@ -208,19 +208,20 @@ class EnrichedDistributionTest {
     }
 
     @Test
-    void testBuilderThrowsIfDataServiceNotSet() {
-        assertThatThrownBy(() -> EnrichedDistribution.Builder.newInstance()
-                .build())
-                .isInstanceOf(NullPointerException.class)
-                .hasMessage("dataService is required");
+    void testBuilderAllowsMissingDataService() {
+        var distribution = EnrichedDistribution.Builder.newInstance()
+                .build();
+
+        assertThat(distribution.getDataService()).isNull();
     }
 
     @Test
-    void testBuilderDataServiceCannotBeNull() {
-        assertThatThrownBy(() -> EnrichedDistribution.Builder.newInstance()
-                .dataService(null))
-                .isInstanceOf(NullPointerException.class)
-                .hasMessage("dataService cannot be null");
+    void testBuilderAcceptsNullDataService() {
+        var distribution = EnrichedDistribution.Builder.newInstance()
+                .dataService(null)
+                .build();
+
+        assertThat(distribution.getDataService()).isNull();
     }
 
     private DataService createDataService(String url) {
