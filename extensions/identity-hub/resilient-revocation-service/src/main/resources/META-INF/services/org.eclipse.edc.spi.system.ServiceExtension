@@ -1,0 +1,2 @@
+org.eclipse.dse.revocation.ResilientRevocationServiceExtension
+org.eclipse.dse.watchdog.RecoveringCredentialWatchdogExtension

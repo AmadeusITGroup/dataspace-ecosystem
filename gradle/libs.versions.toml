@@ -55,6 +55,8 @@ edc-spi-identitytrust = { module = "org.eclipse.edc:decentralized-claims-spi", v
 edc-spi-jsonld = { module = "org.eclipse.edc:json-ld-spi", version.ref = "edc" }
 edc-spi-jwt = { module = "org.eclipse.edc:jwt-spi", version.ref = "edc" }
 edc-spi-vc = { module = "org.eclipse.edc:verifiable-credential-spi", version.ref = "edc-ih" }
+edc-spi-token = { module = "org.eclipse.edc:token-spi", version.ref = "edc" }
+edc-lib-vc = { module = "org.eclipse.edc:verifiable-credentials-lib", version.ref = "edc" }
 edc-spi-edrstore = { module = "org.eclipse.edc:edr-store-spi", version.ref = "edc" }
 edc-spi-dsp-http = { module = "org.eclipse.edc:dsp-http-spi", version.ref = "edc" }
 edc-spi-policy-context = { module = "org.eclipse.edc:request-policy-context-spi", version.ref = "edc" }
