@@ -6,10 +6,6 @@ plugins {
 group = "org.eclipse.edc"
 version = "unspecified"
 
-repositories {
-    mavenCentral()
-}
-
 dependencies {
     api(project(":spi:common-spi"))
     implementation(libs.jackson.core)

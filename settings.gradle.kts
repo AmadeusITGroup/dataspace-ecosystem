@@ -152,6 +152,9 @@ pluginManagement {
 }
 
 dependencyResolutionManagement {
+    // The edc-build plugin adds mavenCentral() and other repositories to every project. With the
+    // default PREFER_PROJECT mode those would silently replace the list below and bypass Artifactory.
+    repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
     repositories {
         maven {
             name = "AmadeusArtifactory"

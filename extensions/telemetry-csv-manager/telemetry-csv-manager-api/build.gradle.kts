@@ -3,10 +3,6 @@ plugins {
     id("io.swagger.core.v3.swagger-gradle-plugin")
 }
 
-repositories {
-    mavenCentral()
-}
-
 dependencies {
     implementation(libs.edc.core.jersey)
     implementation("org.postgresql:postgresql:42.7.8")
