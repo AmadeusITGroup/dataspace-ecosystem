@@ -96,7 +96,7 @@ terraform -chdir=system-tests destroy -auto-approve -var="environment=local"
 terraform -chdir=system-tests apply -auto-approve -var="environment=local"
 ```
 
-> **TLS:** TLS is enabled by default. To deploy without TLS add `-var="tls_enabled=false"`. See [TLS Configuration](docs/developer-guide/build-docs/tls-configuration.md) for details.
+> **TLS:** TLS is enabled by default. To deploy without TLS add `-var="tls_enabled=false"`. See [TLS Configuration](../docs/developer-guide/build-docs/tls-configuration.md) for details.
 
 To destroy the dataspace run the following command:
 ```bash
@@ -165,6 +165,6 @@ Afterwards, you can execute the following command to run the tests:
 ./gradlew :system-tests:runner:test -DincludeTags="EndToEndTest"
 ```
 
-> **TLS:** If you deployed without TLS, pass `TLS_ENABLED=false` before the Gradle command, or add `-Dtls.enabled=false`. See [TLS Configuration](docs/developer-guide/build-docs/tls-configuration.md).
+> **TLS:** If you deployed without TLS, pass `TLS_ENABLED=false` before the Gradle command, or add `-Dtls.enabled=false`. See [TLS Configuration](../docs/developer-guide/build-docs/tls-configuration.md).
 
 Note: The tests can only be run once. If you want to rerun them, destroy first the dataspace and then re-deploy it
