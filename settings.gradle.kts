@@ -21,6 +21,7 @@ include(":extensions:identity-hub:resilient-revocation-service")
 include(":extensions:common:metrics:custom-micrometer")
 include(":extensions:common:store:sql:telemetry-store-sql")
 include(":extensions:common:participant-context-config-seed")
+include(":extensions:common:jsonld-namespaces")
 
 include(":extensions:identity-hub:did-web-parser")
 include(":extensions:identity-hub:identity-hub-iatp")

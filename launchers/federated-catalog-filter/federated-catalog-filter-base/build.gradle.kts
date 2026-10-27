@@ -7,6 +7,7 @@ dependencies {
     runtimeOnly(project(":extensions:federated-catalog:federated-catalog-dcat-distribution-transformation"))
     runtimeOnly(project(":extensions:common:participant-context-config-seed"))
     runtimeOnly(project(":extensions:common:policies"))
+    runtimeOnly(project(":extensions:common:jsonld-namespaces"))
     runtimeOnly(project(":extensions:agreements"))
     runtimeOnly(project(":extensions:common:metrics:custom-micrometer"))
     runtimeOnly(project(":extensions:control-plane:asset-custom-property-subscriber"))
