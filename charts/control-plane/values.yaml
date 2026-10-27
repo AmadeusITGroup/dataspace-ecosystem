@@ -318,10 +318,13 @@ controlplane:
     keystoreSecretName: ""
     # -- Key within internalTls.keystoreSecretName holding the keystore/keymanager password
     keystoreSecretPasswordKey: "password"
-  # -- declare where to mount [volumes](https://kubernetes.io/docs/concepts/storage/volumes/) into the container
+  # -- declare where to mount [volumes](https://kubernetes.io/docs/concepts/storage/volumes/) into the container (rendered with `tpl`)
   volumeMounts: []
-  # -- [volume](https://kubernetes.io/docs/concepts/storage/volumes/) directories
+  # -- [volume](https://kubernetes.io/docs/concepts/storage/volumes/) directories (rendered with `tpl`)
   volumes: []
+  # -- Extra annotations on the Deployment's own metadata (not the pod template), rendered with `tpl`.
+  # See the category-whitelist-config extension README for an example that mounts a ConfigMap-backed file.
+  deploymentAnnotations: {}
   # -- [resource management](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/) for the container
   resources: {}
   # Recommended production values (no CPU limit to avoid JVM throttling under burst workloads):

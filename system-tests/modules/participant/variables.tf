@@ -193,3 +193,40 @@ variable "telemetry_agent_image" {
   type        = string
   default     = ""
 }
+
+# Category whitelist
+variable "category_whitelist_enabled" {
+  description = "Mount the shared category-whitelist ConfigMap into the control plane and set DSE_CATEGORY_WHITELIST_ENABLED, via the chart's generic hooks. When false there is no mount and no env. Defaults to false for standalone use of this module (no ConfigMap exists there); the root system-tests module always passes its own value (default true)."
+  type        = bool
+  default     = false
+}
+
+variable "category_whitelist_configmap" {
+  description = "Name of the shared category-whitelist ConfigMap to mount. Required when category_whitelist_enabled is true."
+  type        = string
+  default     = ""
+}
+
+# Control-plane chart selection. By default the module deploys the local
+# `control-plane` chart from charts_path at the top level. A caller can point
+# this at a different chart (for example an umbrella that bundles extra
+# resources), serve it from a different directory, and nest the control-plane
+# values under a subchart key. Only the control plane is affected; the other
+# participant charts keep using charts_path.
+variable "controlplane_chart" {
+  description = "Name of the chart to deploy for the control plane. Defaults to the control-plane chart itself."
+  type        = string
+  default     = "control-plane"
+}
+
+variable "controlplane_chart_repository" {
+  description = "Directory holding the control-plane chart. Empty falls back to charts_path, so only the control plane can be served from a different directory than the other participant charts."
+  type        = string
+  default     = ""
+}
+
+variable "controlplane_values_key" {
+  description = "When set, the deployed chart is treated as an umbrella and the control-plane values are nested under this subchart key. Empty means the control-plane chart is deployed directly with values at the top level."
+  type        = string
+  default     = ""
+}

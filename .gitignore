@@ -44,6 +44,9 @@ Chart.lock
 # (e.g. charts/participant/charts/*.tgz) — build output, not source, and goes
 # stale relative to the actual subchart source whenever it's not regenerated.
 charts/*/charts/
+# Devbox-only umbrella: its downloaded dependency archives carry the real CLE
+# category list and must never be committed. Helm fetches them at deploy time.
+devbox/charts/*/charts/
 !externalLibs/*.jar
 **/image.tar
 

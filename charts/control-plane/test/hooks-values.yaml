@@ -1,0 +1,17 @@
+# Render fixture for the control-plane generic hooks (used by the "Render
+# control-plane hooks" step in .github/workflows/chart-lint.yaml together with
+# ci/ci-values.yaml). Not under ci/: files there are merged into every lint run,
+# which would hide the default (hooks unset) render.
+controlplane:
+  env:
+    EXAMPLE_FILE_ENABLED: "true"
+  volumes:
+    - name: example-file
+      configMap:
+        name: '{{ .Release.Name }}-example-file'
+  volumeMounts:
+    - name: example-file
+      mountPath: /etc/dse/example-file
+      readOnly: true
+  deploymentAnnotations:
+    example.com/reload: '{{ .Release.Name }}-example-file'

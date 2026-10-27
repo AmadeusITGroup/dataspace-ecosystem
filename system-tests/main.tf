@@ -156,6 +156,29 @@ module "backend-provider" {
 ## PARTICIPANTS ##
 ##################
 
+# Single shared category-whitelist ConfigMap for the whole
+# system-tests deployment. Created only when the whitelist is enabled (the
+# default); when disabled there is no ConfigMap and the participant module
+# mounts nothing. The data key `whitelist.json` matches the path the control
+# plane reads (/etc/dse/category-whitelist/whitelist.json). The file defaults
+# to the committed example list. A caller that deploys the control plane through
+# an umbrella chart that creates its own ConfigMap sets
+# category_whitelist_enabled = false (see controlplane_chart / controlplane_values_key).
+resource "kubernetes_config_map" "category_whitelist" {
+  count = var.category_whitelist_enabled ? 1 : 0
+  metadata {
+    name      = "category-whitelist"
+    namespace = "default"
+    labels = {
+      "app.kubernetes.io/managed-by" = "terraform"
+      "app.kubernetes.io/component"  = "category-whitelist"
+    }
+  }
+  data = {
+    "whitelist.json" = file(coalesce(var.category_whitelist_file, "${path.module}/category-whitelist.example.json"))
+  }
+}
+
 module "participant" {
   source = "./modules/participant"
 
@@ -179,7 +202,20 @@ module "participant" {
   vault_folder = var.vault_folder
 
   # Charts Path (relative to system-tests)
-  charts_path = "../charts"
+  charts_path = var.charts_path
+
+  # Control-plane chart selection (generic). Defaults deploy the local
+  # control-plane chart directly; a caller can swap in an umbrella (served from
+  # a different directory) and nest the control-plane values under a subchart
+  # key. Only the control plane is affected.
+  controlplane_chart            = var.controlplane_chart
+  controlplane_chart_repository = var.controlplane_chart_repository
+  controlplane_values_key       = var.controlplane_values_key
+
+  # Category whitelist: off => no mount; on => mount the shared
+  # ConfigMap through the control-plane chart's generic hooks.
+  category_whitelist_enabled   = var.category_whitelist_enabled
+  category_whitelist_configmap = var.category_whitelist_enabled ? kubernetes_config_map.category_whitelist[0].metadata[0].name : ""
 
   # Internal HTTPS
   tls_enabled                      = var.tls_enabled
@@ -188,7 +224,8 @@ module "participant" {
 
   depends_on = [
     kubernetes_secret.internal_service_tls,
-    kubernetes_secret.nginx_proxy_ssl_ca
+    kubernetes_secret.nginx_proxy_ssl_ca,
+    kubernetes_config_map.category_whitelist
   ]
 }
 #

@@ -5,6 +5,10 @@ metadata:
   name: {{include "dse.fullname" .}}
   labels:
     {{- include "dse.controlplane.labels" . | nindent 4}}
+  {{- with .Values.controlplane.deploymentAnnotations}}
+  annotations:
+    {{- tpl (toYaml .) $ | nindent 4}}
+  {{- end}}
 spec:
   {{- if not .Values.controlplane.autoscaling.enabled}}
   replicas: {{.Values.controlplane.replicaCount}}
@@ -313,6 +317,9 @@ spec:
             - name: shared-volume
               readOnly: true
               mountPath: /shared
+{{- with .Values.controlplane.volumeMounts }}
+            {{- tpl (toYaml .) $ | nindent 12 }}
+{{- end }}
 {{- if .Values.controlplane.internalTls.enabled }}
             - name: internal-tls-volume
               mountPath: /internal-certs
@@ -335,6 +342,9 @@ spec:
                 path: config.properties
         - name: shared-volume
           emptyDir: { }
+{{- with .Values.controlplane.volumes }}
+        {{- tpl (toYaml .) $ | nindent 8 }}
+{{- end }}
 {{- if .Values.controlplane.internalTls.enabled }}
         - name: internal-tls-volume
           secret:

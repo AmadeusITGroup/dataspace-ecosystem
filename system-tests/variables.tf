@@ -112,3 +112,44 @@ variable "vault_folder" {
   type        = string
   default     = ""
 }
+
+# Category whitelist
+variable "category_whitelist_enabled" {
+  description = "Render the shared category-whitelist ConfigMap and mount it into the control plane through the chart's generic hooks. When false there is no ConfigMap and no mount. The control plane reads the file once at boot and system-tests runs no ConfigMap reloader, so after changing the file content re-apply and restart the control-plane deployments (kubectl rollout restart)."
+  type        = bool
+  default     = true
+}
+
+variable "category_whitelist_file" {
+  description = "Path to the category whitelist JSON loaded into the ConfigMap. Empty (the default) uses the committed example list (category-whitelist.example.json)."
+  type        = string
+  default     = ""
+}
+
+# Charts path (relative to system-tests). Defaults to the repo's charts/.
+variable "charts_path" {
+  description = "Path (relative to system-tests) to the directory holding the chart deployed for each participant's control plane."
+  type        = string
+  default     = "../charts"
+}
+
+# Control-plane chart selection (generic). Defaults deploy the local
+# control-plane chart directly; a caller can swap in an umbrella and nest the
+# control-plane values under a subchart key.
+variable "controlplane_chart" {
+  description = "Name of the chart (under the control-plane chart directory) to deploy for each participant's control plane."
+  type        = string
+  default     = "control-plane"
+}
+
+variable "controlplane_chart_repository" {
+  description = "Directory holding the control-plane chart. Empty falls back to charts_path, so only the control plane can be served from a different directory than the other charts."
+  type        = string
+  default     = ""
+}
+
+variable "controlplane_values_key" {
+  description = "When set, the deployed chart is treated as an umbrella and the control-plane values are nested under this subchart key. Empty means the control-plane chart is deployed directly."
+  type        = string
+  default     = ""
+}

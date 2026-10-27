@@ -32,6 +32,7 @@ include(":extensions:data-plane:data-plane-data-consumption-metrics")
 
 include(":extensions:control-plane:asset-custom-property-subscriber")
 include(":extensions:control-plane:asset-property-lookup")
+include(":extensions:control-plane:category-whitelist-config")
 include(":extensions:control-plane:control-plane-federated-catalog-filter")
 include(":extensions:control-plane:contract-validation")
 include(":extensions:control-plane:dcat-distribution-transformation")

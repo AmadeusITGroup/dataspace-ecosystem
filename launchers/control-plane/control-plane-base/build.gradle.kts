@@ -14,6 +14,7 @@ dependencies {
     runtimeOnly(project(":extensions:common:metrics:custom-micrometer"))
     runtimeOnly(project(":extensions:control-plane:asset-custom-property-subscriber"))
     runtimeOnly(project(":extensions:control-plane:asset-property-lookup"))
+    runtimeOnly(project(":extensions:control-plane:category-whitelist-config"))
     runtimeOnly(project(":extensions:control-plane:control-plane-federated-catalog-filter"))
     runtimeOnly(project(":extensions:control-plane:contract-validation"))
     runtimeOnly(project(":extensions:control-plane:dcat-distribution-transformation"))
