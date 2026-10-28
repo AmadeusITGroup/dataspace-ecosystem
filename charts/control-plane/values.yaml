@@ -318,6 +318,33 @@ controlplane:
     keystoreSecretName: ""
     # -- Key within internalTls.keystoreSecretName holding the keystore/keymanager password
     keystoreSecretPasswordKey: "password"
+    # -- Path (inside the pod) to the PKCS12/JKS truststore containing the CA(s) trusted to
+    # verify client certificates. Only used when mtls.enabled is true.
+    truststorePath: "/shared/cacerts"
+    # -- Truststore type, must match the actual format of the file at truststorePath.
+    truststoreType: "PKCS12"
+    # -- Name of the Kubernetes secret containing the truststore password. Required when mtls.enabled is true.
+    truststoreSecretName: ""
+    # -- Key within truststoreSecretName holding the truststore password
+    truststoreSecretPasswordKey: "password"
+    mtls:
+      # -- Require a trusted client certificate on the context(s) listed in `contexts` (e.g. for a
+      # BFF/gateway client calling the management API). Requires internalTls.enabled.
+      enabled: false
+      # -- Comma-separated web context names (matching controlplane.endpoints.*) that require a client certificate
+      contexts: "management"
+      # -- When true a client certificate is mandatory (TLS handshake fails without one). When false it's
+      # only requested at TLS level, but if allowedClientSans is set, requests without a certificate are
+      # still rejected with 403. Only has a real effect together with allowAnyTrustedClient.
+      clientAuthRequired: true
+      # -- Comma-separated list of client certificate Subject Alternative Name (dNSName) entries
+      # authorized to call the context(s) above. A trusted-CA client certificate only proves it was
+      # issued by a CA in the truststore, not that it belongs to an authorized caller. Required when
+      # mtls.enabled is true, unless allowAnyTrustedClient is set (the control-plane fails to start otherwise).
+      allowedClientSans: ""
+      # -- Explicit opt-in to authorize any client certificate trusted by the truststore when
+      # allowedClientSans is empty. Logs a warning at startup; intended for local development only.
+      allowAnyTrustedClient: false
   # -- declare where to mount [volumes](https://kubernetes.io/docs/concepts/storage/volumes/) into the container (rendered with `tpl`)
   volumeMounts: []
   # -- [volume](https://kubernetes.io/docs/concepts/storage/volumes/) directories (rendered with `tpl`)

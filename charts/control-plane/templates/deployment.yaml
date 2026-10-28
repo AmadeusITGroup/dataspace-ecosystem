@@ -134,6 +134,25 @@ spec:
                 name: {{ .Values.controlplane.internalTls.keystoreSecretName | required ".Values.controlplane.internalTls.keystoreSecretName is required when internalTls.enabled" | quote }}
                 key: {{ .Values.controlplane.internalTls.keystoreSecretPasswordKey | quote }}
         {{- end }}
+        {{- if .Values.controlplane.internalTls.mtls.enabled }}
+          - name: "EDC_WEB_HTTPS_TRUSTSTORE_PATH"
+            value: {{ .Values.controlplane.internalTls.truststorePath | quote }}
+          - name: "EDC_WEB_HTTPS_TRUSTSTORE_TYPE"
+            value: {{ .Values.controlplane.internalTls.truststoreType | quote }}
+          - name: "EDC_WEB_HTTPS_TRUSTSTORE_PASSWORD"
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.controlplane.internalTls.truststoreSecretName | required ".Values.controlplane.internalTls.truststoreSecretName is required when internalTls.mtls.enabled" | quote }}
+                key: {{ .Values.controlplane.internalTls.truststoreSecretPasswordKey | quote }}
+          - name: "EDC_WEB_HTTPS_MTLS_CONTEXTS"
+            value: {{ .Values.controlplane.internalTls.mtls.contexts | quote }}
+          - name: "EDC_WEB_HTTPS_MTLS_CLIENT_AUTH_REQUIRED"
+            value: {{ .Values.controlplane.internalTls.mtls.clientAuthRequired | quote }}
+          - name: "EDC_WEB_HTTPS_MTLS_CLIENT_SAN_ALLOWLIST"
+            value: {{ .Values.controlplane.internalTls.mtls.allowedClientSans | quote }}
+          - name: "EDC_WEB_HTTPS_MTLS_ALLOW_ANY_TRUSTED_CLIENT"
+            value: {{ .Values.controlplane.internalTls.mtls.allowAnyTrustedClient | quote }}
+        {{- end }}
 
           #######
           # DSP #

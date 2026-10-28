@@ -36,6 +36,7 @@ include(":extensions:control-plane:category-whitelist-config")
 include(":extensions:control-plane:control-plane-federated-catalog-filter")
 include(":extensions:control-plane:contract-validation")
 include(":extensions:control-plane:dcat-distribution-transformation")
+include(":extensions:control-plane:jetty-mtls")
 
 include(":extensions:issuer-service:membership-attestation-api")
 include(":extensions:issuer-service:membership-attestation-store-sql")

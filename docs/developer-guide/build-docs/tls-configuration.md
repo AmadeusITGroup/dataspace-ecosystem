@@ -6,6 +6,8 @@ The Dataspace Ecosystem supports running with or without TLS for internal servic
 
 By default, TLS is **enabled**. Disabling it is useful for local development and debugging where certificate management is not required.
 
+On top of internal TLS, the control-plane's `management` API also supports mutual TLS (client certificate authentication) — see [Mutual TLS (mTLS)](#mutual-tls-mtls-for-control-plane-management-api) below.
+
 ## Configuration Parameters
 
 | Parameter | Scope | Default | Description |
@@ -122,6 +124,63 @@ The test scheme is derived automatically from the TLS flag via an environment va
     `CLUSTER_HOSTNAME` adapts automatically based on the TLS setting (`localhost:443` → `localhost:80`).
 
 ---
+
+## Mutual TLS (mTLS) for Control Plane Management API
+
+In addition to general internal TLS, the control-plane's `management` HTTP context (port 8181) can require client certificate authentication. This is configured through the `control-plane` Helm chart only (it is not wired into the system-tests Terraform), is layered on top of `internalTls` — it requires `internalTls.enabled = true` — and applies only to the contexts listed in `internalTls.mtls.contexts`; `dsp` and `onboarding` endpoints are unaffected.
+
+### Configuration Parameters
+
+| Parameter | Scope | Default | Description |
+|-----------|-------|---------|-------------|
+| `internalTls.mtls.enabled` | Helm chart (`control-plane`) | `false` | Enables client cert validation on the Jetty HTTPS connector |
+| `internalTls.mtls.contexts` | Helm chart (`control-plane`) | `"management"` | Comma-separated web contexts that require a client cert |
+| `internalTls.mtls.clientAuthRequired` | Helm chart (`control-plane`) | `true` | Whether a client cert is mandatory on those contexts. When `false` the cert is only requested at TLS level, but with `allowedClientSans` set, requests without one are still rejected (`403`) — the only difference is a handshake failure vs. a `403`. Cert-less clients are only accepted together with `allowAnyTrustedClient` |
+| `internalTls.mtls.allowedClientSans` | Helm chart (`control-plane`) | `""` | Comma-separated list of client certificate Subject Alternative Name (`dNSName`) entries authorized to call the context(s) above, matched case-insensitively. **Required** when mTLS is enabled, unless `allowAnyTrustedClient` is set — the control-plane fails to start otherwise |
+| `internalTls.mtls.allowAnyTrustedClient` | Helm chart (`control-plane`) | `false` | Explicit opt-in to authorize any certificate trusted by the truststore when `allowedClientSans` is empty. Logs a warning at startup; local development only |
+| `internalTls.truststorePath` | Helm chart (`control-plane`) | `"/shared/cacerts"` | Truststore used to validate client certs |
+| `internalTls.truststoreType` | Helm chart (`control-plane`) | `"PKCS12"` | Truststore format, must match the file at `truststorePath` |
+| `internalTls.truststoreSecretName` | Helm chart (`control-plane`) | `""` | Name of the required Secret holding the truststore password |
+
+### How it Works
+
+- `JettyMtlsExtension` (`extensions/control-plane/jetty-mtls`) configures Jetty's HTTPS connector to require a trusted client certificate (`needClientAuth`), scoped only to the web contexts listed in `internalTls.mtls.contexts`.
+- Client certificates are validated against the truststore at `internalTls.truststorePath`. The default `/shared/cacerts` contains the internal CA **and** the JVM's default CAs, so a certificate from any of those CAs passes TLS-level validation.
+- Chaining to a trusted CA only proves who issued the certificate, not that it belongs to an authorized caller. `JettyMtlsExtension` therefore registers a JAX-RS filter that rejects (`403`) requests whose client certificate has no `dNSName` Subject Alternative Name in `internalTls.mtls.allowedClientSans`, scoped to the same contexts. SAN (not Subject CN) is used because RFC 6125 and modern CA policies deprecate the CN for identity verification, and many CAs now issue certificates with an empty Subject that rely entirely on SAN.
+- The allowlist is fail-closed: with mTLS enabled and an empty `allowedClientSans`, the control-plane refuses to start unless `allowAnyTrustedClient: true` is set. With that opt-in, a warning is logged at startup — and a second one if `clientAuthRequired` is `false`, since clients without any certificate are then accepted too.
+
+!!! warning "TLS-terminating proxies"
+    If an ingress or proxy terminates the caller's TLS connection and re-connects to the control-plane with its own client certificate, the control-plane only sees the proxy's certificate. Do **not** add the proxy's SAN to `allowedClientSans`: every caller that can reach the proxy would then be authorized. Route authorized callers to the `management` context directly (TLS passthrough or in-cluster access) so their own certificate is presented.
+
+### Example: Adding an Allowed SAN
+
+To authorize a new caller, find the `dNSName` Subject Alternative Name of its client certificate and add it to `internalTls.mtls.allowedClientSans` (comma-separated).
+
+```bash
+openssl x509 -noout -ext subjectAltName -in cr-bff-client.crt
+# X509v3 Subject Alternative Name:
+#     DNS:cr-bff.svc.cluster.local
+```
+
+=== "values.yaml"
+    ```yaml
+    # charts/control-plane/values.yaml
+    controlplane:
+      internalTls:
+        mtls:
+          enabled: true
+          contexts: "management"
+          allowedClientSans: "cr-bff.svc.cluster.local"
+    ```
+
+=== "helm --set"
+    ```bash
+    helm upgrade --install control-plane charts/control-plane \
+      --set controlplane.internalTls.mtls.enabled=true \
+      --set controlplane.internalTls.mtls.allowedClientSans="cr-bff.svc.cluster.local"
+    ```
+
+To authorize more than one caller, separate SAN entries with commas, e.g. `allowedClientSans: "cr-bff.svc.cluster.local,other-bff.svc.cluster.local"`.
 
 ## Next Steps
 
