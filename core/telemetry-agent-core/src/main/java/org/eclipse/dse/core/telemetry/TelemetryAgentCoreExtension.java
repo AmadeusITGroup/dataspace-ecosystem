@@ -7,7 +7,7 @@ import org.eclipse.dse.spi.telemetry.RequestTelemetryPolicyContext;
 import org.eclipse.dse.spi.telemetry.TelemetryPolicy;
 import org.eclipse.edc.http.spi.EdcHttpClient;
 import org.eclipse.edc.iam.did.spi.resolution.DidResolverRegistry;
-import org.eclipse.edc.jwt.signer.spi.JwsSignerProvider;
+import org.eclipse.edc.jwt.spi.signer.JwsSignerProvider;
 import org.eclipse.edc.policy.engine.spi.PolicyEngine;
 import org.eclipse.edc.runtime.metamodel.annotation.Inject;
 import org.eclipse.edc.runtime.metamodel.annotation.Provider;
@@ -36,25 +36,27 @@ import static org.eclipse.edc.statemachine.StateMachineConfiguration.DEFAULT_SEN
 @Provides({TelemetryAgent.class, TelemetryServiceCredentialManager.class})
 public class TelemetryAgentCoreExtension implements ServiceExtension {
 
-    @Setting(description = "The iteration wait time in milliseconds in the telemetry agent state machine. Default value " + DEFAULT_ITERATION_WAIT, type = "long")
+    @Setting(description = "The iteration wait time in milliseconds in the telemetry agent state machine. Default value " + DEFAULT_ITERATION_WAIT)
     private static final String TELEMETRY_AGENT_MACHINE_ITERATION_WAIT_MILLIS = "dse.telemetry-agent.state-machine.iteration-wait-millis";
 
-    @Setting(description = "The batch size in the telemetry agent state machine. Default value " + DEFAULT_BATCH_SIZE, type = "int")
+    @Setting(description = "The batch size in the telemetry agent state machine. Default value " + DEFAULT_BATCH_SIZE)
     private static final String TELEMETRY_AGENT_MACHINE_BATCH_SIZE = "dse.telemetry-agent.state-machine.batch-size";
 
-    @Setting(description = "How many times a specific operation must be tried before terminating the telemetry agent with error", type = "int", defaultValue = DEFAULT_SEND_RETRY_LIMIT + "")
+    @Setting(description = "How many times a specific operation must be tried before terminating the telemetry agent with error",
+            defaultValue = DEFAULT_SEND_RETRY_LIMIT + "")
     private static final String TELEMETRY_AGENT_SEND_RETRY_LIMIT = "dse.telemetry-agent.send.retry.limit";
 
-    @Setting(description = "The base delay for the telemetry agent retry mechanism in millisecond", type = "long", defaultValue = DEFAULT_SEND_RETRY_BASE_DELAY + "")
+    @Setting(description = "The base delay for the telemetry agent retry mechanism in millisecond", defaultValue = DEFAULT_SEND_RETRY_BASE_DELAY + "")
     private static final String TELEMETRY_AGENT_SEND_RETRY_BASE_DELAY_MS = "dse.telemetry-agent.send.retry.base-delay.ms";
 
-    @Setting(description = "Initial retry delay in seconds for credential fetching from telemetry service", type = "long", defaultValue = "1")
+    @Setting(description = "Initial retry delay in seconds for credential fetching from telemetry service", defaultValue = "1")
     private static final String CREDENTIAL_MANAGER_INITIAL_RETRY_DELAY_SECONDS = "dse.credential-manager.retry.initial-delay.seconds";
 
-    @Setting(description = "Maximum retry delay in seconds for credential fetching from telemetry service (cap for exponential backoff)", type = "long", defaultValue = "300")
+    @Setting(description = "Maximum retry delay in seconds for credential fetching from telemetry service (cap for exponential backoff)",
+            defaultValue = "300")
     private static final String CREDENTIAL_MANAGER_MAX_RETRY_DELAY_SECONDS = "dse.credential-manager.retry.max-delay.seconds";
 
-    @Setting(description = "Backoff multiplier for credential fetching retry delays (exponential backoff factor)", type = "int", defaultValue = "2")
+    @Setting(description = "Backoff multiplier for credential fetching retry delays (exponential backoff factor)", defaultValue = "2")
     private static final String CREDENTIAL_MANAGER_BACKOFF_MULTIPLIER = "dse.credential-manager.retry.backoff-multiplier";
 
     @Setting(description = "Authority did", key = "dse.authority.did", required = true)

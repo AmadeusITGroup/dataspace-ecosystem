@@ -6,6 +6,7 @@ dependencies {
     runtimeOnly(project(":extensions:identity-hub:did-web-parser"))
     runtimeOnly(project(":extensions:identity-hub:identity-hub-iatp"))
     runtimeOnly(project(":extensions:identity-hub:superuser-seed"))
+    runtimeOnly(project(":extensions:identity-hub:legacy-participant-id-path"))
     runtimeOnly(project(":extensions:common:metrics:custom-micrometer"))
     // INTERIM FIX — remove when DSE migrates to EDC v1.0.0.
     // Replaces the stock credential-watchdog + revocation service to stop transient statuslist

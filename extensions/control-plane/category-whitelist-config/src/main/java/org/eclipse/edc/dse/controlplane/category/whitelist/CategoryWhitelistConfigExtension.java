@@ -48,7 +48,7 @@ public class CategoryWhitelistConfigExtension implements ServiceExtension {
 
     @Setting(description = "Whether to load the category whitelist at boot. When false, no whitelist is " +
             "loaded, no CategoryWhitelist service is registered, and any category is accepted.",
-            defaultValue = "false", type = "boolean")
+            defaultValue = "false")
     public static final String ENABLED_KEY = "dse.category.whitelist.enabled";
 
     @Setting(description = "Filesystem path to the shared category whitelist JSON file (ConfigMap-backed)",

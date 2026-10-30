@@ -144,12 +144,12 @@ locals {
                EOT
 
       "config" : <<EOT
-edc.iam.trusted-issuer.authority.id=${local.authority_did}
+edc.iam.trustedissuer.authority.id=${local.authority_did}
 edc.vault.hashicorp.token.scheduled-renew-enabled=false
 edc.vault.hashicorp.allow.fallback=true
 edc.negotiation.state-machine.iteration-wait-millis=${var.negotiation_state_machine_wait_millis}
 edc.transfer.state-machine.iteration-wait-millis=${var.transfer_state_machine_wait_millis}
-edc.policy.monitor.state-machine.iteration-wait-millis=${var.policy_monitor_state_machine_wait_millis}
+edc.policy.monitor.period=PT${max(1, ceil(var.policy_monitor_state_machine_wait_millis / 1000))}S
 edc.data.plane.selector.state-machine.check.period=5
 dse.namespace.prefix=${var.dse_namespace_prefix}
 dse.policy.prefix=${var.dse_policy_prefix}

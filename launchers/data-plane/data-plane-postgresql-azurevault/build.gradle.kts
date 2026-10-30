@@ -4,15 +4,17 @@ plugins {
     alias(libs.plugins.shadow)
 }
 
-var distTar = tasks.getByName("distTar")
-var distZip = tasks.getByName("distZip")
+val distTar = tasks.named("distTar")
+val distZip = tasks.named("distZip")
 
 dependencies {
     runtimeOnly(project(":launchers:data-plane:data-plane-base"))
 
     runtimeOnly(project(":extensions:common:store:sql:telemetry-store-sql"))
     runtimeOnly(libs.edc.ext.sql.edrindex)
-    runtimeOnly(libs.edc.core.participantcontext.single)
+    runtimeOnly(libs.edc.core.participantcontext.connector.classic)
+    // EDC 0.18 classic participant core no longer bundles the (in-memory) ParticipantContextStore
+    runtimeOnly(libs.edc.core.participantcontext)
     runtimeOnly(libs.edc.dataplane.sql.bom)
     runtimeOnly(libs.edc.ext.azure.vault)
 }

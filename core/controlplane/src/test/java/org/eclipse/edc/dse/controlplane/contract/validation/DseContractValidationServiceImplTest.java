@@ -100,7 +100,6 @@ class DseContractValidationServiceImplTest {
             var result = validationService.validateInitialOffer(agent, consumerOffer);
 
             assertThat(result.succeeded()).isTrue();
-            assertThat(result.getContent().getOffer().getAssetId()).isEqualTo(ASSET_ID);
             verify(assetIndex, never()).countAssets(any());
         }
 

@@ -4,17 +4,23 @@ plugins {
     alias(libs.plugins.shadow)
 }
 
-var distTar = tasks.getByName("distTar")
-var distZip = tasks.getByName("distZip")
+val distTar = tasks.named("distTar")
+val distZip = tasks.named("distZip")
 
 dependencies {
     runtimeOnly(project(":launchers:data-plane:data-plane-base"))
 
     runtimeOnly(project(":extensions:common:store:sql:telemetry-store-sql"))
     runtimeOnly(libs.edc.ext.sql.edrindex)
+    // SQL stores for access tokens (edc_accesstokendata) and data flows (edc_data_plane). Without them both live in
+    // memory and every data-plane restart invalidates the EDRs of in-flight PULL transfers (403 "AccessTokenData
+    // ... does not exist"). Dropped by mistake in PSMP-3491; the azurevault launcher always had it.
+    runtimeOnly(libs.edc.dataplane.sql.bom)
     runtimeOnly(libs.edc.ext.sql.pool.apache.commons)
     runtimeOnly(libs.postgres)
-    runtimeOnly(libs.edc.core.participantcontext.single)
+    runtimeOnly(libs.edc.core.participantcontext.connector.classic)
+    // EDC 0.18 classic participant core no longer bundles the (in-memory) ParticipantContextStore
+    runtimeOnly(libs.edc.core.participantcontext)
     runtimeOnly(libs.edc.core.participantcontext.config)
     runtimeOnly(libs.edc.ext.vault.hashicorp)
 }

@@ -21,10 +21,10 @@ class DseScopeToCriterionTransformerTest {
     void success() {
         var scope = join(SCOPE_SEPARATOR, DSE_VC_TYPE_SCOPE_ALIAS, CREDENTIAL_TYPE, "read");
 
-        var result = transformer.transform(scope);
+        var result = transformer.transformScope(scope);
 
         assertThat(result.succeeded()).isTrue();
-        assertThat(result.getContent()).usingRecursiveComparison().isEqualTo(new Criterion(TYPE_OPERAND, CONTAINS_OPERATOR, CREDENTIAL_TYPE));
+        assertThat(result.getContent()).singleElement().usingRecursiveComparison().isEqualTo(new Criterion(TYPE_OPERAND, CONTAINS_OPERATOR, CREDENTIAL_TYPE));
     }
 
 }

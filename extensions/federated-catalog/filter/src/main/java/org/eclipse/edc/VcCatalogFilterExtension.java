@@ -1,23 +1,40 @@
 package org.eclipse.edc;
 
 import jakarta.json.Json;
+import jakarta.json.JsonBuilderFactory;
 import org.eclipse.edc.api.VcCatalogFilterController;
+import org.eclipse.edc.connector.controlplane.transform.odrl.from.JsonObjectFromPolicyTransformer;
 import org.eclipse.edc.connector.controlplane.transform.odrl.to.JsonObjectToActionTransformer;
 import org.eclipse.edc.connector.controlplane.transform.odrl.to.JsonObjectToConstraintTransformer;
 import org.eclipse.edc.connector.controlplane.transform.odrl.to.JsonObjectToDutyTransformer;
 import org.eclipse.edc.connector.controlplane.transform.odrl.to.JsonObjectToOperatorTransformer;
 import org.eclipse.edc.connector.controlplane.transform.odrl.to.JsonObjectToPermissionTransformer;
+import org.eclipse.edc.connector.controlplane.transform.odrl.to.JsonObjectToPolicyTransformer;
 import org.eclipse.edc.connector.controlplane.transform.odrl.to.JsonObjectToProhibitionTransformer;
 import org.eclipse.edc.iam.did.spi.resolution.DidResolverRegistry;
 import org.eclipse.edc.jsonld.spi.JsonLd;
+import org.eclipse.edc.jsonld.spi.JsonLdKeywords;
+import org.eclipse.edc.jsonld.spi.Namespaces;
+import org.eclipse.edc.participant.spi.ParticipantIdMapper;
 import org.eclipse.edc.policy.engine.spi.PolicyEngine;
+import org.eclipse.edc.policy.model.OdrlNamespace;
+import org.eclipse.edc.protocol.dsp.catalog.transform.from.JsonObjectFromCatalogV2025Transformer;
+import org.eclipse.edc.protocol.dsp.catalog.transform.from.JsonObjectFromDataServiceTransformer;
+import org.eclipse.edc.protocol.dsp.catalog.transform.from.JsonObjectFromDatasetTransformer;
+import org.eclipse.edc.protocol.dsp.catalog.transform.from.JsonObjectFromDistributionTransformer;
+import org.eclipse.edc.protocol.dsp.catalog.transform.to.JsonObjectToDataServiceTransformer;
+import org.eclipse.edc.protocol.dsp.catalog.transform.to.JsonObjectToDatasetTransformer;
+import org.eclipse.edc.protocol.dsp.catalog.transform.to.JsonObjectToDistributionTransformer;
+import org.eclipse.edc.protocol.dsp.catalog.transform.v2025.to.JsonObjectToCatalogTransformer;
 import org.eclipse.edc.runtime.metamodel.annotation.Configuration;
 import org.eclipse.edc.runtime.metamodel.annotation.Extension;
 import org.eclipse.edc.runtime.metamodel.annotation.Inject;
 import org.eclipse.edc.runtime.metamodel.annotation.Setting;
 import org.eclipse.edc.runtime.metamodel.annotation.Settings;
+import org.eclipse.edc.spi.constants.CoreConstants;
 import org.eclipse.edc.spi.iam.IdentityService;
 import org.eclipse.edc.spi.monitor.Monitor;
+import org.eclipse.edc.spi.query.CriterionOperatorRegistry;
 import org.eclipse.edc.spi.system.ServiceExtension;
 import org.eclipse.edc.spi.system.ServiceExtensionContext;
 import org.eclipse.edc.spi.types.TypeManager;
@@ -26,6 +43,7 @@ import org.eclipse.edc.transform.transformer.edc.from.JsonObjectFromCriterionTra
 import org.eclipse.edc.transform.transformer.edc.from.JsonObjectFromQuerySpecTransformer;
 import org.eclipse.edc.transform.transformer.edc.to.JsonObjectToCriterionTransformer;
 import org.eclipse.edc.transform.transformer.edc.to.JsonObjectToQuerySpecTransformer;
+import org.eclipse.edc.transform.transformer.edc.to.JsonValueToGenericTypeTransformer;
 import org.eclipse.edc.util.AuthorityCatalogFilterDidResolver;
 import org.eclipse.edc.util.FederatedCatalogService;
 import org.eclipse.edc.web.jersey.providers.jsonld.JerseyJsonLdInterceptor;
@@ -37,16 +55,19 @@ import org.eclipse.edc.web.spi.configuration.PortMappingRegistry;
 import java.net.http.HttpClient;
 import java.util.Map;
 
-import org.eclipse.edc.jsonld.spi.JsonLdKeywords;
-import org.eclipse.edc.jsonld.spi.Namespaces;
-import org.eclipse.edc.policy.model.OdrlNamespace;
-import org.eclipse.edc.spi.constants.CoreConstants;
+import static org.eclipse.edc.protocol.dsp.spi.type.Dsp2025Constants.DSP_NAMESPACE_V_2025_1;
 
 
 @Extension("VC-based Catalogue Filter Extension")
 public class VcCatalogFilterExtension implements ServiceExtension {
 
     public static final String NAME = "Federated Catalog Filter API";
+
+    @Inject
+    private ParticipantIdMapper participantIdMapper;
+
+    @Inject
+    private CriterionOperatorRegistry criterionOperatorRegistry;
 
     @Inject
     private Monitor monitor;
@@ -126,6 +147,33 @@ public class VcCatalogFilterExtension implements ServiceExtension {
         transformerRegistry.register(new JsonObjectFromCriterionTransformer(factory, typeManager, CoreConstants.JSON_LD));
         transformerRegistry.register(new JsonObjectToProhibitionTransformer());
         transformerRegistry.register(new JsonObjectToDutyTransformer());
+        registerCatalogTransformers(factory);
+    }
+
+    /**
+     * Registers the DCAT catalog, QuerySpec and policy transformers in the default transformer registry.
+     *
+     * <p>Up to EDC 0.16 these were registered globally by the federated catalog core module
+     * ({@code FederatedCatalogCacheExtension}), which this runtime pulled in transitively. Since EDC 0.17 the
+     * catalog crawler only registers them in the DSP context, so the filter registers the same set itself:
+     * {@link FederatedCatalogService} parses the authority catalog into {@code Catalog} objects and
+     * {@code VcCatalogFilterController} serializes them back.
+     */
+    private void registerCatalogTransformers(JsonBuilderFactory factory) {
+        transformerRegistry.register(new JsonObjectToCatalogTransformer());
+        transformerRegistry.register(new JsonObjectToDatasetTransformer());
+        transformerRegistry.register(new JsonObjectToDataServiceTransformer());
+        transformerRegistry.register(new JsonObjectToDistributionTransformer());
+        transformerRegistry.register(new JsonObjectToQuerySpecTransformer());
+        transformerRegistry.register(new JsonObjectToCriterionTransformer(criterionOperatorRegistry));
+        transformerRegistry.register(new JsonObjectFromCatalogV2025Transformer(
+                factory, typeManager, CoreConstants.JSON_LD, participantIdMapper, DSP_NAMESPACE_V_2025_1));
+        transformerRegistry.register(new JsonObjectFromDatasetTransformer(factory, typeManager, CoreConstants.JSON_LD));
+        transformerRegistry.register(new JsonObjectFromDistributionTransformer(factory));
+        transformerRegistry.register(new JsonObjectFromDataServiceTransformer(factory));
+        transformerRegistry.register(new JsonObjectFromPolicyTransformer(factory, participantIdMapper));
+        transformerRegistry.register(new JsonObjectToPolicyTransformer(participantIdMapper));
+        transformerRegistry.register(new JsonValueToGenericTypeTransformer(typeManager, CoreConstants.JSON_LD));
     }
 
     @Settings

@@ -6,13 +6,17 @@ plugins {
     alias(libs.plugins.shadow)
 }
 
-var distTar = tasks.getByName("distTar")
-var distZip = tasks.getByName("distZip")
+val distTar = tasks.named("distTar")
+val distZip = tasks.named("distZip")
 
 dependencies {
     runtimeOnly(project(":launchers:control-plane:control-plane-base"))
     runtimeOnly(project(":extensions:agreements:retirement-evaluation-store-sql"))
-    runtimeOnly(libs.edc.controlplane.sql.bom)
+    runtimeOnly(libs.edc.controlplane.sql.bom) {
+        // federated catalog stores (added to this BOM in EDC 0.17) are not used by a DSE connector
+        exclude(group = "org.eclipse.edc", module = "federated-catalog-cache-sql")
+        exclude(group = "org.eclipse.edc", module = "target-node-directory-sql")
+    }
     runtimeOnly(libs.edc.ext.azure.vault)
 }
 

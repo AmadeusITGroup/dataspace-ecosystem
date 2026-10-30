@@ -35,6 +35,7 @@ public class DcatDistributionTransformationExtension implements ServiceExtension
 
     public static final String NAME = "Federated Catalog DCAT Distribution Transformation Extension";
 
+    private static final String MANAGEMENT_API_TRANSFORMER_CONTEXT = "management-api";
     static final String DSP_TRANSFORMER_CONTEXT_V_2025_1 = DSP_TRANSFORMER_CONTEXT + DSP_CONTEXT_SEPARATOR + "2025-1";
 
     @Inject
@@ -58,5 +59,11 @@ public class DcatDistributionTransformationExtension implements ServiceExtension
 
         registry.register(new JsonObjectFromEnrichedDistributionTransformer(jsonFactory, monitor));
         registry.register(new JsonObjectToEnrichedDistributionTransformer());
+
+        // EDC 0.17+ serializes federated catalog query results with the "management-api" transformer context
+        // (FederatedCatalogApiExtension, also used by DSE's /v1alpha/catalog/query): override it there as well,
+        // otherwise the upstream distribution transformer fails on DSE's enriched distributions.
+        registry.forContext(MANAGEMENT_API_TRANSFORMER_CONTEXT)
+                .register(new JsonObjectFromEnrichedDistributionTransformer(jsonFactory, monitor));
     }
 }

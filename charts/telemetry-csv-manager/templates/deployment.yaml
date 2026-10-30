@@ -163,8 +163,6 @@ spec:
             #############
             # SSI / DID #
             #############
-            - name: "EDC_IAM_ISSUER_ID"
-              value: {{ include "dse.telemetrycsvmanager.didWebUrl" . | quote }}
             - name: "EDC_IDENTITY_DID_URL"
               value: {{ include "dse.telemetrycsvmanager.didWebUrl" . | quote }}
             - name: "EDC_IAM_DID_WEB_USE_HTTPS"

@@ -1,11 +1,12 @@
 import com.bmuschko.gradle.docker.tasks.image.DockerBuildImage
-import com.github.jengelman.gradle.plugins.shadow.ShadowJavaPlugin
 import java.io.ByteArrayOutputStream
+import javax.inject.Inject
+import org.gradle.process.ExecOperations
 
 plugins {
     `java-library`
-    id("com.bmuschko.docker-remote-api") version "9.3.4"
-    id("com.github.johnrengelman.shadow") version "8.1.1"
+    id("com.bmuschko.docker-remote-api") version "10.0.0"
+    alias(libs.plugins.shadow)
     alias(libs.plugins.edc.build)
 }
 
@@ -36,10 +37,18 @@ val registryVersionTag = project.findProperty("registryVersionTag")?.toString() 
 // Check if registry configuration is provided (for push to registry workflow)
 val useRegistry = !registryName.isNullOrEmpty() && !registryPort.isNullOrEmpty()
 
+// Gradle 9 removed Project.exec {}; external processes run through the injected ExecOperations service.
+interface InjectedExecOperations {
+    @get:Inject
+    val execOperations: ExecOperations
+}
+
+val execOps: ExecOperations = objects.newInstance(InjectedExecOperations::class.java).execOperations
+
 // Local image content fingerprint (not comparable to a registry manifest digest, podman computes those differently).
 fun Project.podmanImageIdOrNull(imageName: String): String? {
     val output = ByteArrayOutputStream()
-    val result = exec {
+    val result = execOps.exec {
         commandLine("podman", "image", "inspect", imageName, "--format", "{{.Id}}")
         standardOutput = output
         isIgnoreExitValue = true
@@ -64,7 +73,7 @@ fun Project.registryManifestDigestOrNull(repository: String, tag: String): Strin
     }
     args += "https://$registryName:$registryPort/v2/$repository/manifests/$tag"
 
-    val result = exec {
+    val result = execOps.exec {
         commandLine(args)
         standardOutput = headers
         isIgnoreExitValue = true
@@ -91,8 +100,6 @@ allprojects {
 
     configure<org.eclipse.edc.plugins.edcbuild.extensions.BuildExtension> {
         pom {
-            // this is actually important, so we can publish under the correct GID
-            groupId = project.group.toString()
             projectName.set(project.name)
             description.set("edc :: ${project.name}")
             projectUrl.set(dseWebsiteUrl)
@@ -109,6 +116,12 @@ allprojects {
 
     tasks.withType<Test> {
         finalizedBy(tasks.withType<JacocoReport>())
+    }
+
+    // edc-build >= 1.2 no longer configures the Java toolchain/release (its JavaConvention was removed);
+    // keep producing Java 17 bytecode regardless of the JDK running Gradle.
+    tasks.withType<JavaCompile>().configureEach {
+        options.release.set(17)
     }
 
     tasks.withType<JacocoReport> {
@@ -157,6 +170,20 @@ allprojects {
 }
 
 subprojects {
+    // Shadow 9 defaults duplicatesStrategy to EXCLUDE, which drops every META-INF/services file but the first one
+    // *before* mergeServiceFiles() runs: the runtime would then load almost no EDC extension. Keep duplicates of
+    // service descriptors so they get merged, and exclude other duplicates as before.
+    plugins.withId("com.gradleup.shadow") {
+        tasks.withType<com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar>().configureEach {
+            duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+            filesMatching("META-INF/services/**") {
+                duplicatesStrategy = DuplicatesStrategy.INCLUDE
+            }
+        }
+    }
+}
+
+subprojects {
     afterEvaluate {
         val vaultType: String = project.findProperty("vaultType") as? String ?: "hashicorp"
         val baseImage: String = project.findProperty("baseImage") as? String ?: "centos:latest"
@@ -172,7 +199,7 @@ subprojects {
             else -> false
         }
 
-        if (project.plugins.hasPlugin("com.github.johnrengelman.shadow") && file("${project.projectDir}/Dockerfile").exists() && !shouldSkipVaultVariant) {
+        if (project.plugins.hasPlugin("com.gradleup.shadow") && file("${project.projectDir}/Dockerfile").exists() && !shouldSkipVaultVariant) {
             val buildDir = project.layout.buildDirectory.get().asFile
             val otelFileName = "opentelemetry-javaagent.jar"
             val agentFileOnBuildDirectory = buildDir.resolve(otelFileName)
@@ -204,7 +231,7 @@ subprojects {
                 }
             }
 
-            val downloadOtel = tasks.create("downloadOtel") {
+            val downloadOtel = tasks.register("downloadOtel") {
                 // Run after copyOtel to check if we still need to download
                 dependsOn(copyOtel)
                 // only execute task if the opentelemetry agent does not exist after copyOtel. invoke the "clean" task to force
@@ -228,9 +255,7 @@ subprojects {
                 }
             }
 
-            val shadowJarTask = tasks.named<com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar>(
-                ShadowJavaPlugin.SHADOW_JAR_TASK_NAME
-            )
+            val shadowJarTask = tasks.named<com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar>("shadowJar")
 
             val podmanTask = tasks.register("podmanize", Exec::class) {
                 group = "build"
@@ -262,12 +287,12 @@ subprojects {
                 }
                 commandLine(commandLineArgs )
                 doFirst {
-                    exec {
+                    execOps.exec {
                         commandLine("podman", "rmi", "-f", imageName)
                         isIgnoreExitValue = true
                     }
                     val result = ByteArrayOutputStream()
-                    exec {
+                    execOps.exec {
                         commandLine("podman", "images", "-q", imageName)
                         standardOutput = result
                         isIgnoreExitValue = true
@@ -281,7 +306,7 @@ subprojects {
                     }
                 }
                 doLast {
-                    exec {
+                    execOps.exec {
                         commandLine("podman", "save", "-o", imageTar.get().asFile.absolutePath, imageName)
                     }
                     println("New image saved $imageName")
@@ -324,7 +349,7 @@ subprojects {
                         // Login to registry if credentials are provided
                         if (!registryUsername.isNullOrEmpty() && !registryPassword.isNullOrEmpty()) {
                             logger.lifecycle("Logging into registry: $registryName:$registryPort")
-                            exec {
+                            execOps.exec {
                                 commandLine("podman", "login", "$registryName:$registryPort", "-u", registryUsername, "-p", registryPassword)
                             }
                             logger.lifecycle("Successfully logged into registry")
@@ -334,14 +359,14 @@ subprojects {
                         
                         // Tag the image for registry
                         logger.lifecycle("Tagging image: $imageName -> $targetTag")
-                        exec {
+                        execOps.exec {
                             commandLine("podman", "tag", imageName, targetTag)
                         }
                         
                         // Push to registry, capturing the actual digest podman wrote so we can verify it later.
                         logger.lifecycle("Pushing image to registry...")
                         val digestFile = layout.buildDirectory.file("docker/${project.name}-pushed.digest").get().asFile
-                        exec {
+                        execOps.exec {
                             commandLine("podman", "push", "--digestfile", digestFile.absolutePath, targetTag)
                         }
                         logger.lifecycle("Successfully pushed image: $targetTag")
@@ -352,7 +377,7 @@ subprojects {
                     } else {
                         // Default behavior: load to Kind cluster
                         logger.lifecycle("No registry configuration detected - loading image to Kind cluster: $kindClusterName")
-                        exec {
+                        execOps.exec {
                             commandLine("kind", "load", "image-archive", imageTar.get().asFile.absolutePath, "-n", kindClusterName)
                         }
                         logger.lifecycle("Image loaded to kind: $imageName")
@@ -361,8 +386,10 @@ subprojects {
                 }
             }
 
-            val dockerTask: DockerBuildImage = tasks.create("dockerize", DockerBuildImage::class) {
-                project.plugins.apply("com.bmuschko.docker-remote-api")
+            project.plugins.apply("com.bmuschko.docker-remote-api")
+            tasks.register("dockerize", DockerBuildImage::class) {
+                // make sure it always runs after the shadow jar and the OpenTelemetry agent download
+                dependsOn(shadowJarTask, downloadOtel)
                 images.add("${project.name}:latest")
                 // specify platform with the -Dplatform flag:
                 if (System.getProperty("platform") != null)
@@ -375,9 +402,6 @@ subprojects {
                 buildArgs.put("INSTALL_OPENSSL", installOpenssl)
                 inputDir.set(file(dockerContextDir))
             }
-            // make sure  always runs after "dockerize" and after "copyOtel"
-            dockerTask.dependsOn(tasks.named(ShadowJavaPlugin.SHADOW_JAR_TASK_NAME))
-                .dependsOn(downloadOtel)
         }
     }
 }
@@ -434,7 +458,7 @@ tasks.register("cleanCache") {
             println("\nRemoving podman images...")
             imagesToClean.forEach { imageName ->
                 try {
-                    exec {
+                    execOps.exec {
                         commandLine("podman", "rmi", "-f", imageName)
                         isIgnoreExitValue = true
                     }

@@ -45,4 +45,6 @@ CMD ["java", \
      "-Dotel.metrics.exporter=prometheus", \
      "-Djava.security.egd=file:/dev/urandom", \
      "-jar", \
-     "telemetry-service.jar"]
+     "telemetry-service.jar", \
+     "--no-color", \
+     "--log-level=INFO"]

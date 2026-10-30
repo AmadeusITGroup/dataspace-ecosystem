@@ -2,7 +2,9 @@ package org.eclipse.edc.telemetry.store.sql;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.eclipse.dse.edc.spi.telemetryagent.TelemetryRecord;
+import org.eclipse.edc.spi.persistence.EdcPersistenceException;
 import org.eclipse.edc.spi.persistence.LeaseContext;
+import org.eclipse.edc.spi.result.StoreFailure;
 import org.eclipse.edc.spi.result.StoreResult;
 import org.eclipse.edc.sql.QueryExecutor;
 import org.eclipse.edc.sql.ResultSetMapper;
@@ -24,6 +26,7 @@ import java.util.stream.Stream;
 import javax.sql.DataSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
@@ -123,6 +126,37 @@ class SqlTelemetryRecordStoreUnitTest {
         verify(statements).createNextNotLeaseQuery(any(), eq(42L));
         verify(leaseContext).acquireLease(first.getId());
         verify(leaseContext).acquireLease(second.getId());
+    }
+
+    @Test
+    void breakLease_shouldBreakLeaseOfRecord() {
+        var record = record("record-3");
+        when(leaseContext.breakLease("record-3")).thenReturn(StoreResult.success());
+
+        var result = store.breakLease(record);
+
+        assertThat(result.succeeded()).isTrue();
+        verify(leaseContext).breakLease("record-3");
+        verifyNoInteractions(queryExecutor);
+    }
+
+    @Test
+    void breakLease_whenLeasedByAnotherRuntime_shouldReturnFailure() {
+        when(leaseContext.breakLease("record-5")).thenReturn(StoreResult.alreadyLeased("leased by another runtime"));
+
+        var result = store.breakLease(record("record-5"));
+
+        assertThat(result.failed()).isTrue();
+        assertThat(result.reason()).isEqualTo(StoreFailure.Reason.ALREADY_LEASED);
+    }
+
+    @Test
+    void breakLease_whenConnectionFails_shouldThrowPersistenceException() throws SQLException {
+        when(dataSource.getConnection()).thenThrow(new SQLException("connection refused"));
+
+        assertThatThrownBy(() -> store.breakLease(record("record-4")))
+                .isInstanceOf(EdcPersistenceException.class)
+                .hasCauseInstanceOf(SQLException.class);
     }
 
     private TelemetryRecord record(String id) {

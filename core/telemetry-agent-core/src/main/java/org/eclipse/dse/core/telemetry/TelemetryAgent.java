@@ -8,7 +8,6 @@ import org.eclipse.dse.edc.spi.telemetryagent.TelemetryRecordStore;
 import org.eclipse.edc.spi.query.Criterion;
 import org.eclipse.edc.statemachine.AbstractStateEntityManager;
 import org.eclipse.edc.statemachine.Processor;
-import org.eclipse.edc.statemachine.ProcessorImpl;
 import org.eclipse.edc.statemachine.StateMachineManager;
 
 import java.util.Collection;
@@ -92,10 +91,17 @@ public class TelemetryAgent extends AbstractStateEntityManager<TelemetryRecord, 
     }
 
     private Processor completedRecordsProcessor() {
-        return ProcessorImpl.Builder.newInstance(() -> this.getRecordsWithType(TelemetryRecordStates.SENT))
-                .process(telemetry.contextPropagationMiddleware(this::deleteRecord))
-                .onNotProcessed(this::breakLease)
-                .build();
+        Function<TelemetryRecord, Boolean> delete = telemetry.contextPropagationMiddleware(this::deleteRecord);
+        return () -> getRecordsWithType(TelemetryRecordStates.SENT).stream()
+                .map((TelemetryRecord record) -> {
+                    var processed = delete.apply(record);
+                    if (!processed) {
+                        breakLease(record);
+                    }
+                    return processed;
+                })
+                .filter(isEqual(true))
+                .count();
     }
 
     private Collection<TelemetryRecord> getRecordsWithType(TelemetryRecordStates state) {

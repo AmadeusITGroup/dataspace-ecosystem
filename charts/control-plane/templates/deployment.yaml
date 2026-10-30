@@ -260,8 +260,6 @@ spec:
           #######
           # DID #
           #######
-          - name: "EDC_IAM_ISSUER_ID"
-            value: {{ include "dse.controlplane.identityHubDidWebUrl" . | quote }}
           - name: "EDC_IDENTITY_DID_URL"
             value: {{ include "dse.controlplane.identityHubDidWebUrl" . | quote }}
           - name: "EDC_IAM_DID_WEB_USE_HTTPS"

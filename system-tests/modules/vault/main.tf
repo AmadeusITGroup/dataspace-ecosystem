@@ -322,7 +322,16 @@ resource "kubernetes_job" "vault-keygen-job" {
               # registers that algorithm when edc.encryption.aes.key.alias resolves to a key in the vault.
               # Without it participant context creation fails and the runtime aborts during boot.
               # AesEncryptionAlgorithm Base64-decodes the secret into a SecretKeySpec.
-              vault kv put secret/${var.participant_name}-aes content="$(head -c 32 /dev/urandom | base64 | tr -d '\n')"
+              # Since EDC 0.18 this key encrypts persisted participant-context config (edc_participant_context_config),
+              # so it must NOT be rotated: Terraform re-creates this job after its TTL, write the key only if absent.
+              # -cas=0 (KV-v2 check-and-set) makes the write create-only, so a failed read (e.g. transient error)
+              # or a concurrent run can never replace an existing key.
+              if vault kv get secret/${var.participant_name}-aes >/dev/null 2>&1; then
+                echo "AES key secret/${var.participant_name}-aes already present, keeping it"
+              elif ! vault kv put -cas=0 secret/${var.participant_name}-aes content="$(head -c 32 /dev/urandom | base64 | tr -d '\n')"; then
+                vault kv get secret/${var.participant_name}-aes >/dev/null 2>&1 || exit 1
+                echo "AES key secret/${var.participant_name}-aes created concurrently, keeping it"
+              fi
             EOF
           ]
           env {

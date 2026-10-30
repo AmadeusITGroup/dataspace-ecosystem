@@ -70,7 +70,7 @@ resource "helm_release" "federated-catalog-filter" {
         #        EOT
 
         "config" : <<EOT
-edc.iam.trusted-issuer.authority.id=${local.did_url}
+edc.iam.trustedissuer.authority.id=${local.did_url}
 edc.vault.hashicorp.token.scheduled-renew-enabled=false
 edc.vault.hashicorp.allow.fallback=true
 dse.namespace.prefix=${var.dse_namespace_prefix}

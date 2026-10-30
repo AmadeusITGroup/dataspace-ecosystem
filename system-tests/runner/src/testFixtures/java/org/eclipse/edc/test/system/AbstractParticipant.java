@@ -356,6 +356,8 @@ abstract class AbstractParticipant extends AbstractEntity {
                     // versionPath is empty because controlPlaneProtocolUrl() already includes V_2025_1_PATH;
                     // Participant.getProtocolUrl() appends versionPath to the configured protocol URL.
                     .protocol(DATASPACE_PROTOCOL_HTTP_V_2025_1, "")
+                    // EDC 0.18 changed the fixture default to "/v4"; DSE (and its consumers) still use management v3
+                    .managementVersionBasePath("/v3")
                     .jsonLd(jsonLd())
                     .dataPlaneData(dataPlaneDataUrl())
                     .controlPlaneManagement(controlPlaneManagementUrl())

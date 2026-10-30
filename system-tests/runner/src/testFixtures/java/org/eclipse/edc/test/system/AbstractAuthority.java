@@ -88,7 +88,7 @@ abstract class AbstractAuthority extends AbstractEntity {
                 .body(dto)
                 .contentType(JSON)
                 .when()
-                .post("/v1alpha/participants/%s/attestation-visibility".formatted(toBase64(did())))
+                .post("/v1beta/participants/%s/attestation-visibility".formatted(toBase64(did())))
                 .then()
                 .statusCode(isStatus2xxOrConflict());
     }
@@ -142,7 +142,7 @@ abstract class AbstractAuthority extends AbstractEntity {
                 .body(dto)
                 .contentType(JSON)
                 .when()
-                .post("/v1alpha/participants/%s/attestations".formatted(toBase64(did())))
+                .post("/v1beta/participants/%s/attestations".formatted(toBase64(did())))
                 .then()
                 .statusCode(isStatus2xxOrConflict());
 
@@ -164,7 +164,7 @@ abstract class AbstractAuthority extends AbstractEntity {
                 .body(dto)
                 .contentType(JSON)
                 .when()
-                .post("/v1alpha/participants/%s/attestations".formatted(toBase64(did())))
+                .post("/v1beta/participants/%s/attestations".formatted(toBase64(did())))
                 .then()
                 .statusCode(isStatus2xxOrConflict());
 
@@ -188,7 +188,7 @@ abstract class AbstractAuthority extends AbstractEntity {
                 .body(dto)
                 .contentType(JSON)
                 .when()
-                .post("/v1alpha/participants/%s/attestations".formatted(toBase64(did())))
+                .post("/v1beta/participants/%s/attestations".formatted(toBase64(did())))
                 .then()
                 .statusCode(isStatus2xxOrConflict());
 
@@ -214,7 +214,7 @@ abstract class AbstractAuthority extends AbstractEntity {
                 .body(dto)
                 .contentType(JSON)
                 .when()
-                .post("/v1alpha/participants/%s/credentialdefinitions".formatted(toBase64(did())))
+                .post("/v1beta/participants/%s/credentialdefinitions".formatted(toBase64(did())))
                 .then()
                 .statusCode(isStatus2xxOrConflict());
 
@@ -236,7 +236,7 @@ abstract class AbstractAuthority extends AbstractEntity {
                 .body(dto)
                 .contentType(JSON)
                 .when()
-                .post("/v1alpha/participants/%s/credentialdefinitions".formatted(toBase64(did())))
+                .post("/v1beta/participants/%s/credentialdefinitions".formatted(toBase64(did())))
                 .then()
                 .statusCode(isStatus2xxOrConflict());
 
@@ -258,7 +258,7 @@ abstract class AbstractAuthority extends AbstractEntity {
                 .body(dto)
                 .contentType(JSON)
                 .when()
-                .post("/v1alpha/participants/%s/credentialdefinitions".formatted(toBase64(did())))
+                .post("/v1beta/participants/%s/credentialdefinitions".formatted(toBase64(did())))
                 .then()
                 .statusCode(isStatus2xxOrConflict());
     }
@@ -271,7 +271,7 @@ abstract class AbstractAuthority extends AbstractEntity {
                 .body(dto)
                 .contentType(JSON)
                 .when()
-                .post("/v1alpha/participants/%s/holders".formatted(toBase64(did())))
+                .post("/v1beta/participants/%s/holders".formatted(toBase64(did())))
                 .then()
                 .statusCode(isStatus2xxOrConflict());
     }
@@ -283,7 +283,7 @@ abstract class AbstractAuthority extends AbstractEntity {
                 .body(dto)
                 .contentType(JSON)
                 .when()
-                .post("/v1alpha/participants/%s/attestation-membership".formatted(toBase64(did())))
+                .post("/v1beta/participants/%s/attestation-membership".formatted(toBase64(did())))
                 .then()
                 .statusCode(isStatus2xxOrConflict());
 
@@ -300,7 +300,7 @@ abstract class AbstractAuthority extends AbstractEntity {
                 .body(dto)
                 .contentType(JSON)
                 .when()
-                .post("/v1alpha/participants/%s/attestation-domain".formatted(toBase64(did())))
+                .post("/v1beta/participants/%s/attestation-domain".formatted(toBase64(did())))
                 .then()
                 .statusCode(isStatus2xxOrConflict());
     }
@@ -316,7 +316,7 @@ abstract class AbstractAuthority extends AbstractEntity {
                 .body(dto)
                 .contentType(JSON)
                 .when()
-                .post("/v1alpha/participants/%s/attestation-domain".formatted(toBase64(did())))
+                .post("/v1beta/participants/%s/attestation-domain".formatted(toBase64(did())))
                 .then()
                 .statusCode(HttpStatus.SC_FORBIDDEN);
     }

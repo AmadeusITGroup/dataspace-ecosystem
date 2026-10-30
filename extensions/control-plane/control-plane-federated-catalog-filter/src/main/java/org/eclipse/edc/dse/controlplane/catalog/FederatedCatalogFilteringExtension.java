@@ -8,6 +8,7 @@ import org.eclipse.edc.runtime.metamodel.annotation.Extension;
 import org.eclipse.edc.runtime.metamodel.annotation.Inject;
 import org.eclipse.edc.runtime.metamodel.annotation.Setting;
 import org.eclipse.edc.spi.iam.IdentityService;
+import org.eclipse.edc.spi.query.CriterionOperatorRegistry;
 import org.eclipse.edc.spi.system.ServiceExtension;
 import org.eclipse.edc.spi.system.ServiceExtensionContext;
 import org.eclipse.edc.transform.spi.TypeTransformerRegistry;
@@ -36,13 +37,16 @@ public class FederatedCatalogFilteringExtension implements ServiceExtension {
     @Inject
     private TypeTransformerRegistry transformerRegistry;
 
+    @Inject
+    private DidResolverRegistry didResolverRegistry;
+
+    @Inject
+    private CriterionOperatorRegistry criterionOperatorRegistry;
+
     @Override
     public String name() {
         return "Participant Catalog Filtering Extension";
     }
-
-    @Inject
-    private DidResolverRegistry didResolverRegistry;
 
     @Override
     public void initialize(ServiceExtensionContext context) {
@@ -57,7 +61,7 @@ public class FederatedCatalogFilteringExtension implements ServiceExtension {
 
     private void registerTransformers() {
         transformerRegistry.register(new JsonObjectToQuerySpecTransformer());
-        transformerRegistry.register(new JsonObjectToCriterionTransformer());
+        transformerRegistry.register(new JsonObjectToCriterionTransformer(criterionOperatorRegistry));
     }
 
 }

@@ -74,7 +74,7 @@ resource "helm_release" "telemetryservice" {
                EOT
 
         "config" : <<EOT
-edc.iam.trusted-issuer.authority.id=${local.authority_did}
+edc.iam.trustedissuer.authority.id=${local.authority_did}
 edc.vault.hashicorp.token.scheduled-renew-enabled=false
 edc.vault.hashicorp.allow.fallback=true
 dse.namespace.prefix=${var.dse_namespace_prefix}

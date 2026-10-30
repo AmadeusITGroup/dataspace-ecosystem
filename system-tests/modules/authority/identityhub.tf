@@ -78,7 +78,7 @@ resource "helm_release" "identity-hub" {
               {
                 id : "issuer-service-url",
                 type : "IssuerService",
-                serviceEndpoint : "${local.issuance_url}/v1alpha/participants/${local.did_url_base64_url}"
+                serviceEndpoint : "${local.issuance_url}/v1beta/participants/${local.did_url_base64_url}"
               },
               {
                 id : "telemetry-service-url",

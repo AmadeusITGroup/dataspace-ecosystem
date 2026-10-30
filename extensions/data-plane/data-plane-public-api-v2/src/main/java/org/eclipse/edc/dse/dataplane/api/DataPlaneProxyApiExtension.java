@@ -26,7 +26,7 @@ public class DataPlaneProxyApiExtension implements ServiceExtension {
     static final String DEFAULT_ADMIN_PATH = "/api/data";
     private static final String API_CONTEXT = "data";
 
-    @Setting(value = "Thread pool size for the consumer data plane data api", type = "int")
+    @Setting(description = "Thread pool size for the consumer data plane data api")
     private static final String THREAD_POOL_SIZE = "edc.dpf.dataplane.consumer.gateway.thread.pool";
     @Configuration
     private DataApiConfiguration apiConfiguration;

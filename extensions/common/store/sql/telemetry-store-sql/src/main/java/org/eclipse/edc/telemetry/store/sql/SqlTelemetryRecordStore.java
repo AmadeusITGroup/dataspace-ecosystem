@@ -91,6 +91,18 @@ public class SqlTelemetryRecordStore extends AbstractSqlStore implements Telemet
     }
 
     @Override
+    public StoreResult<Void> breakLease(TelemetryRecord record) {
+        return transactionContext.execute(() -> {
+            try (var connection = getConnection()) {
+                // propagate the result: fails with ALREADY_LEASED if another runtime holds the lease (same as the EDC SQL stores)
+                return leaseContext.withConnection(connection).breakLease(record.getId());
+            } catch (SQLException e) {
+                throw new EdcPersistenceException(e);
+            }
+        });
+    }
+
+    @Override
     public StoreResult<TelemetryRecord> deleteById(String recordId) {
         Objects.requireNonNull(recordId);
 

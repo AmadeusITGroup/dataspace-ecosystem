@@ -24,6 +24,7 @@ include(":extensions:common:participant-context-config-seed")
 include(":extensions:common:jsonld-namespaces")
 
 include(":extensions:identity-hub:did-web-parser")
+include(":extensions:identity-hub:legacy-participant-id-path")
 include(":extensions:identity-hub:identity-hub-iatp")
 include(":extensions:identity-hub:superuser-seed")
 
@@ -181,8 +182,3 @@ dependencyResolutionManagement {
         }
     }
 }
-include("launchers:federated-catalog-filter")
-include("launchers:federated-catalog-filter:federated-catalog-filter-base")
-findProject(":launchers:federated-catalog-filter:federated-catalog-filter-base")?.name = "federated-catalog-filter-base"
-include("launchers:federated-catalog-filter:federated-catalog-filter-postgress-hashicorp")
-findProject(":launchers:federated-catalog-filter:federated-catalog-filter-postgress-hashicorp")?.name = "federated-catalog-filter-postgress-hashicorp"

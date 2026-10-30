@@ -1,6 +1,6 @@
 # Dataspace Ecosystem
 
-![EDC Version](https://img.shields.io/badge/EDC-0.15.1-blue)
+![EDC Version](https://img.shields.io/badge/EDC-0.18.1-blue)
 ![DSE_Version](https://img.shields.io/badge/DSE-0.7.5-orange)
 [![Public Documentation](https://img.shields.io/badge/📚_Public_Documentation-Visit_Site-green)](https://amadeusitgroup.github.io/dataspace-ecosystem/)
 

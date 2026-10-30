@@ -6,7 +6,9 @@ import org.eclipse.dse.edc.spi.telemetryagent.TelemetryRecordPublisherFactory;
 import org.eclipse.dse.edc.spi.telemetryagent.TelemetryRecordStore;
 import org.eclipse.edc.spi.iam.TokenRepresentation;
 import org.eclipse.edc.spi.monitor.Monitor;
+import org.eclipse.edc.spi.query.Criterion;
 import org.eclipse.edc.spi.telemetry.Telemetry;
+import org.eclipse.edc.statemachine.Processor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -18,6 +20,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -112,6 +115,33 @@ class TelemetryAgentTest {
         var result = invokeSendRecords(publisher, List.of());
 
         assertThat(result).isEqualTo(0L);
+    }
+
+    @Test
+    void completedRecordsProcessor_shouldDeleteSentRecords() throws Exception {
+        var record1 = TelemetryRecord.Builder.newInstance().id("sent-1").type("test").build();
+        var record2 = TelemetryRecord.Builder.newInstance().id("sent-2").type("test").build();
+        when(store.nextNotLeased(anyInt(), any(Criterion[].class))).thenReturn(List.of(record1, record2));
+
+        var processed = invokeCompletedRecordsProcessor().process();
+
+        assertThat(processed).isEqualTo(2L);
+        verify(store).deleteById("sent-1");
+        verify(store).deleteById("sent-2");
+    }
+
+    @Test
+    void completedRecordsProcessor_noSentRecords_shouldReturnZero() throws Exception {
+        when(store.nextNotLeased(anyInt(), any(Criterion[].class))).thenReturn(List.of());
+
+        assertThat(invokeCompletedRecordsProcessor().process()).isEqualTo(0L);
+        verify(store, never()).deleteById(any());
+    }
+
+    private Processor invokeCompletedRecordsProcessor() throws Exception {
+        Method method = TelemetryAgent.class.getDeclaredMethod("completedRecordsProcessor");
+        method.setAccessible(true);
+        return (Processor) method.invoke(agent);
     }
 
     @SuppressWarnings("unchecked")

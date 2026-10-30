@@ -37,7 +37,7 @@ abstract class AbstractEntity {
                 .body(dto)
                 .contentType(JSON)
                 .when()
-                .post("/v1alpha/participants/%s/credentials/request".formatted(toBase64(did())))
+                .post("/v1beta/participants/%s/credentials/request".formatted(toBase64(did())))
                 .then()
                 .statusCode(isStatus2xxOrConflict());
     }
@@ -47,7 +47,7 @@ abstract class AbstractEntity {
                 .baseUri(identityHubIdentityUrl())
                 .when()
                 .contentType(JSON)
-                .get("/v1alpha/participants/%s/credentials".formatted(toBase64(did())))
+                .get("/v1beta/participants/%s/credentials".formatted(toBase64(did())))
                 .then()
                 .statusCode(isStatus2xx()).extract().body().asString();
         return mapper.readValue(credentials, JsonArray.class).stream()

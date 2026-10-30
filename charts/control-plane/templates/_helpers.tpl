@@ -287,13 +287,13 @@ otel.instrumentation.micrometer.enabled=true
 
 {{/*
 Control Plane - config.properties. Reproduces the static/derivable EDC
-settings the Terraform reference always injects (trusted-issuer authority id
+settings the Terraform reference always injects (trustedissuer authority id
 + credential revocation mimetype), then appends any extra component config
 supplied via .Values.controlplane.config (e.g. state-machine tuning, keystore
 paths — the environment-specific lines still supplied through values).
 */}}
 {{- define "dse.controlplane.configProperties" -}}
-edc.iam.trusted-issuer.authority.id={{ include "dse.controlplane.authorityDid" . }}
+edc.iam.trustedissuer.authority.id={{ include "dse.controlplane.authorityDid" . }}
 edc.iam.credential.revocation.mimetype=application/json
 {{- with .Values.controlplane.config }}
 {{ . }}

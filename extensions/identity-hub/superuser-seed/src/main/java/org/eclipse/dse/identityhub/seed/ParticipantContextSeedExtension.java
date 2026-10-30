@@ -2,17 +2,19 @@ package org.eclipse.dse.identityhub.seed;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.eclipse.edc.iam.did.spi.document.Service;
+import org.eclipse.edc.identityhub.spi.participantcontext.IdentityApiScopes;
 import org.eclipse.edc.identityhub.spi.participantcontext.IdentityHubParticipantContextService;
+import org.eclipse.edc.identityhub.spi.participantcontext.IssuerAdminApiScopes;
 import org.eclipse.edc.identityhub.spi.participantcontext.model.CreateParticipantContextResponse;
 import org.eclipse.edc.identityhub.spi.participantcontext.model.KeyDescriptor;
 import org.eclipse.edc.identityhub.spi.participantcontext.model.ParticipantManifest;
 import org.eclipse.edc.participantcontext.spi.config.model.ParticipantContextConfiguration;
 import org.eclipse.edc.participantcontext.spi.config.service.ParticipantContextConfigService;
 import org.eclipse.edc.runtime.metamodel.annotation.Inject;
-import org.eclipse.edc.spi.result.ServiceFailure;
 import org.eclipse.edc.runtime.metamodel.annotation.Setting;
 import org.eclipse.edc.spi.EdcException;
 import org.eclipse.edc.spi.monitor.Monitor;
+import org.eclipse.edc.spi.result.ServiceFailure;
 import org.eclipse.edc.spi.security.Vault;
 import org.eclipse.edc.spi.system.ServiceExtension;
 import org.eclipse.edc.spi.system.ServiceExtensionContext;
@@ -22,7 +24,6 @@ import java.util.List;
 import java.util.Map;
 
 import static java.util.Optional.ofNullable;
-import static org.eclipse.edc.identityhub.spi.authentication.ServicePrincipal.ROLE_ADMIN;
 
 public class ParticipantContextSeedExtension implements ServiceExtension {
 
@@ -129,7 +130,7 @@ public class ParticipantContextSeedExtension implements ServiceExtension {
                         .privateKeyAlias(privateKeyAlias)
                         .publicKeyPem(publicKeyPem)
                         .build())
-                .roles(List.of(ROLE_ADMIN));
+                .scopes(List.of(IdentityApiScopes.ADMIN, IssuerAdminApiScopes.ADMIN));
         typeManager.readValue(services, tr).forEach(builder::serviceEndpoint);
         return participantContextService.createParticipantContext(builder.build())
                 .orElseThrow(failure -> new EdcException(failure.getFailureDetail()));

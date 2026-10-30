@@ -41,4 +41,6 @@ CMD ["java", \
      "-Dotel.javaagent.configuration-file=/app/opentelemetry.properties", \
      "-Djava.security.egd=file:/dev/urandom", \
      "-jar", \
-     "telemetry-csv-manager.jar"]
+     "telemetry-csv-manager.jar", \
+     "--no-color", \
+     "--log-level=INFO"]

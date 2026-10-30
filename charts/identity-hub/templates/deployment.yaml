@@ -246,6 +246,11 @@ spec:
             # boot (ParticipantContextSeedExtension.createParticipant).
             - name: "EDC_ENCRYPTION_AES_KEY_ALIAS"
               value: {{ include "dse.identityhub.keys.encryption.aesKeyAlias" . | quote }}
+            # -- EDC 0.18 removed the implicit "aes" default (eclipse-edc/Connector#5781): without it participant
+            #    context config (persisted in edc_participant_context_config) is stored unencrypted.
+            #    Only set on runtimes that ship the aes-encryption module (IdentityHub BOMs), otherwise boot fails.
+            - name: "EDC_PARTICIPANTS_CONFIG_ENCRYPTION_ALGORITHM"
+              value: "aes"
 
           #######
           # API #

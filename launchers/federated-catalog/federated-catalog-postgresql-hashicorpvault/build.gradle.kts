@@ -4,8 +4,8 @@ plugins {
     alias(libs.plugins.shadow)
 }
 
-var distTar = tasks.getByName("distTar")
-var distZip = tasks.getByName("distZip")
+val distTar = tasks.named("distTar")
+val distZip = tasks.named("distZip")
 
 dependencies {
     runtimeOnly(project(":launchers:federated-catalog:federated-catalog-base"))

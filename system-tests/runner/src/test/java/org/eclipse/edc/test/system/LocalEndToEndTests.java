@@ -721,7 +721,7 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
             assertThat(service.getString("@id")).isEqualTo(CUSTOM_DISTRIBUTION_ID + ":service");
             assertThat(getString(service, DCAT_MEDIA_TYPE, "dcat:mediaType"))
                     .isEqualTo("https://www.iana.org/assignments/media-types/application/json");
-            var conformsTo = getArray(service, DCT_CONFORMS_TO, "dct:conformsTo");
+            var conformsTo = getArray(service, DCT_CONFORMS_TO, conformsToKey(service));
             assertThat(conformsTo).singleElement()
                     .satisfies(value -> assertThat(getString(value.asJsonObject(), DCT_TITLE, "dct:title"))
                             .isEqualTo("Binding Kafka-specific information on AsyncAPI"));
@@ -742,10 +742,18 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
                     .isEqualTo("Order Created Event AsyncAPI Specification");
             assertThat(getString(serviceLessDistribution, DCT_MODIFIED, "dct:modified"))
                     .isEqualTo("2023-11-19T04:54:00Z");
-            assertThat(getString(serviceLessDistribution, DCT_CONFORMS_TO, "dct:conformsTo"))
+            assertThat(getString(serviceLessDistribution, DCT_CONFORMS_TO, conformsToKey(serviceLessDistribution)))
                     .isEqualTo("https://datatracker.ietf.org/doc/html/rfc4648");
             assertThat(getString(serviceLessDistribution, DCT_TYPE, "dct:type"))
                     .isEqualTo("ASYNC_API_SPECIFICATION");
+        }
+
+        /**
+         * EDC 0.18 (eclipse-edc/Connector#5780) defines the "conformsTo" term in the EDC DSP JSON-LD context, so the
+         * federated catalog (compacted with that context) returns "conformsTo" where 0.16 returned "dct:conformsTo".
+         */
+        private String conformsToKey(JsonObject object) {
+            return object.containsKey("conformsTo") ? "conformsTo" : "dct:conformsTo";
         }
 
         private JsonObject getObject(JsonObject object, String expandedKey, String compactKey) {
