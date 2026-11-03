@@ -181,6 +181,11 @@ identityhub:
       # list or a JSON array string. When empty, derives the participant DSP
       # and Credential Service URLs.
       services: []
+      # -- When the participant context already exists, update the services of
+      # its DID document that differ from `services` (matched by id) and publish
+      # it again. Services not listed in `services` are never touched. When
+      # false, the differences are only logged as warnings at startup.
+      syncServices: false
 
   # -- Postgresql database configuration
   postgresql:

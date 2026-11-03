@@ -265,6 +265,10 @@ spec:
           ##############
             - name: "EDC_IH_API_SUPERUSER_SERVICES"
               value: {{ include "dse.identityhub.participantContextServices" . | quote }}
+            # -- when the participant already exists, update the DID document services that differ from the ones
+            #    above (false: only log the differences)
+            - name: "EDC_IH_API_SUPERUSER_SERVICES_SYNC"
+              value: {{ .Values.identityhub.participantcontext.superuser.syncServices | default false | quote }}
 
           {{- if .Values.global.telemetry.enabled }}
             #############################

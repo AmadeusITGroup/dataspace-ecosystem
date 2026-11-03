@@ -4,7 +4,7 @@ info:
   title: Issuer Service Domain Attestation API
   version: "1"
 paths:
-  /v1alpha/participants/{participantContextId}/attestation-domain:
+  /v1beta/participants/{participantContextId}/attestation-domain:
     post:
       description: Adds a new domain attestation.
       operationId: createDomainAttestation
@@ -86,7 +86,7 @@ paths:
             found.
       tags:
         - Domain Attestation Admin API
-  /v1alpha/participants/{participantContextId}/attestation-domain/request:
+  /v1beta/participants/{participantContextId}/attestation-domain/request:
     post:
       description: Gets all domain attestations for a certain query.
       operationId: queryDomainAttestations
@@ -120,7 +120,7 @@ paths:
           description: "Request body was malformed, or the request could not be processed"
       tags:
         - Domain Attestation Admin API
-  /v1alpha/participants/{participantContextId}/attestation-domain/{id}:
+  /v1beta/participants/{participantContextId}/attestation-domain/{id}:
     delete:
       description: Delete domain attestation.
       operationId: deleteDomainAttestation
