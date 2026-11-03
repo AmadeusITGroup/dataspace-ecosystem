@@ -583,11 +583,11 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
         PROVIDER.createRawAsset(loadAssetFromResource("assets/order-created-event-asset-v1.0.0.json", ASSET_ID_ORDER_CREATED_EVENT_V1));
 
         var dcatNs = "http://www.w3.org/ns/dcat#";
-        var skosNs = "http://www.w3.org/2004/02/skos/core#";
-        var topConceptNotationPath =
-                "properties.'" + dcatNs + "themeTaxonomy'.'" + skosNs + "hasTopConcept'.'" + skosNs + "notation'";
-        var narrowerNotationPath =
-                "properties.'" + dcatNs + "themeTaxonomy'.'" + skosNs + "hasTopConcept'.'" + skosNs + "narrower'.'" + skosNs + "notation'";
+        var dctNs = "http://purl.org/dc/terms/";
+        var mediaTypePath = "properties.'" + dcatNs + "distribution'.'" + dcatNs + "mediaType'";
+        var accessUrlPath = "properties.'" + dcatNs + "distribution'.'" + dcatNs + "accessURL'";
+        // two array levels: dcat:distribution[] -> dct:conformsTo[] -> @id
+        var conformsToPath = "properties.'" + dcatNs + "distribution'.'" + dctNs + "conformsTo'.'@id'";
 
         var membershipConstraint = atomicConstraint(
                 "%s:%s".formatted(DSE_POLICY_PREFIX, org.eclipse.dse.iam.policy.PolicyConstants.MEMBERSHIP_CONSTRAINT),
@@ -602,13 +602,13 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
         PROVIDER.createContractDefinitionWithSelector(
                 UUID.randomUUID().toString(),
                 policyId, policyId,
-                narrowerNotationPath, "=", "990");
+                conformsToPath, "=", "https://www.asyncapi.com/docs/reference/specification/v2.6.0");
 
         PROVIDER.createContractDefinitionWithSelector(
                 UUID.randomUUID().toString(),
                 policyId, policyId,
-                new String[]{ topConceptNotationPath, "=", "50" },
-                new String[]{ narrowerNotationPath, "=", "990" });
+                new String[]{ mediaTypePath, "=", "application/yaml" },
+                new String[]{ accessUrlPath, "=", "https://test.platform.api.amadeus.com/v1/content-management/content-documents/file/907" });
     }
 
     private static JsonObject genericClaimConstraint(String credentialType, String path, String operator, String rightOperand) {
@@ -1698,9 +1698,8 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
 
         @Test
         void transfer_with_nested_array_property_single_selector() {
-            // Tests single selector matching nested array property: narrower notation = "990"
-            // This verifies that the contract definition's asset selector correctly traverses
-            // nested JSON-LD arrays without indices (e.g., skos:hasTopConcept.skos:narrower.notation)
+            // Tests a single selector on a property two arrays deep: dcat:distribution[].dct:conformsTo[].@id
+            // This verifies the asset selector walks nested JSON-LD arrays without indices.
             var transferProcessId = negotiationContractAndStartTransfer(CONSUMER, PROVIDER, ASSET_ID_ORDER_CREATED_EVENT);
 
             var contractId = getContractIdFromTransferProcess(CONSUMER, transferProcessId);
@@ -1714,9 +1713,9 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
 
         @Test
         void transfer_with_nested_array_property_multiple_selectors() {
-            // Tests multiple correlated selectors on nested array properties: top notation = "50" AND narrower = "990"
-            // This verifies that when multiple selectors are combined with AND logic, both conditions must be satisfied
-            // without incorrectly matching assets where only one condition applies (e.g., top concept "60" also has narrower "990")
+            // Tests multiple selectors on a nested array property: mediaType = "application/yaml" AND accessURL = ".../file/907".
+            // Both selectors must match the asset (AND). Each one is checked on its own across all distributions,
+            // so this does not guarantee both values come from the same distribution.
             var transferProcessId = negotiationContractAndStartTransfer(CONSUMER, PROVIDER, ASSET_ID_ORDER_CREATED_EVENT_V1);
 
             var contractId = getContractIdFromTransferProcess(CONSUMER, transferProcessId);
