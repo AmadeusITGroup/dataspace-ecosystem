@@ -5,6 +5,8 @@ plugins {
 dependencies {
     // Our extension under test
     testImplementation(project(":extensions:control-plane:dcat-distribution-transformation"))
+    // Registers the skos prefix in DSP responses, as in the real control-plane launcher (#419)
+    testImplementation(project(":extensions:common:jsonld-namespaces"))
 
     // Runtime dependencies to boot a minimal control-plane with DSP catalog support
     testImplementation(libs.edc.controlplane.base.bom)

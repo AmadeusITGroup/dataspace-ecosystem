@@ -1,0 +1,8 @@
+{
+  "categories": [
+    { "id": "Example Category", "name": "Example Category",
+      "description": "Example category so the test runtime can start with the category whitelist enabled.",
+      "internalId": "urn:example:category:ExampleCategory",
+      "parentId": null }
+  ]
+}

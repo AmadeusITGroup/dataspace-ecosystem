@@ -23,6 +23,8 @@ import org.eclipse.edc.spi.system.ServiceExtensionContext;
 import java.util.List;
 import java.util.Map;
 
+import static org.eclipse.edc.protocol.dsp.spi.type.Dsp2025Constants.DSP_SCOPE_V_2025_1;
+
 /**
  * Registers the extra JSON-LD vocabularies used by the CLE Event model (DCAT representation) so that
  * DSE responses compact them ({@code skos:prefLabel}) instead of emitting full IRIs.
@@ -57,9 +59,10 @@ public class DseJsonLdNamespacesExtension implements ServiceExtension {
      */
     public static final String MANAGEMENT_API_SCOPE = "MANAGEMENT_API";
     /**
-     * Dataspace Protocol 2025-1 (EDC {@code Dsp2025Constants.DSP_SCOPE_V_2025_1}).
+     * Dataspace Protocol 2025-1. Taken from EDC so it follows upstream: EDC 0.18 renamed it
+     * from {@code DSP:2025-1} to {@code DSP:dataspace-protocol-http:2025-1}.
      */
-    public static final String DSP_2025_1_SCOPE = "DSP:2025-1";
+    public static final String DSP_2025_1_SCOPE = DSP_SCOPE_V_2025_1;
     /**
      * DSE catalog filter API ({@code VcCatalogFilterExtension.CATALOG_FILTER_SCOPE}).
      */

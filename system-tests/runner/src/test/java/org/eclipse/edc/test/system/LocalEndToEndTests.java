@@ -77,6 +77,7 @@ import static org.eclipse.dse.iam.policy.PolicyConstants.VISIBILITY_CREDENTIAL_T
 import static org.eclipse.edc.connector.controlplane.test.system.utils.PolicyFixtures.atomicConstraint;
 import static org.eclipse.edc.connector.controlplane.transfer.spi.types.TransferProcessStates.TERMINATED;
 import static org.eclipse.edc.jsonld.spi.JsonLdKeywords.ID;
+import static org.eclipse.edc.jsonld.spi.JsonLdKeywords.VALUE;
 import static org.eclipse.edc.spi.constants.CoreConstants.EDC_NAMESPACE;
 import static org.eclipse.edc.test.system.AbstractAuthority.DOMAIN_ROUTE;
 import static org.eclipse.edc.test.system.AbstractAuthority.DOMAIN_TRAVEL;
@@ -123,6 +124,12 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
     public static String dummyJwt;
     public static String dummyJwtWithMultipleRoles;
     public static String dummyJwtNonExistentParticipant;
+
+    // Provider asset themed with a category found in both the local example whitelist and the devbox one (see createThemedAssets).
+    private static final String ASSET_ID_THEMED_ORDER_MANAGEMENT_SYSTEM = "theme-taxonomy-order-management-system";
+    private static final String CATEGORY_PREFIX = "urn:amadeus:platform:content-management:taxonomy:category:";
+    private static final String CATEGORY_ORDER = CATEGORY_PREFIX + "Order";
+    private static final String CATEGORY_ORDER_MANAGEMENT_SYSTEM = CATEGORY_PREFIX + "Order:subcategory:Order_Management_System";
     private static final String EVENT_HUB_CONNECTION_STRING_ALIAS = "event-hub-connection-string";
     private static final String EVENT_HUB_CONNECTION_STRING_SECRET = "Endpoint=sb://eventhubs;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;";
     private static final String LOCAL_CONSUMER_EVENT_HUB_CONNECTION_STRING = "Endpoint=sb://localhost:52717;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;";
@@ -552,6 +559,22 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
         PROVIDER.createRawAssetWithDefaultContract(distributionAsset);
 
         createOrderCreatedEventAssetsAndContracts();
+        createThemedAssets();
+    }
+
+    /**
+     * Seeds a provider asset whose dcat:theme points at Order Management System, a category that
+     * exists both in the local example whitelist (system-tests/category-whitelist.example.json)
+     * and in the list the devbox deploys. Its parent Order must show up with it in the provider
+     * catalog's dcat:themeTaxonomy; Air Travel, which no asset uses, must not.
+     */
+    private static void createThemedAssets() {
+        var context = Map.of("dct", "http://purl.org/dc/terms/", "dcat", "http://www.w3.org/ns/dcat#");
+        PROVIDER.createEntryWithCustomContext(ASSET_ID_THEMED_ORDER_MANAGEMENT_SYSTEM, context,
+                Map.of(
+                        "dct:title", "Order management system events",
+                        "dcat:theme", Map.of("@id", CATEGORY_ORDER_MANAGEMENT_SYSTEM)),
+                Map.of("baseUrl", "http://example.com"));
     }
 
     private static void createOrderCreatedEventAssetsAndContracts() {
@@ -635,7 +658,8 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
                     ASSET_ID_DCAT_GAMMA,
                     ASSET_ID_DCAT_DISTRIBUTION,
                     ASSET_ID_ORDER_CREATED_EVENT,
-                    ASSET_ID_ORDER_CREATED_EVENT_V1
+                    ASSET_ID_ORDER_CREATED_EVENT_V1,
+                    ASSET_ID_THEMED_ORDER_MANAGEMENT_SYSTEM
             );
 
             assertThat(queryParticipantDatasets(AUTHORITY, PROVIDER.did(), PROVIDER.controlPlaneCatalogFilterUrl()))
@@ -653,6 +677,106 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
             assertThat(queryParticipantDatasets(AUTHORITY, PROVIDER.did(), CONSUMER.controlPlaneCatalogFilterUrl()))
                     .anyMatch(dataset -> ASSET_ID_REST_API_ROUTE_DOMAIN_RESTRICTED.equals(dataset.getString(ID)))
                     .noneMatch(dataset -> ASSET_ID_REST_API_TRAVEL_DOMAIN_RESTRICTED.equals(dataset.getString(ID)));
+        }
+    }
+
+    @Nested
+    class ThemeTaxonomyTest {
+
+        private static final String DCAT_THEME_TAXONOMY = "dcat:themeTaxonomy";
+        private static final String SKOS_HAS_TOP_CONCEPT = "skos:hasTopConcept";
+        private static final String SKOS_NARROWER = "skos:narrower";
+        private static final String SKOS_PREF_LABEL = "skos:prefLabel";
+        private static final String SKOS_NOTATION = "skos:notation";
+        private static final String SKOS_DEFINITION = "skos:definition";
+
+        @Test
+        void participantCatalog_includesUsedCategoriesWithTheirParents() {
+            // Same as POST /consumer/cp/management/v3/catalog/request: the consumer asks the provider
+            // for its catalog over DSP 2025-1. Only the assets seeded by createThemedAssets use
+            // whitelisted categories.
+            var catalogRequest = Json.createObjectBuilder()
+                    .add("@context", Json.createObjectBuilder().add("@vocab", EDC_NAMESPACE))
+                    .add("@type", "CatalogRequest")
+                    .add("counterPartyAddress", PROVIDER.controlPlaneProtocolUrl())
+                    .add("counterPartyId", PROVIDER.did())
+                    .add("protocol", PROVIDER.participantClient().getProtocol().name())
+                    .add("querySpec", Json.createObjectBuilder().add("offset", 0).add("limit", 50))
+                    .build();
+
+            await().atMost(TEST_TIMEOUT).untilAsserted(() -> {
+                var body = CONSUMER.participantClient().baseManagementRequest()
+                        .contentType(ContentType.JSON)
+                        .body(catalogRequest.toString())
+                        // baseManagementRequest() already points at the /v3 management API
+                        .post("/catalog/request")
+                        .then()
+                        .statusCode(200)
+                        .extract().body().asString();
+                var catalog = Json.createReader(new StringReader(body)).readObject();
+
+                assertThat(catalog.containsKey(DCAT_THEME_TAXONOMY)).as("catalog carries dcat:themeTaxonomy").isTrue();
+                var taxonomy = asArray(catalog.get(DCAT_THEME_TAXONOMY)).getJsonObject(0);
+                assertThat(taxonomy.getString(ID, null)).isEqualTo("urn:dse:taxonomy");
+
+                // Order Management System is used, so its parent Order comes with it. Air Travel
+                // is not used by any asset, so it is absent.
+                var topConcepts = asArray(taxonomy.get(SKOS_HAS_TOP_CONCEPT));
+                assertThat(ids(topConcepts)).containsExactly(CATEGORY_ORDER);
+
+                var order = topConcepts.getJsonObject(0);
+                var orderChildren = asArray(order.get(SKOS_NARROWER));
+                assertThat(ids(orderChildren)).containsExactly(CATEGORY_ORDER_MANAGEMENT_SYSTEM);
+                var orderManagementSystem = orderChildren.getJsonObject(0);
+                assertThat(orderManagementSystem.containsKey(SKOS_NARROWER)).isFalse();
+
+                // Each concept carries its whitelist name, id and description.
+                assertConcept(order, "Order",
+                        "Content related to order lifecycle management, from creation through fulfillment and accounting.");
+                assertConcept(orderManagementSystem, "Order Management System",
+                        "The Nevio Order Management System (OrMS) is a comprehensive solution designed to effectively manage orders from multiple content providers.");
+            });
+        }
+
+        /**
+         * The whitelist category's name goes to skos:prefLabel, its id to skos:notation and its
+         * description to skos:definition. In the whitelist, id and name are the same.
+         */
+        private static void assertConcept(JsonObject concept, String name, String description) {
+            assertThat(text(concept.get(SKOS_PREF_LABEL))).as("skos:prefLabel of %s", concept.getString(ID, null)).isEqualTo(name);
+            assertThat(text(concept.get(SKOS_NOTATION))).as("skos:notation of %s", concept.getString(ID, null)).isEqualTo(name);
+            assertThat(text(concept.get(SKOS_DEFINITION))).as("skos:definition of %s", concept.getString(ID, null)).isEqualTo(description);
+        }
+
+        /**
+         * Compacted JSON-LD writes a plain string, or {"@value": ...} when it keeps the value object.
+         */
+        private static String text(JsonValue value) {
+            var values = asArray(value);
+            if (values.isEmpty()) {
+                return null;
+            }
+            var single = values.get(0);
+            if (single.getValueType() == JsonValue.ValueType.STRING) {
+                return ((JsonString) single).getString();
+            }
+            return single.asJsonObject().getString(VALUE, null);
+        }
+
+        private static List<String> ids(JsonArray concepts) {
+            return concepts.stream().map(concept -> concept.asJsonObject().getString(ID, null)).toList();
+        }
+
+        /**
+         * Compacted JSON-LD writes a single value as an object and several as an array.
+         */
+        private static JsonArray asArray(JsonValue value) {
+            if (value == null) {
+                return JsonValue.EMPTY_JSON_ARRAY;
+            }
+            return value.getValueType() == JsonValue.ValueType.ARRAY
+                    ? value.asJsonArray()
+                    : Json.createArrayBuilder().add(value).build();
         }
     }
 

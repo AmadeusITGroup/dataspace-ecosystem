@@ -31,6 +31,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.eclipse.dse.common.jsonld.DseJsonLdNamespacesExtension.ADMS_NAMESPACE;
 import static org.eclipse.dse.common.jsonld.DseJsonLdNamespacesExtension.PROV_NAMESPACE;
 import static org.eclipse.dse.common.jsonld.DseJsonLdNamespacesExtension.SKOS_NAMESPACE;
+import static org.eclipse.edc.protocol.dsp.spi.type.Dsp2025Constants.DSP_SCOPE_V_2025_1;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -60,7 +61,7 @@ class DseJsonLdNamespacesExtensionTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"MANAGEMENT_API", "DSP:2025-1", "CATALOG_FILTER_API", "CATALOG_QUERY_API"})
+    @ValueSource(strings = {"MANAGEMENT_API", DSP_SCOPE_V_2025_1, "CATALOG_FILTER_API", "CATALOG_QUERY_API"})
     void compaction_usesRegisteredPrefixes(String scope, DseJsonLdNamespacesExtension extension, ServiceExtensionContext context) {
         extension.initialize(context);
 

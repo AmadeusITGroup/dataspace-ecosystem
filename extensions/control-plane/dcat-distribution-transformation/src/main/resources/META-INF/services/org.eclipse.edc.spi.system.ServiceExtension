@@ -1,1 +1,2 @@
 org.eclipse.edc.dse.transform.DcatDistributionTransformationExtension
+org.eclipse.edc.dse.transform.DseThemeTaxonomyExtension
