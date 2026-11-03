@@ -12,14 +12,12 @@ import org.eclipse.edc.connector.controlplane.catalog.spi.Catalog;
 import org.eclipse.edc.spi.iam.ClaimToken;
 import org.eclipse.edc.spi.iam.IdentityService;
 import org.eclipse.edc.spi.monitor.Monitor;
-import org.eclipse.edc.spi.query.QuerySpec;
 import org.eclipse.edc.spi.result.AbstractResult;
 import org.eclipse.edc.spi.result.Result;
 import org.eclipse.edc.spi.system.ServiceExtensionContext;
 import org.eclipse.edc.transform.spi.TypeTransformerRegistry;
 import org.eclipse.edc.util.FederatedCatalogService;
 import org.eclipse.edc.util.IdentityServiceValidator;
-import org.eclipse.edc.web.spi.exception.InvalidRequestException;
 
 import java.util.Collection;
 

@@ -15,7 +15,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
 
-import static java.util.function.Predicate.isEqual;
 import static org.eclipse.edc.spi.persistence.StateEntityStore.hasState;
 
 public class TelemetryAgent extends AbstractStateEntityManager<TelemetryRecord, TelemetryRecordStore> {
@@ -86,7 +85,7 @@ public class TelemetryAgent extends AbstractStateEntityManager<TelemetryRecord, 
                     }
                     return hasBeenProcessed;
                 })
-                .filter(isEqual(true))
+                .filter(Boolean::booleanValue)
                 .count();
     }
 
@@ -100,7 +99,7 @@ public class TelemetryAgent extends AbstractStateEntityManager<TelemetryRecord, 
                     }
                     return processed;
                 })
-                .filter(isEqual(true))
+                .filter(Boolean::booleanValue)
                 .count();
     }
 
@@ -109,9 +108,21 @@ public class TelemetryAgent extends AbstractStateEntityManager<TelemetryRecord, 
         return store.nextNotLeased(batchSize, criteria);
     }
 
+    /**
+     * Deletes one record. Never throws: a failure is logged and reported as {@code false}, so the caller breaks the
+     * lease of this record and carries on with the rest of the batch.
+     */
     private Boolean deleteRecord(TelemetryRecord record) {
-        store.deleteById(record.getId());
-        return Boolean.TRUE;
+        try {
+            var result = store.deleteById(record.getId());
+            if (result.failed()) {
+                monitor.warning("Failed to delete telemetry record %s: %s".formatted(record.getId(), result.getFailureDetail()));
+            }
+            return result.succeeded();
+        } catch (Exception e) {
+            monitor.warning("Failed to delete telemetry record %s".formatted(record.getId()), e);
+            return Boolean.FALSE;
+        }
     }
 
     private void transitionToCompleted(TelemetryRecord record) {

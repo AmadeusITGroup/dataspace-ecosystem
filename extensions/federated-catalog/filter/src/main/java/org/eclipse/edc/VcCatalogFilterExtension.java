@@ -11,13 +11,11 @@ import org.eclipse.edc.connector.controlplane.transform.odrl.to.JsonObjectToOper
 import org.eclipse.edc.connector.controlplane.transform.odrl.to.JsonObjectToPermissionTransformer;
 import org.eclipse.edc.connector.controlplane.transform.odrl.to.JsonObjectToPolicyTransformer;
 import org.eclipse.edc.connector.controlplane.transform.odrl.to.JsonObjectToProhibitionTransformer;
+import org.eclipse.edc.dse.common.DseNamespaceConfig;
 import org.eclipse.edc.iam.did.spi.resolution.DidResolverRegistry;
 import org.eclipse.edc.jsonld.spi.JsonLd;
-import org.eclipse.edc.jsonld.spi.JsonLdKeywords;
-import org.eclipse.edc.jsonld.spi.Namespaces;
 import org.eclipse.edc.participant.spi.ParticipantIdMapper;
 import org.eclipse.edc.policy.engine.spi.PolicyEngine;
-import org.eclipse.edc.policy.model.OdrlNamespace;
 import org.eclipse.edc.protocol.dsp.catalog.transform.from.JsonObjectFromCatalogV2025Transformer;
 import org.eclipse.edc.protocol.dsp.catalog.transform.from.JsonObjectFromDataServiceTransformer;
 import org.eclipse.edc.protocol.dsp.catalog.transform.from.JsonObjectFromDatasetTransformer;
@@ -55,8 +53,9 @@ import org.eclipse.edc.web.spi.configuration.PortMappingRegistry;
 import java.net.http.HttpClient;
 import java.util.Map;
 
+import static org.eclipse.edc.jsonld.spi.Namespaces.DSPACE_CONTEXT_2025_1;
+import static org.eclipse.edc.jsonld.spi.Namespaces.EDC_DSPACE_CONTEXT;
 import static org.eclipse.edc.protocol.dsp.spi.type.Dsp2025Constants.DSP_NAMESPACE_V_2025_1;
-
 
 @Extension("VC-based Catalogue Filter Extension")
 public class VcCatalogFilterExtension implements ServiceExtension {
@@ -96,6 +95,9 @@ public class VcCatalogFilterExtension implements ServiceExtension {
     @Inject
     private JsonLd jsonLd;
 
+    @Inject
+    private DseNamespaceConfig namespaceConfig;
+
     @Configuration
     private CatalogFilterApiConfiguration apiConfiguration;
 
@@ -110,7 +112,7 @@ public class VcCatalogFilterExtension implements ServiceExtension {
     public void initialize(ServiceExtensionContext context) {
         monitor.info("Initializing VC Catalogue Filter Extension");
         HttpClient httpClient = HttpClient.newHttpClient();
-        registerNameSpaces();
+        registerContexts(jsonLd, namespaceConfig);
         registerTransformers();
         portMappingRegistry.register(new PortMapping(CATALOG_QUERY, apiConfiguration.port(), apiConfiguration.path()));
         AuthorityCatalogFilterDidResolver didresolver = new AuthorityCatalogFilterDidResolver(didResolverRegistry, authorityDid);
@@ -128,13 +130,10 @@ public class VcCatalogFilterExtension implements ServiceExtension {
         monitor.info("Registered Federated Catalog Filter");
     }
 
-    private void registerNameSpaces() {
-        jsonLd.registerNamespace(JsonLdKeywords.VOCAB, CoreConstants.EDC_NAMESPACE, CATALOG_FILTER_SCOPE);
-        jsonLd.registerNamespace(CoreConstants.EDC_PREFIX, CoreConstants.EDC_NAMESPACE, CATALOG_FILTER_SCOPE);
-        jsonLd.registerNamespace(OdrlNamespace.ODRL_PREFIX, OdrlNamespace.ODRL_SCHEMA, CATALOG_FILTER_SCOPE);
-        jsonLd.registerNamespace(Namespaces.DCAT_PREFIX, Namespaces.DCAT_SCHEMA, CATALOG_FILTER_SCOPE);
-        jsonLd.registerNamespace(Namespaces.DCT_PREFIX, Namespaces.DCT_SCHEMA, CATALOG_FILTER_SCOPE);
-        jsonLd.registerNamespace(Namespaces.DSPACE_PREFIX, Namespaces.DSPACE_2025_1_IRI, CATALOG_FILTER_SCOPE);
+    static void registerContexts(JsonLd jsonLd, DseNamespaceConfig namespaceConfig) {
+        jsonLd.registerContext(DSPACE_CONTEXT_2025_1, CATALOG_FILTER_SCOPE);
+        jsonLd.registerContext(EDC_DSPACE_CONTEXT, CATALOG_FILTER_SCOPE);
+        jsonLd.registerNamespace("dse", namespaceConfig.dseNamespace());
     }
 
     private void registerTransformers() {

@@ -9,4 +9,6 @@ dependencies {
     implementation(libs.jakarta.rsApi)
 
     testImplementation(libs.edc.core.junit)
+    // JAX-RS implementation, so that the test can use a real UriBuilder like the runtime does
+    testImplementation(libs.edc.core.jersey)
 }

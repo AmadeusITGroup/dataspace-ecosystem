@@ -29,6 +29,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import static org.eclipse.edc.FilterConstants.VC_CLAIMS;
@@ -69,10 +70,7 @@ public class FederatedCatalogService {
                 monitor.warning("Encountered null catalog entry, skipping");
                 continue;
             }
-            if (catalog.getProperties().values().stream()
-                    .filter(String.class::isInstance)
-                    .map(String.class::cast)
-                    .anyMatch(v -> v.contains(participantDid))) {
+            if (Objects.equals(catalog.getParticipantId(), participantDid)) {
                 filteredCatalogs.add(catalog);
                 continue;
             }

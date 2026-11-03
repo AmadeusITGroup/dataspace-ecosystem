@@ -6,7 +6,9 @@ import org.eclipse.dse.edc.spi.telemetryagent.TelemetryRecordPublisherFactory;
 import org.eclipse.dse.edc.spi.telemetryagent.TelemetryRecordStore;
 import org.eclipse.edc.spi.iam.TokenRepresentation;
 import org.eclipse.edc.spi.monitor.Monitor;
+import org.eclipse.edc.spi.persistence.EdcPersistenceException;
 import org.eclipse.edc.spi.query.Criterion;
+import org.eclipse.edc.spi.result.StoreResult;
 import org.eclipse.edc.spi.telemetry.Telemetry;
 import org.eclipse.edc.statemachine.Processor;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,6 +23,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -90,7 +93,7 @@ class TelemetryAgentTest {
         var record1 = TelemetryRecord.Builder.newInstance().type("test").build();
         var record2 = TelemetryRecord.Builder.newInstance().type("test").build();
         when(publisher.sendRecord(any())).thenReturn(true);
-        when(store.save(any())).thenReturn(org.eclipse.edc.spi.result.StoreResult.success());
+        when(store.save(any())).thenReturn(StoreResult.success());
 
         var result = invokeSendRecords(publisher, List.of(record1, record2));
 
@@ -103,7 +106,7 @@ class TelemetryAgentTest {
         var record2 = TelemetryRecord.Builder.newInstance().type("test").build();
         when(publisher.sendRecord(record1)).thenReturn(true);
         when(publisher.sendRecord(record2)).thenReturn(false);
-        when(store.save(any())).thenReturn(org.eclipse.edc.spi.result.StoreResult.success());
+        when(store.save(any())).thenReturn(StoreResult.success());
 
         var result = invokeSendRecords(publisher, List.of(record1, record2));
 
@@ -122,12 +125,44 @@ class TelemetryAgentTest {
         var record1 = TelemetryRecord.Builder.newInstance().id("sent-1").type("test").build();
         var record2 = TelemetryRecord.Builder.newInstance().id("sent-2").type("test").build();
         when(store.nextNotLeased(anyInt(), any(Criterion[].class))).thenReturn(List.of(record1, record2));
+        when(store.deleteById(any())).thenReturn(StoreResult.success());
 
         var processed = invokeCompletedRecordsProcessor().process();
 
         assertThat(processed).isEqualTo(2L);
         verify(store).deleteById("sent-1");
         verify(store).deleteById("sent-2");
+        verify(store, never()).breakLease(any());
+    }
+
+    @Test
+    void completedRecordsProcessor_deleteThrows_shouldBreakLeaseAndContinueWithOtherRecords() throws Exception {
+        var failing = TelemetryRecord.Builder.newInstance().id("sent-1").type("test").build();
+        var other = TelemetryRecord.Builder.newInstance().id("sent-2").type("test").build();
+        when(store.nextNotLeased(anyInt(), any(Criterion[].class))).thenReturn(List.of(failing, other));
+        when(store.deleteById("sent-1")).thenThrow(new EdcPersistenceException("db down"));
+        when(store.deleteById("sent-2")).thenReturn(StoreResult.success());
+
+        var processed = invokeCompletedRecordsProcessor().process();
+
+        assertThat(processed).isEqualTo(1L);
+        verify(store).deleteById("sent-2");
+        verify(store).breakLease(failing);
+        verify(store, never()).breakLease(other);
+        verify(monitor).warning(contains("sent-1"), any(EdcPersistenceException.class));
+    }
+
+    @Test
+    void completedRecordsProcessor_deleteFails_shouldBreakLeaseAndNotCountRecord() throws Exception {
+        var record = TelemetryRecord.Builder.newInstance().id("sent-1").type("test").build();
+        when(store.nextNotLeased(anyInt(), any(Criterion[].class))).thenReturn(List.of(record));
+        when(store.deleteById("sent-1")).thenReturn(StoreResult.notFound("not found"));
+
+        var processed = invokeCompletedRecordsProcessor().process();
+
+        assertThat(processed).isEqualTo(0L);
+        verify(store).breakLease(record);
+        verify(monitor).warning(contains("sent-1"));
     }
 
     @Test

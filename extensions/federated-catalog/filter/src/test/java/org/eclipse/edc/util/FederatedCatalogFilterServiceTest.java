@@ -7,6 +7,7 @@ import org.eclipse.dse.iam.policy.CatalogDiscoveryConstraintFunction;
 import org.eclipse.dse.iam.policy.CatalogDiscoveryPolicyContext;
 import org.eclipse.dse.iam.policy.PolicyConstants;
 import org.eclipse.edc.connector.controlplane.catalog.spi.Catalog;
+import org.eclipse.edc.connector.controlplane.catalog.spi.Dataset;
 import org.eclipse.edc.connector.controlplane.transform.odrl.to.JsonObjectToActionTransformer;
 import org.eclipse.edc.connector.controlplane.transform.odrl.to.JsonObjectToConstraintTransformer;
 import org.eclipse.edc.connector.controlplane.transform.odrl.to.JsonObjectToOperatorTransformer;
@@ -26,6 +27,7 @@ import org.eclipse.edc.policy.engine.spi.PolicyEngine;
 import org.eclipse.edc.policy.engine.spi.RuleBindingRegistry;
 import org.eclipse.edc.policy.engine.validation.RuleValidator;
 import org.eclipse.edc.policy.model.Permission;
+import org.eclipse.edc.policy.model.Policy;
 import org.eclipse.edc.protocol.dsp.catalog.transform.to.JsonObjectToDataServiceTransformer;
 import org.eclipse.edc.protocol.dsp.catalog.transform.to.JsonObjectToDatasetTransformer;
 import org.eclipse.edc.protocol.dsp.catalog.transform.to.JsonObjectToDistributionTransformer;
@@ -67,6 +69,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 public class FederatedCatalogFilterServiceTest {
@@ -173,6 +176,63 @@ public class FederatedCatalogFilterServiceTest {
                         .anyMatch(c -> c.getDatasets().stream()
                                 .anyMatch(d -> d.getId().equals("restricted-list-asset")))
         );
+    }
+
+    @Test
+    void shouldExposeRestrictedAssetsFromOwnDsp2025Catalog() throws IOException, InterruptedException {
+        var service = new FederatedCatalogService(policyEngine, monitor, didResolverRegistry, transformerRegistry,
+                jsonLd, httpClient);
+        var catalogs = service.retrieveCatalog(null);
+        var ownerDid = "did:web:consumer-identityhub%3A8383:api:did";
+        var tokens = ClaimToken.Builder.newInstance().claim("vc", List.of()).build();
+
+        var result = service.filterCatalog(catalogs, service.createContext(tokens, ownerDid), ownerDid);
+
+        assertTrue(result.stream()
+                .flatMap(catalog -> catalog.getDatasets().stream())
+                .anyMatch(dataset -> dataset.getId().equals("restricted-travel-asset")));
+    }
+
+    @Test
+    void shouldExposeOwnCatalogWithoutEvaluatingPolicies() {
+        var rejectingPolicyEngine = mock(PolicyEngine.class);
+        var service = new FederatedCatalogService(rejectingPolicyEngine, monitor, didResolverRegistry,
+                transformerRegistry, jsonLd, httpClient);
+        var restrictedDataset = Dataset.Builder.newInstance()
+                .id("restricted-asset")
+                .offer("offer-id", Policy.Builder.newInstance().build())
+                .build();
+        var ownCatalog = Catalog.Builder.newInstance()
+                .id("catalog-id")
+                .participantId(PARTICIPANT_DID)
+                .dataset(restrictedDataset)
+                .build();
+
+        var result = service.filterCatalog(List.of(ownCatalog), mock(CatalogDiscoveryPolicyContext.class), PARTICIPANT_DID);
+
+        assertTrue(result.iterator().next().getDatasets().contains(restrictedDataset));
+        verifyNoInteractions(rejectingPolicyEngine);
+    }
+
+    @Test
+    void shouldEvaluatePoliciesForAnotherParticipantsCatalog() {
+        var rejectingPolicyEngine = mock(PolicyEngine.class);
+        when(rejectingPolicyEngine.evaluate(any(), any())).thenReturn(Result.failure("missing credential"));
+        var service = new FederatedCatalogService(rejectingPolicyEngine, monitor, didResolverRegistry,
+                transformerRegistry, jsonLd, httpClient);
+        var restrictedDataset = Dataset.Builder.newInstance()
+                .id("restricted-asset")
+                .offer("offer-id", Policy.Builder.newInstance().build())
+                .build();
+        var foreignCatalog = Catalog.Builder.newInstance()
+                .id("catalog-id")
+                .participantId("did:web:another-participant")
+                .dataset(restrictedDataset)
+                .build();
+
+        var result = service.filterCatalog(List.of(foreignCatalog), mock(CatalogDiscoveryPolicyContext.class), PARTICIPANT_DID);
+
+        assertTrue(result.iterator().next().getDatasets().isEmpty());
     }
 
     private static VerifiableCredential createVc(String type, Map<String, Object> claims) {

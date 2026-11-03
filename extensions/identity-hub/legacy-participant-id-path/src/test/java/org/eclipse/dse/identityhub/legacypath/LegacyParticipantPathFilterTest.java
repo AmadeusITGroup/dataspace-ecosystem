@@ -1,6 +1,7 @@
 package org.eclipse.dse.identityhub.legacypath;
 
 import jakarta.ws.rs.container.ContainerRequestContext;
+import jakarta.ws.rs.core.UriBuilder;
 import jakarta.ws.rs.core.UriInfo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,6 +25,8 @@ class LegacyParticipantPathFilterTest {
     private static final URI BASE_URI = URI.create("http://identityhub:8181/api/identity/");
     private static final String DID = "did:web:consumer-identityhub%3A8383:api:did";
     private static final String B64 = Base64.getUrlEncoder().withoutPadding().encodeToString(DID.getBytes(StandardCharsets.UTF_8));
+    // the DID as one percent-encoded path segment: ':' -> %3A and its literal '%' -> %25
+    private static final String ENCODED_DID = "did%3Aweb%3Aconsumer-identityhub%253A8383%3Aapi%3Adid";
 
     private final ContainerRequestContext requestContext = mock();
     private final UriInfo uriInfo = mock();
@@ -37,20 +40,21 @@ class LegacyParticipantPathFilterTest {
 
     @Test
     void shouldRewriteLegacyPathAndKeepQuery() {
-        when(uriInfo.getRequestUri()).thenReturn(URI.create("http://identityhub:8181/api/identity/v1alpha/participants/" + B64 + "/keypairs?active=true"));
+        givenRequestUri("http://identityhub:8181/api/identity/v1alpha/participants/" + B64 + "/keypairs?active=true");
 
         filter.filter(requestContext);
 
         var newUri = ArgumentCaptor.forClass(URI.class);
         verify(requestContext).setRequestUri(eq(BASE_URI), newUri.capture());
-        assertThat(newUri.getValue().getRawPath()).startsWith("/api/identity/v1beta/participants/did%3Aweb%3A").endsWith("/keypairs");
+        assertThat(newUri.getValue().getRawPath()).isEqualTo("/api/identity/v1beta/participants/" + ENCODED_DID + "/keypairs");
         assertThat(newUri.getValue().getRawQuery()).isEqualTo("active=true");
+        assertThat(newUri.getValue().getScheme()).isEqualTo("http");
         assertThat(newUri.getValue().getRawAuthority()).isEqualTo("identityhub:8181");
     }
 
     @Test
     void shouldRewriteWithoutQuery() {
-        when(uriInfo.getRequestUri()).thenReturn(URI.create("http://identityhub:8181/api/identity/v1alpha/participants/user/keypairs"));
+        givenRequestUri("http://identityhub:8181/api/identity/v1alpha/participants/user/keypairs");
 
         filter.filter(requestContext);
 
@@ -61,10 +65,16 @@ class LegacyParticipantPathFilterTest {
 
     @Test
     void shouldLeaveCurrentPathUntouched() {
-        when(uriInfo.getRequestUri()).thenReturn(URI.create("http://identityhub:8181/api/identity/v1beta/participants/user/keypairs"));
+        givenRequestUri("http://identityhub:8181/api/identity/v1beta/participants/user/keypairs");
 
         filter.filter(requestContext);
 
         verify(requestContext, never()).setRequestUri(any(), any());
+    }
+
+    private void givenRequestUri(String uri) {
+        var requestUri = URI.create(uri);
+        when(uriInfo.getRequestUri()).thenReturn(requestUri);
+        when(uriInfo.getRequestUriBuilder()).thenAnswer(i -> UriBuilder.fromUri(requestUri));
     }
 }

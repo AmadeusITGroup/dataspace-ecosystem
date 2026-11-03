@@ -21,9 +21,21 @@ import java.util.regex.Pattern;
  */
 public final class LegacyParticipantPathRewriter {
 
-    // the participant id is optional, so that the collection URL (create / list participants) is mapped as well
-    private static final Pattern PARTICIPANT_PATH =
-            Pattern.compile("^(?<prefix>.*?/)(?<version>v1alpha|v1beta|v1)(?<participants>/participants)(?:/(?<id>[^/?#]+))?(?<rest>(?:/.*)?)$");
+    /*
+     * Participant-scoped path, split into named groups. Example:
+     *
+     *   /api/identity/v1alpha/participants/ZGlkOndlYjpjb25zdW1lcg/keypairs
+     *   |-- prefix --||version||participants||-------- id --------||-rest--|
+     *
+     * The id is optional, so that the collection URL (create / list participants) is mapped as well.
+     */
+    private static final Pattern PARTICIPANT_PATH = Pattern.compile("^" +
+            "(?<prefix>.*?/)" +                      // everything up to the version, e.g. "/api/identity/"
+            "(?<version>v1alpha|v1beta|v1)" +        // API version segment
+            "(?<participants>/participants)" +
+            "(?:/(?<id>[^/?#]+))?" +                 // optional participant id: one raw path segment
+            "(?<rest>(?:/.*)?)" +                    // optional sub-resource, e.g. "/keypairs"
+            "$");
     private static final Pattern BASE64_URL = Pattern.compile("^(?<data>[A-Za-z0-9_-]+)(?<padding>={0,2})$");
     private static final Pattern ENCODED_PADDING = Pattern.compile("%3[Dd]");
     private static final String DID_PREFIX = "did:";
