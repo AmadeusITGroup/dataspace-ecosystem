@@ -689,6 +689,10 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
         private static final String SKOS_PREF_LABEL = "skos:prefLabel";
         private static final String SKOS_NOTATION = "skos:notation";
         private static final String SKOS_DEFINITION = "skos:definition";
+        // Same terms as full IRIs, for the federated catalog's expanded JSON-LD.
+        private static final String DCAT_THEME_TAXONOMY_IRI = "http://www.w3.org/ns/dcat#themeTaxonomy";
+        private static final String SKOS_HAS_TOP_CONCEPT_IRI = "http://www.w3.org/2004/02/skos/core#hasTopConcept";
+        private static final String SKOS_NARROWER_IRI = "http://www.w3.org/2004/02/skos/core#narrower";
 
         @Test
         void participantCatalog_includesUsedCategoriesWithTheirParents() {
@@ -761,6 +765,30 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
                 return ((JsonString) single).getString();
             }
             return single.asJsonObject().getString(VALUE, null);
+        }
+
+        @Test
+        void federatedCatalog_keepsTheProviderThemeTaxonomy() {
+            // The federated catalog crawls the provider's catalog, stores it and serves it again
+            // from /v1alpha/catalog/query. The taxonomy must come out exactly as the provider
+            // built it. The query returns expanded JSON-LD, so the properties use full IRIs.
+            // The crawler may have stored the provider catalog before the assets with category
+            // ids were created, so keep asking until a later crawl brings the full tree.
+            await().atMost(TEST_TIMEOUT).untilAsserted(() -> {
+                var catalog = queryParticipantCatalog(AUTHORITY, PROVIDER.did(),
+                        AUTHORITY.catalogUrl() + "/v1alpha/catalog/query");
+
+                assertThat(catalog.containsKey(DCAT_THEME_TAXONOMY_IRI)).as("cached catalog carries dcat:themeTaxonomy").isTrue();
+                var taxonomy = asArray(catalog.get(DCAT_THEME_TAXONOMY_IRI)).getJsonObject(0);
+                assertThat(taxonomy.getString(ID, null)).isEqualTo("urn:dse:taxonomy");
+
+                var topConcepts = asArray(taxonomy.get(SKOS_HAS_TOP_CONCEPT_IRI));
+                assertThat(ids(topConcepts)).containsExactly(CATEGORY_ORDER);
+
+                var orderChildren = asArray(topConcepts.getJsonObject(0).get(SKOS_NARROWER_IRI));
+                assertThat(ids(orderChildren)).containsExactly(CATEGORY_ORDER_MANAGEMENT_SYSTEM);
+                assertThat(orderChildren.getJsonObject(0).containsKey(SKOS_NARROWER_IRI)).isFalse();
+            });
         }
 
         private static List<String> ids(JsonArray concepts) {
