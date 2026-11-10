@@ -9,9 +9,7 @@ metadata:
   namespace: {{ .Release.Namespace | default "default" | quote }}
   labels:
     {{- include "dse.labels" . | nindent 4 }}
-    {{- with .Values.issuerservice.service.labels }}
-      {{- toYaml . | nindent 4 }}
-    {{- end }}
+    {{- include "dse.issuerservice.extraLabels" (dict "labels" .Values.issuerservice.service.labels "context" $) | nindent 4 }}
 spec:
   type: {{ .Values.issuerservice.service.type }}
   ports:

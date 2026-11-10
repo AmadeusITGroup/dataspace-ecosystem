@@ -51,7 +51,7 @@ helm.sh/chart: {{ include "dse.chart" . }}
 app.kubernetes.io/version: {{ .Values.federatedcatalogfilter.image.tag | quote }}
 {{- end }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
-app.kubernetes.io/component: edc-federatedcatalogfilter
+app.kubernetes.io/component: {{ include "dse.federatedcatalogfilter.component" . }}
 app.kubernetes.io/part-of: edc
 {{- end }}
 
@@ -323,4 +323,23 @@ active for this component").
 */}}
 {{- define "dse.federatedcatalogfilter.vaultAzureEnabled" -}}
 {{- if or .Values.federatedcatalogfilter.vault.azure.name (and .Values.global.vault.azure.name (or (eq .Values.global.vaultProvider "azure") (eq .Values.global.vaultProvider "azurevault"))) -}}true{{- end -}}
+{{- end }}
+
+{{/*
+federatedcatalogfilter - app.kubernetes.io/component value.
+*/}}
+{{- define "dse.federatedcatalogfilter.component" -}}
+edc-federatedcatalogfilter
+{{- end }}
+
+{{/*
+federatedcatalogfilter - extra labels for the pod template or the Service: the given labels plus
+app.kubernetes.io/component. Merged as a map, so a consumer that already sets
+app.kubernetes.io/component keeps its value and no key is written twice. Never
+used in selectorLabels: Deployment selectors are immutable.
+Usage: include "dse.federatedcatalogfilter.extraLabels" (dict "labels" .Values.federatedcatalogfilter.podLabels "context" $)
+*/}}
+{{- define "dse.federatedcatalogfilter.extraLabels" -}}
+{{- $labels := merge (dict) (.labels | default dict) (dict "app.kubernetes.io/component" (include "dse.federatedcatalogfilter.component" .context)) -}}
+{{- toYaml $labels -}}
 {{- end }}

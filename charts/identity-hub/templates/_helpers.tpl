@@ -51,8 +51,28 @@ helm.sh/chart: {{ include "dse.chart" . }}
 app.kubernetes.io/version: {{ .Values.identityhub.image.tag | quote }}
 {{- end }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
-app.kubernetes.io/component: edc-identityhub
+app.kubernetes.io/component: {{ include "dse.identityhub.component" . }}
 app.kubernetes.io/part-of: edc
+{{- end }}
+
+{{/*
+Identity Hub - app.kubernetes.io/component value.
+*/}}
+{{- define "dse.identityhub.component" -}}
+edc-identityhub
+{{- end }}
+
+{{/*
+Identity Hub - extra labels for the pod template or the Service: the given
+labels plus app.kubernetes.io/component. Merged as a map, so a consumer that
+already sets app.kubernetes.io/component keeps its value and no key is
+written twice. Never used in selectorLabels: Deployment selectors are
+immutable.
+Usage: include "dse.identityhub.extraLabels" (dict "labels" .Values.identityhub.podLabels "context" $)
+*/}}
+{{- define "dse.identityhub.extraLabels" -}}
+{{- $labels := merge (dict) (.labels | default dict) (dict "app.kubernetes.io/component" (include "dse.identityhub.component" .context)) -}}
+{{- toYaml $labels -}}
 {{- end }}
 
 {{/*

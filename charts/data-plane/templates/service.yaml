@@ -9,9 +9,7 @@ metadata:
   namespace: {{ .Release.Namespace | default "default" | quote }}
   labels:
     {{- include "dse.labels" . | nindent 4 }}
-    {{- with .Values.dataplane.service.labels }}
-      {{- toYaml . | nindent 4 }}
-    {{- end }}
+    {{- include "dse.dataplane.extraLabels" (dict "labels" .Values.dataplane.service.labels "context" $) | nindent 4 }}
 spec:
   type: {{ .Values.dataplane.service.type }}
   ports:

@@ -9,9 +9,7 @@ metadata:
   namespace: {{ .Release.Namespace | default "default" | quote }}
   labels:
     {{- include "dse.labels" . | nindent 4 }}
-    {{- with .Values.federatedcatalogfilter.service.labels }}
-      {{- toYaml . | nindent 4 }}
-    {{- end }}
+    {{- include "dse.federatedcatalogfilter.extraLabels" (dict "labels" .Values.federatedcatalogfilter.service.labels "context" $) | nindent 4 }}
 spec:
   type: {{ .Values.federatedcatalogfilter.service.type }}
   ports:

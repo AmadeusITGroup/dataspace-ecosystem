@@ -20,9 +20,7 @@ spec:
       {{- end}}
       labels:
         {{- include "dse.telemetrycsvmanager.selectorLabels" . | nindent 8}}
-          {{- with .Values.telemetrycsvmanager.podLabels}}
-          {{- toYaml . | nindent 8}}
-          {{- end}}
+        {{- include "dse.telemetrycsvmanager.extraLabels" (dict "labels" .Values.telemetrycsvmanager.podLabels "context" $) | nindent 8 }}
     spec:
       {{- with .Values.imagePullSecrets}}
       imagePullSecrets:
@@ -123,6 +121,14 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.telemetrycsvmanager.internalTls.keystoreSecretName | required ".Values.telemetrycsvmanager.internalTls.keystoreSecretName is required when internalTls.enabled" | quote }}
                   key: {{ .Values.telemetrycsvmanager.internalTls.keystoreSecretPasswordKey | quote }}
+            {{- with .Values.telemetrycsvmanager.internalTls.keystorePath }}
+            - name: "EDC_WEB_HTTPS_KEYSTORE_PATH"
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.telemetrycsvmanager.internalTls.keystoreType }}
+            - name: "EDC_WEB_HTTPS_KEYSTORE_TYPE"
+              value: {{ . | quote }}
+            {{- end }}
           {{- end }}
 
             ##############

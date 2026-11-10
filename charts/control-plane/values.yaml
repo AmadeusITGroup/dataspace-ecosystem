@@ -318,6 +318,13 @@ controlplane:
     keystoreSecretName: ""
     # -- Key within internalTls.keystoreSecretName holding the keystore/keymanager password
     keystoreSecretPasswordKey: "password"
+    # -- Path (inside the pod) to the keystore holding the pod-to-pod TLS certificate, set as
+    # EDC_WEB_HTTPS_KEYSTORE_PATH. The internalTls.secretName secret is mounted at /internal-certs
+    # (e.g. "/internal-certs/keystore.p12" for a cert-manager PKCS12 keystore). Empty: not set by
+    # the chart, so edc.web.https.keystore.path in `config` applies.
+    keystorePath: ""
+    # -- Keystore type (e.g. "PKCS12"), set as EDC_WEB_HTTPS_KEYSTORE_TYPE. Empty: not set by the chart.
+    keystoreType: ""
     # -- Path (inside the pod) to the PKCS12/JKS truststore containing the CA(s) trusted to
     # verify client certificates. Only used when mtls.enabled is true.
     truststorePath: "/shared/cacerts"

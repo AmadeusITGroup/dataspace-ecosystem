@@ -51,7 +51,7 @@ helm.sh/chart: {{ include "dse.chart" . }}
 app.kubernetes.io/version: {{ .Values.telemetrycsvmanager.image.tag | quote }}
 {{- end }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
-app.kubernetes.io/component: edc-telemetrycsvmanager
+app.kubernetes.io/component: {{ include "dse.telemetrycsvmanager.component" . }}
 app.kubernetes.io/part-of: edc
 {{- end }}
 
@@ -128,4 +128,22 @@ false
 {{- else -}}
 {{- printf "%s-aes" (required "global.participantName is required when telemetrycsvmanager.keys.encryption.aesKeyAlias is not set" .Values.global.participantName) -}}
 {{- end -}}
+{{- end }}
+{{/*
+telemetrycsvmanager - app.kubernetes.io/component value.
+*/}}
+{{- define "dse.telemetrycsvmanager.component" -}}
+edc-telemetrycsvmanager
+{{- end }}
+
+{{/*
+telemetrycsvmanager - extra labels for the pod template or the Service: the given labels plus
+app.kubernetes.io/component. Merged as a map, so a consumer that already sets
+app.kubernetes.io/component keeps its value and no key is written twice. Never
+used in selectorLabels: Deployment selectors are immutable.
+Usage: include "dse.telemetrycsvmanager.extraLabels" (dict "labels" .Values.telemetrycsvmanager.podLabels "context" $)
+*/}}
+{{- define "dse.telemetrycsvmanager.extraLabels" -}}
+{{- $labels := merge (dict) (.labels | default dict) (dict "app.kubernetes.io/component" (include "dse.telemetrycsvmanager.component" .context)) -}}
+{{- toYaml $labels -}}
 {{- end }}

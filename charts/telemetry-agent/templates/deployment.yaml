@@ -20,9 +20,7 @@ spec:
       {{- end }}
       labels:
         {{- include "dse.telemetryagent.selectorLabels" . | nindent 8 }}
-        {{- with .Values.telemetryagent.podLabels }}
-        {{- toYaml . | nindent 8 }}
-        {{- end }}
+        {{- include "dse.telemetryagent.extraLabels" (dict "labels" .Values.telemetryagent.podLabels "context" $) | nindent 8 }}
     spec:
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
@@ -118,6 +116,14 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.telemetryagent.internalTls.keystoreSecretName | required ".Values.telemetryagent.internalTls.keystoreSecretName is required when internalTls.enabled" | quote }}
                   key: {{ .Values.telemetryagent.internalTls.keystoreSecretPasswordKey | quote }}
+            {{- with .Values.telemetryagent.internalTls.keystorePath }}
+            - name: "EDC_WEB_HTTPS_KEYSTORE_PATH"
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.telemetryagent.internalTls.keystoreType }}
+            - name: "EDC_WEB_HTTPS_KEYSTORE_TYPE"
+              value: {{ . | quote }}
+            {{- end }}
           {{- end }}
             #####################
             ## HASHICORP VAULT ##

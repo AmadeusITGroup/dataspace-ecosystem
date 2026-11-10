@@ -6,7 +6,7 @@
   "properties": {
     "global": {
       "type": "object",
-      "description": "Values shared across every subchart. This is the primary values surface an external Argo CD values repository needs to supply per participant/environment.",
+      "description": "Values shared across every subchart. This is the primary values surface an external Argo CD values repository needs to supply per participant/environment. Keys DSE does not define are allowed, because Helm passes the top-level `global` to every chart in a consumer's umbrella (e.g. `applicationName` or `infra.*` read by other charts). The keys DSE defines are still validated.",
       "properties": {
         "participantName": {
           "type": "string",
@@ -215,7 +215,7 @@
           "additionalProperties": false
         }
       },
-      "additionalProperties": false
+      "additionalProperties": true
     }
   },
   "required": [

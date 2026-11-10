@@ -51,7 +51,7 @@ helm.sh/chart: {{ include "dse.chart" . }}
 app.kubernetes.io/version: {{ .Values.telemetrystorage.image.tag | quote }}
 {{- end }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
-app.kubernetes.io/component: edc-telemetrystorage
+app.kubernetes.io/component: {{ include "dse.telemetrystorage.component" . }}
 app.kubernetes.io/part-of: edc
 {{- end }}
 
@@ -128,4 +128,22 @@ false
 {{- else -}}
 {{- printf "%s-aes" (required "global.participantName is required when telemetrystorage.keys.encryption.aesKeyAlias is not set" .Values.global.participantName) -}}
 {{- end -}}
+{{- end }}
+{{/*
+telemetrystorage - app.kubernetes.io/component value.
+*/}}
+{{- define "dse.telemetrystorage.component" -}}
+edc-telemetrystorage
+{{- end }}
+
+{{/*
+telemetrystorage - extra labels for the pod template or the Service: the given labels plus
+app.kubernetes.io/component. Merged as a map, so a consumer that already sets
+app.kubernetes.io/component keeps its value and no key is written twice. Never
+used in selectorLabels: Deployment selectors are immutable.
+Usage: include "dse.telemetrystorage.extraLabels" (dict "labels" .Values.telemetrystorage.podLabels "context" $)
+*/}}
+{{- define "dse.telemetrystorage.extraLabels" -}}
+{{- $labels := merge (dict) (.labels | default dict) (dict "app.kubernetes.io/component" (include "dse.telemetrystorage.component" .context)) -}}
+{{- toYaml $labels -}}
 {{- end }}
