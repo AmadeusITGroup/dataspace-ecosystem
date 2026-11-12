@@ -20,7 +20,9 @@ spec:
       {{- end }}
       labels:
         {{- include "dse.telemetryagent.selectorLabels" . | nindent 8 }}
-        {{- include "dse.telemetryagent.extraLabels" (dict "labels" .Values.telemetryagent.podLabels "context" $) | nindent 8 }}
+        {{- with .Values.telemetryagent.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
     spec:
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
@@ -116,14 +118,6 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.telemetryagent.internalTls.keystoreSecretName | required ".Values.telemetryagent.internalTls.keystoreSecretName is required when internalTls.enabled" | quote }}
                   key: {{ .Values.telemetryagent.internalTls.keystoreSecretPasswordKey | quote }}
-            {{- with .Values.telemetryagent.internalTls.keystorePath }}
-            - name: "EDC_WEB_HTTPS_KEYSTORE_PATH"
-              value: {{ . | quote }}
-            {{- end }}
-            {{- with .Values.telemetryagent.internalTls.keystoreType }}
-            - name: "EDC_WEB_HTTPS_KEYSTORE_TYPE"
-              value: {{ . | quote }}
-            {{- end }}
           {{- end }}
             #####################
             ## HASHICORP VAULT ##
@@ -247,6 +241,8 @@ spec:
             #######
             # DID #
             #######
+            - name: "EDC_IAM_ISSUER_ID"
+              value: {{ include "dse.telemetryagent.did.web.url" . | quote }}
             - name: "EDC_IDENTITY_DID_URL"
               value: {{ include "dse.telemetryagent.did.web.url" . | quote }}
             - name: "EDC_IAM_DID_WEB_USE_HTTPS"
@@ -270,11 +266,6 @@ spec:
             # participant-context creation fails.
             - name: "EDC_ENCRYPTION_AES_KEY_ALIAS"
               value: {{ include "dse.telemetryagent.keys.encryption.aesKeyAlias" . | quote }}
-            # -- EDC 0.18 removed the implicit "aes" default (eclipse-edc/Connector#5781): without it participant
-            #    context config (persisted in edc_participant_context_config) is stored unencrypted.
-            #    Only set on runtimes that ship the aes-encryption module (IdentityHub BOMs), otherwise boot fails.
-            - name: "EDC_PARTICIPANTS_CONFIG_ENCRYPTION_ALGORITHM"
-              value: "aes"
 
             #######
             # API #

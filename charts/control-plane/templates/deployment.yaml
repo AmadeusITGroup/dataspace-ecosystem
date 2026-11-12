@@ -5,10 +5,6 @@ metadata:
   name: {{include "dse.fullname" .}}
   labels:
     {{- include "dse.controlplane.labels" . | nindent 4}}
-  {{- with .Values.controlplane.deploymentAnnotations}}
-  annotations:
-    {{- tpl (toYaml .) $ | nindent 4}}
-  {{- end}}
 spec:
   {{- if not .Values.controlplane.autoscaling.enabled}}
   replicas: {{.Values.controlplane.replicaCount}}
@@ -24,7 +20,9 @@ spec:
       {{- end}}
       labels:
         {{- include "dse.controlplane.selectorLabels" . | nindent 8}}
-        {{- include "dse.controlplane.extraLabels" (dict "labels" .Values.controlplane.podLabels "context" $) | nindent 8}}
+          {{- with .Values.controlplane.podLabels}}
+          {{- toYaml . | nindent 8}}
+          {{- end}}
     spec:
       {{- with .Values.imagePullSecrets}}
       imagePullSecrets:
@@ -131,33 +129,6 @@ spec:
               secretKeyRef:
                 name: {{ .Values.controlplane.internalTls.keystoreSecretName | required ".Values.controlplane.internalTls.keystoreSecretName is required when internalTls.enabled" | quote }}
                 key: {{ .Values.controlplane.internalTls.keystoreSecretPasswordKey | quote }}
-          {{- with .Values.controlplane.internalTls.keystorePath }}
-          - name: "EDC_WEB_HTTPS_KEYSTORE_PATH"
-            value: {{ . | quote }}
-          {{- end }}
-          {{- with .Values.controlplane.internalTls.keystoreType }}
-          - name: "EDC_WEB_HTTPS_KEYSTORE_TYPE"
-            value: {{ . | quote }}
-          {{- end }}
-        {{- end }}
-        {{- if .Values.controlplane.internalTls.mtls.enabled }}
-          - name: "EDC_WEB_HTTPS_TRUSTSTORE_PATH"
-            value: {{ .Values.controlplane.internalTls.truststorePath | quote }}
-          - name: "EDC_WEB_HTTPS_TRUSTSTORE_TYPE"
-            value: {{ .Values.controlplane.internalTls.truststoreType | quote }}
-          - name: "EDC_WEB_HTTPS_TRUSTSTORE_PASSWORD"
-            valueFrom:
-              secretKeyRef:
-                name: {{ .Values.controlplane.internalTls.truststoreSecretName | required ".Values.controlplane.internalTls.truststoreSecretName is required when internalTls.mtls.enabled" | quote }}
-                key: {{ .Values.controlplane.internalTls.truststoreSecretPasswordKey | quote }}
-          - name: "EDC_WEB_HTTPS_MTLS_CONTEXTS"
-            value: {{ .Values.controlplane.internalTls.mtls.contexts | quote }}
-          - name: "EDC_WEB_HTTPS_MTLS_CLIENT_AUTH_REQUIRED"
-            value: {{ .Values.controlplane.internalTls.mtls.clientAuthRequired | quote }}
-          - name: "EDC_WEB_HTTPS_MTLS_CLIENT_SAN_ALLOWLIST"
-            value: {{ .Values.controlplane.internalTls.mtls.allowedClientSans | quote }}
-          - name: "EDC_WEB_HTTPS_MTLS_ALLOW_ANY_TRUSTED_CLIENT"
-            value: {{ .Values.controlplane.internalTls.mtls.allowAnyTrustedClient | quote }}
         {{- end }}
 
           #######
@@ -266,6 +237,8 @@ spec:
           #######
           # DID #
           #######
+          - name: "EDC_IAM_ISSUER_ID"
+            value: {{ include "dse.controlplane.identityHubDidWebUrl" . | quote }}
           - name: "EDC_IDENTITY_DID_URL"
             value: {{ include "dse.controlplane.identityHubDidWebUrl" . | quote }}
           - name: "EDC_IAM_DID_WEB_USE_HTTPS"
@@ -340,9 +313,6 @@ spec:
             - name: shared-volume
               readOnly: true
               mountPath: /shared
-{{- with .Values.controlplane.volumeMounts }}
-            {{- tpl (toYaml .) $ | nindent 12 }}
-{{- end }}
 {{- if .Values.controlplane.internalTls.enabled }}
             - name: internal-tls-volume
               mountPath: /internal-certs
@@ -365,9 +335,6 @@ spec:
                 path: config.properties
         - name: shared-volume
           emptyDir: { }
-{{- with .Values.controlplane.volumes }}
-        {{- tpl (toYaml .) $ | nindent 8 }}
-{{- end }}
 {{- if .Values.controlplane.internalTls.enabled }}
         - name: internal-tls-volume
           secret:

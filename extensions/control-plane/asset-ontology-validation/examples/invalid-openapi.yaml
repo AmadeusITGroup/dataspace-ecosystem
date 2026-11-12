@@ -1,0 +1,32 @@
+openapi: 3.0.3
+info:
+  title: DXP acknowledgement API - invalid example
+  version: 1.0.0
+paths:
+  /ack:
+    get:
+      operationId: getAcknowledgement
+      responses:
+        '200':
+          description: An acknowledgement with a field outside the IATA ontology
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ack'
+              example:
+                statusCode: OK
+                debugCode: DEMO-001
+components:
+  schemas:
+    Ack:
+      type: object
+      x-dxp-ontology-class: http://www.iata.org/ontology#Ack
+      required:
+        - statusCode
+      properties:
+        statusCode:
+          $ref: '#/components/schemas/Code'
+        debugCode:
+          type: string
+    Code:
+      type: string

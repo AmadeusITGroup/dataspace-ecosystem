@@ -3,8 +3,8 @@ plugins {
     alias(libs.plugins.shadow)
 }
 
-val distTar = tasks.named("distTar")
-val distZip = tasks.named("distZip")
+var distTar = tasks.getByName("distTar")
+var distZip = tasks.getByName("distZip")
 
 dependencies {
     runtimeOnly(project(":launchers:telemetry-service:telemetry-service-base"))

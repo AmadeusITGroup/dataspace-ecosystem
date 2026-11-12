@@ -4,23 +4,21 @@ The Identity API provides endpoints for managing decentralized identities, verif
 
 ## Base URLs
 
-Old `v1alpha` URLs are still accepted via the legacy-participant-id-path rewrite (temporary).
-
 ### Identity Hub API
 ```
-{{protocol}}://{{apiGatewayHost}}/ih/identity/v1beta
+{{protocol}}://{{apiGatewayHost}}/ih/identity/v1alpha
 ```
 
 ### Issuer Service API
 
 **Setup Operations (attestations, credential definitions, holders):**
 ```
-{{protocol}}://{{apiGatewayHost}}/authority/is/issueradmin/v1beta
+{{protocol}}://{{apiGatewayHost}}/authority/is/issueradmin/v1alpha
 ```
 
 **Runtime Operations (attestation-membership):**
 ```
-{{protocol}}://{{apiGatewayHost}}/{{authorityId}}/is/issueradmin/v1beta
+{{protocol}}://{{apiGatewayHost}}/{{authorityId}}/is/issueradmin/v1alpha
 ```
 
 ## Credential Management
@@ -30,7 +28,7 @@ Old `v1alpha` URLs are still accepted via the legacy-participant-id-path rewrite
 Participants can request verifiable credentials from issuers:
 
 ```http
-POST {{protocol}}://{{apiGatewayHost}}/ih/identity/v1beta/participants/{{participantDID}}/credentials/request
+POST {{protocol}}://{{apiGatewayHost}}/ih/identity/v1alpha/participants/{{participantDID}}/credentials/request
 Content-Type: application/json
 participant: {{participant}}
 ```
@@ -62,7 +60,7 @@ Where:
 Define attestation templates for credential issuance:
 
 ```http
-POST /authority/is/issueradmin/v1beta/participants/{{authorityDID}}/attestations
+POST /authority/is/issueradmin/v1alpha/participants/{{authorityDID}}/attestations
 Content-Type: application/json
 ```
 
@@ -84,7 +82,7 @@ Content-Type: application/json
 Define credential types and their structure:
 
 ```http
-POST /authority/is/issueradmin/v1beta/participants/{{authorityDID}}/credentialdefinitions
+POST /authority/is/issueradmin/v1alpha/participants/{{authorityDID}}/credentialdefinitions
 Content-Type: application/json
 ```
 
@@ -130,7 +128,7 @@ Content-Type: application/json
 Register a new credential holder:
 
 ```http
-POST /authority/is/issueradmin/v1beta/participants/{{authorityDID}}/holders
+POST /authority/is/issueradmin/v1alpha/participants/{{authorityDID}}/holders
 Content-Type: application/json
 ```
 
@@ -149,7 +147,7 @@ Content-Type: application/json
 Attest to a participant's membership credentials:
 
 ```http
-POST /{{authorityId}}/is/issueradmin/v1beta/participants/{{authorityDID}}/attestation-membership
+POST /{{authorityId}}/is/issueradmin/v1alpha/participants/{{authorityDID}}/attestation-membership
 Content-Type: application/json
 ```
 

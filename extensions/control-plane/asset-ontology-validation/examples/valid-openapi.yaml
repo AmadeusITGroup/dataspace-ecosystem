@@ -1,0 +1,34 @@
+openapi: 3.0.3
+info:
+  title: DXP acknowledgement API - valid example
+  version: 1.0.0
+paths:
+  /ack:
+    get:
+      operationId: getAcknowledgement
+      responses:
+        '200':
+          description: A valid IATA acknowledgement
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ack'
+              example:
+                statusCode: OK
+                statusMessageText: Request accepted
+components:
+  schemas:
+    Ack:
+      type: object
+      x-dxp-ontology-class: http://www.iata.org/ontology#Ack
+      required:
+        - statusCode
+      properties:
+        statusCode:
+          $ref: '#/components/schemas/Code'
+        statusMessageText:
+          $ref: '#/components/schemas/Text'
+    Code:
+      type: string
+    Text:
+      type: string

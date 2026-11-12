@@ -20,7 +20,9 @@ spec:
       {{- end }}
       labels:
         {{- include "dse.dataplane.selectorLabels" . | nindent 8 }}
-        {{- include "dse.dataplane.extraLabels" (dict "labels" .Values.dataplane.podLabels "context" $) | nindent 8 }}
+        {{- with .Values.dataplane.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
     spec:
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
@@ -123,14 +125,6 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.dataplane.internalTls.keystoreSecretName | required ".Values.dataplane.internalTls.keystoreSecretName is required when internalTls.enabled" | quote }}
                   key: {{ .Values.dataplane.internalTls.keystoreSecretPasswordKey | quote }}
-            {{- with .Values.dataplane.internalTls.keystorePath }}
-            - name: "EDC_WEB_HTTPS_KEYSTORE_PATH"
-              value: {{ . | quote }}
-            {{- end }}
-            {{- with .Values.dataplane.internalTls.keystoreType }}
-            - name: "EDC_WEB_HTTPS_KEYSTORE_TYPE"
-              value: {{ . | quote }}
-            {{- end }}
           {{- end }}
 
           #################

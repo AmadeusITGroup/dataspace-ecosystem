@@ -51,7 +51,7 @@ helm.sh/chart: {{ include "dse.chart" . }}
 app.kubernetes.io/version: {{ .Values.telemetryservice.image.tag | quote }}
 {{- end }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
-app.kubernetes.io/component: {{ include "dse.telemetryservice.component" . }}
+app.kubernetes.io/component: edc-telemetryservice
 app.kubernetes.io/part-of: edc
 {{- end }}
 
@@ -299,23 +299,4 @@ active for this component").
 */}}
 {{- define "dse.telemetryservice.vaultAzureEnabled" -}}
 {{- if or .Values.telemetryservice.vault.azure.name (and .Values.global.vault.azure.name (or (eq .Values.global.vaultProvider "azure") (eq .Values.global.vaultProvider "azurevault"))) -}}true{{- end -}}
-{{- end }}
-
-{{/*
-telemetryservice - app.kubernetes.io/component value.
-*/}}
-{{- define "dse.telemetryservice.component" -}}
-edc-telemetryservice
-{{- end }}
-
-{{/*
-telemetryservice - extra labels for the pod template or the Service: the given labels plus
-app.kubernetes.io/component. Merged as a map, so a consumer that already sets
-app.kubernetes.io/component keeps its value and no key is written twice. Never
-used in selectorLabels: Deployment selectors are immutable.
-Usage: include "dse.telemetryservice.extraLabels" (dict "labels" .Values.telemetryservice.podLabels "context" $)
-*/}}
-{{- define "dse.telemetryservice.extraLabels" -}}
-{{- $labels := merge (dict) (.labels | default dict) (dict "app.kubernetes.io/component" (include "dse.telemetryservice.component" .context)) -}}
-{{- toYaml $labels -}}
 {{- end }}

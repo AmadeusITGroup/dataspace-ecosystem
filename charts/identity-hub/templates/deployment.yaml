@@ -20,7 +20,9 @@ spec:
       {{- end }}
       labels:
         {{- include "dse.identityhub.selectorLabels" . | nindent 8 }}
-        {{- include "dse.identityhub.extraLabels" (dict "labels" .Values.identityhub.podLabels "context" $) | nindent 8 }}
+        {{- with .Values.identityhub.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
     spec:
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
@@ -123,14 +125,6 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.identityhub.internalTls.keystoreSecretName | required ".Values.identityhub.internalTls.keystoreSecretName is required when internalTls.enabled" | quote }}
                   key: {{ .Values.identityhub.internalTls.keystoreSecretPasswordKey | quote }}
-            {{- with .Values.identityhub.internalTls.keystorePath }}
-            - name: "EDC_WEB_HTTPS_KEYSTORE_PATH"
-              value: {{ . | quote }}
-            {{- end }}
-            {{- with .Values.identityhub.internalTls.keystoreType }}
-            - name: "EDC_WEB_HTTPS_KEYSTORE_TYPE"
-              value: {{ . | quote }}
-            {{- end }}
           {{- end }}
             #####################
             ## HASHICORP VAULT ##
@@ -252,11 +246,6 @@ spec:
             # boot (ParticipantContextSeedExtension.createParticipant).
             - name: "EDC_ENCRYPTION_AES_KEY_ALIAS"
               value: {{ include "dse.identityhub.keys.encryption.aesKeyAlias" . | quote }}
-            # -- EDC 0.18 removed the implicit "aes" default (eclipse-edc/Connector#5781): without it participant
-            #    context config (persisted in edc_participant_context_config) is stored unencrypted.
-            #    Only set on runtimes that ship the aes-encryption module (IdentityHub BOMs), otherwise boot fails.
-            - name: "EDC_PARTICIPANTS_CONFIG_ENCRYPTION_ALGORITHM"
-              value: "aes"
 
           #######
           # API #
@@ -271,10 +260,6 @@ spec:
           ##############
             - name: "EDC_IH_API_SUPERUSER_SERVICES"
               value: {{ include "dse.identityhub.participantContextServices" . | quote }}
-            # -- when the participant already exists, update the DID document services that differ from the ones
-            #    above (false: only log the differences)
-            - name: "EDC_IH_API_SUPERUSER_SERVICES_SYNC"
-              value: {{ .Values.identityhub.participantcontext.superuser.syncServices | default false | quote }}
 
           {{- if .Values.global.telemetry.enabled }}
             #############################

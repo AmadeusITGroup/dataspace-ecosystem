@@ -22,7 +22,6 @@ dependencies {
     
     testImplementation(libs.awaitility)
     implementation(libs.edc.lib.util)
-    implementation(libs.edc.spi.protocol)
     testImplementation(libs.edc.lib.json)
     testImplementation(testFixtures(project(":spi:telemetry-agent-spi")))
     testImplementation("com.squareup.okhttp3:mockwebserver:5.3.2")

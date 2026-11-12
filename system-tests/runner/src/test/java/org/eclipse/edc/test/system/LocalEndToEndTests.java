@@ -77,7 +77,6 @@ import static org.eclipse.dse.iam.policy.PolicyConstants.VISIBILITY_CREDENTIAL_T
 import static org.eclipse.edc.connector.controlplane.test.system.utils.PolicyFixtures.atomicConstraint;
 import static org.eclipse.edc.connector.controlplane.transfer.spi.types.TransferProcessStates.TERMINATED;
 import static org.eclipse.edc.jsonld.spi.JsonLdKeywords.ID;
-import static org.eclipse.edc.jsonld.spi.JsonLdKeywords.VALUE;
 import static org.eclipse.edc.spi.constants.CoreConstants.EDC_NAMESPACE;
 import static org.eclipse.edc.test.system.AbstractAuthority.DOMAIN_ROUTE;
 import static org.eclipse.edc.test.system.AbstractAuthority.DOMAIN_TRAVEL;
@@ -124,12 +123,6 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
     public static String dummyJwt;
     public static String dummyJwtWithMultipleRoles;
     public static String dummyJwtNonExistentParticipant;
-
-    // Provider asset themed with a category found in both the local example whitelist and the devbox one (see createThemedAssets).
-    private static final String ASSET_ID_THEMED_ORDER_MANAGEMENT_SYSTEM = "theme-taxonomy-order-management-system";
-    private static final String CATEGORY_PREFIX = "urn:amadeus:platform:content-management:taxonomy:category:";
-    private static final String CATEGORY_ORDER = CATEGORY_PREFIX + "Order";
-    private static final String CATEGORY_ORDER_MANAGEMENT_SYSTEM = CATEGORY_PREFIX + "Order:subcategory:Order_Management_System";
     private static final String EVENT_HUB_CONNECTION_STRING_ALIAS = "event-hub-connection-string";
     private static final String EVENT_HUB_CONNECTION_STRING_SECRET = "Endpoint=sb://eventhubs;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;";
     private static final String LOCAL_CONSUMER_EVENT_HUB_CONNECTION_STRING = "Endpoint=sb://localhost:52717;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;";
@@ -559,22 +552,6 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
         PROVIDER.createRawAssetWithDefaultContract(distributionAsset);
 
         createOrderCreatedEventAssetsAndContracts();
-        createThemedAssets();
-    }
-
-    /**
-     * Seeds a provider asset whose dcat:theme points at Order Management System, a category that
-     * exists both in the local example whitelist (system-tests/category-whitelist.example.json)
-     * and in the list the devbox deploys. Its parent Order must show up with it in the provider
-     * catalog's dcat:themeTaxonomy; Air Travel, which no asset uses, must not.
-     */
-    private static void createThemedAssets() {
-        var context = Map.of("dct", "http://purl.org/dc/terms/", "dcat", "http://www.w3.org/ns/dcat#");
-        PROVIDER.createEntryWithCustomContext(ASSET_ID_THEMED_ORDER_MANAGEMENT_SYSTEM, context,
-                Map.of(
-                        "dct:title", "Order management system events",
-                        "dcat:theme", Map.of("@id", CATEGORY_ORDER_MANAGEMENT_SYSTEM)),
-                Map.of("baseUrl", "http://example.com"));
     }
 
     private static void createOrderCreatedEventAssetsAndContracts() {
@@ -583,11 +560,11 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
         PROVIDER.createRawAsset(loadAssetFromResource("assets/order-created-event-asset-v1.0.0.json", ASSET_ID_ORDER_CREATED_EVENT_V1));
 
         var dcatNs = "http://www.w3.org/ns/dcat#";
-        var dctNs = "http://purl.org/dc/terms/";
-        var mediaTypePath = "properties.'" + dcatNs + "distribution'.'" + dcatNs + "mediaType'";
-        var accessUrlPath = "properties.'" + dcatNs + "distribution'.'" + dcatNs + "accessURL'";
-        // two array levels: dcat:distribution[] -> dct:conformsTo[] -> @id
-        var conformsToPath = "properties.'" + dcatNs + "distribution'.'" + dctNs + "conformsTo'.'@id'";
+        var skosNs = "http://www.w3.org/2004/02/skos/core#";
+        var topConceptNotationPath =
+                "properties.'" + dcatNs + "themeTaxonomy'.'" + skosNs + "hasTopConcept'.'" + skosNs + "notation'";
+        var narrowerNotationPath =
+                "properties.'" + dcatNs + "themeTaxonomy'.'" + skosNs + "hasTopConcept'.'" + skosNs + "narrower'.'" + skosNs + "notation'";
 
         var membershipConstraint = atomicConstraint(
                 "%s:%s".formatted(DSE_POLICY_PREFIX, org.eclipse.dse.iam.policy.PolicyConstants.MEMBERSHIP_CONSTRAINT),
@@ -602,13 +579,13 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
         PROVIDER.createContractDefinitionWithSelector(
                 UUID.randomUUID().toString(),
                 policyId, policyId,
-                conformsToPath, "=", "https://www.asyncapi.com/docs/reference/specification/v2.6.0");
+                narrowerNotationPath, "=", "990");
 
         PROVIDER.createContractDefinitionWithSelector(
                 UUID.randomUUID().toString(),
                 policyId, policyId,
-                new String[]{ mediaTypePath, "=", "application/yaml" },
-                new String[]{ accessUrlPath, "=", "https://test.platform.api.amadeus.com/v1/content-management/content-documents/file/907" });
+                new String[]{ topConceptNotationPath, "=", "50" },
+                new String[]{ narrowerNotationPath, "=", "990" });
     }
 
     private static JsonObject genericClaimConstraint(String credentialType, String path, String operator, String rightOperand) {
@@ -658,8 +635,7 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
                     ASSET_ID_DCAT_GAMMA,
                     ASSET_ID_DCAT_DISTRIBUTION,
                     ASSET_ID_ORDER_CREATED_EVENT,
-                    ASSET_ID_ORDER_CREATED_EVENT_V1,
-                    ASSET_ID_THEMED_ORDER_MANAGEMENT_SYSTEM
+                    ASSET_ID_ORDER_CREATED_EVENT_V1
             );
 
             assertThat(queryParticipantDatasets(AUTHORITY, PROVIDER.did(), PROVIDER.controlPlaneCatalogFilterUrl()))
@@ -677,134 +653,6 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
             assertThat(queryParticipantDatasets(AUTHORITY, PROVIDER.did(), CONSUMER.controlPlaneCatalogFilterUrl()))
                     .anyMatch(dataset -> ASSET_ID_REST_API_ROUTE_DOMAIN_RESTRICTED.equals(dataset.getString(ID)))
                     .noneMatch(dataset -> ASSET_ID_REST_API_TRAVEL_DOMAIN_RESTRICTED.equals(dataset.getString(ID)));
-        }
-    }
-
-    @Nested
-    class ThemeTaxonomyTest {
-
-        private static final String DCAT_THEME_TAXONOMY = "dcat:themeTaxonomy";
-        private static final String SKOS_HAS_TOP_CONCEPT = "skos:hasTopConcept";
-        private static final String SKOS_NARROWER = "skos:narrower";
-        private static final String SKOS_PREF_LABEL = "skos:prefLabel";
-        private static final String SKOS_NOTATION = "skos:notation";
-        private static final String SKOS_DEFINITION = "skos:definition";
-        // Same terms as full IRIs, for the federated catalog's expanded JSON-LD.
-        private static final String DCAT_THEME_TAXONOMY_IRI = "http://www.w3.org/ns/dcat#themeTaxonomy";
-        private static final String SKOS_HAS_TOP_CONCEPT_IRI = "http://www.w3.org/2004/02/skos/core#hasTopConcept";
-        private static final String SKOS_NARROWER_IRI = "http://www.w3.org/2004/02/skos/core#narrower";
-
-        @Test
-        void participantCatalog_includesUsedCategoriesWithTheirParents() {
-            // Same as POST /consumer/cp/management/v3/catalog/request: the consumer asks the provider
-            // for its catalog over DSP 2025-1. Only the assets seeded by createThemedAssets use
-            // whitelisted categories.
-            var catalogRequest = Json.createObjectBuilder()
-                    .add("@context", Json.createObjectBuilder().add("@vocab", EDC_NAMESPACE))
-                    .add("@type", "CatalogRequest")
-                    .add("counterPartyAddress", PROVIDER.controlPlaneProtocolUrl())
-                    .add("counterPartyId", PROVIDER.did())
-                    .add("protocol", PROVIDER.participantClient().getProtocol().name())
-                    .add("querySpec", Json.createObjectBuilder().add("offset", 0).add("limit", 50))
-                    .build();
-
-            await().atMost(TEST_TIMEOUT).untilAsserted(() -> {
-                var body = CONSUMER.participantClient().baseManagementRequest()
-                        .contentType(ContentType.JSON)
-                        .body(catalogRequest.toString())
-                        // baseManagementRequest() already points at the /v3 management API
-                        .post("/catalog/request")
-                        .then()
-                        .statusCode(200)
-                        .extract().body().asString();
-                var catalog = Json.createReader(new StringReader(body)).readObject();
-
-                assertThat(catalog.containsKey(DCAT_THEME_TAXONOMY)).as("catalog carries dcat:themeTaxonomy").isTrue();
-                var taxonomy = asArray(catalog.get(DCAT_THEME_TAXONOMY)).getJsonObject(0);
-                assertThat(taxonomy.getString(ID, null)).isEqualTo("urn:dse:taxonomy");
-
-                // Order Management System is used, so its parent Order comes with it. Air Travel
-                // is not used by any asset, so it is absent.
-                var topConcepts = asArray(taxonomy.get(SKOS_HAS_TOP_CONCEPT));
-                assertThat(ids(topConcepts)).containsExactly(CATEGORY_ORDER);
-
-                var order = topConcepts.getJsonObject(0);
-                var orderChildren = asArray(order.get(SKOS_NARROWER));
-                assertThat(ids(orderChildren)).containsExactly(CATEGORY_ORDER_MANAGEMENT_SYSTEM);
-                var orderManagementSystem = orderChildren.getJsonObject(0);
-                assertThat(orderManagementSystem.containsKey(SKOS_NARROWER)).isFalse();
-
-                // Each concept carries its whitelist name, id and description.
-                assertConcept(order, "Order",
-                        "Content related to order lifecycle management, from creation through fulfillment and accounting.");
-                assertConcept(orderManagementSystem, "Order Management System",
-                        "The Nevio Order Management System (OrMS) is a comprehensive solution designed to effectively manage orders from multiple content providers.");
-            });
-        }
-
-        /**
-         * The whitelist category's name goes to skos:prefLabel, its id to skos:notation and its
-         * description to skos:definition. In the whitelist, id and name are the same.
-         */
-        private static void assertConcept(JsonObject concept, String name, String description) {
-            assertThat(text(concept.get(SKOS_PREF_LABEL))).as("skos:prefLabel of %s", concept.getString(ID, null)).isEqualTo(name);
-            assertThat(text(concept.get(SKOS_NOTATION))).as("skos:notation of %s", concept.getString(ID, null)).isEqualTo(name);
-            assertThat(text(concept.get(SKOS_DEFINITION))).as("skos:definition of %s", concept.getString(ID, null)).isEqualTo(description);
-        }
-
-        /**
-         * Compacted JSON-LD writes a plain string, or {"@value": ...} when it keeps the value object.
-         */
-        private static String text(JsonValue value) {
-            var values = asArray(value);
-            if (values.isEmpty()) {
-                return null;
-            }
-            var single = values.get(0);
-            if (single.getValueType() == JsonValue.ValueType.STRING) {
-                return ((JsonString) single).getString();
-            }
-            return single.asJsonObject().getString(VALUE, null);
-        }
-
-        @Test
-        void federatedCatalog_keepsTheProviderThemeTaxonomy() {
-            // The federated catalog crawls the provider's catalog, stores it and serves it again
-            // from /v1alpha/catalog/query. The taxonomy must come out exactly as the provider
-            // built it. The query returns expanded JSON-LD, so the properties use full IRIs.
-            // The crawler may have stored the provider catalog before the assets with category
-            // ids were created, so keep asking until a later crawl brings the full tree.
-            await().atMost(TEST_TIMEOUT).untilAsserted(() -> {
-                var catalog = queryParticipantCatalog(AUTHORITY, PROVIDER.did(),
-                        AUTHORITY.catalogUrl() + "/v1alpha/catalog/query");
-
-                assertThat(catalog.containsKey(DCAT_THEME_TAXONOMY_IRI)).as("cached catalog carries dcat:themeTaxonomy").isTrue();
-                var taxonomy = asArray(catalog.get(DCAT_THEME_TAXONOMY_IRI)).getJsonObject(0);
-                assertThat(taxonomy.getString(ID, null)).isEqualTo("urn:dse:taxonomy");
-
-                var topConcepts = asArray(taxonomy.get(SKOS_HAS_TOP_CONCEPT_IRI));
-                assertThat(ids(topConcepts)).containsExactly(CATEGORY_ORDER);
-
-                var orderChildren = asArray(topConcepts.getJsonObject(0).get(SKOS_NARROWER_IRI));
-                assertThat(ids(orderChildren)).containsExactly(CATEGORY_ORDER_MANAGEMENT_SYSTEM);
-                assertThat(orderChildren.getJsonObject(0).containsKey(SKOS_NARROWER_IRI)).isFalse();
-            });
-        }
-
-        private static List<String> ids(JsonArray concepts) {
-            return concepts.stream().map(concept -> concept.asJsonObject().getString(ID, null)).toList();
-        }
-
-        /**
-         * Compacted JSON-LD writes a single value as an object and several as an array.
-         */
-        private static JsonArray asArray(JsonValue value) {
-            if (value == null) {
-                return JsonValue.EMPTY_JSON_ARRAY;
-            }
-            return value.getValueType() == JsonValue.ValueType.ARRAY
-                    ? value.asJsonArray()
-                    : Json.createArrayBuilder().add(value).build();
         }
     }
 
@@ -873,7 +721,7 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
             assertThat(service.getString("@id")).isEqualTo(CUSTOM_DISTRIBUTION_ID + ":service");
             assertThat(getString(service, DCAT_MEDIA_TYPE, "dcat:mediaType"))
                     .isEqualTo("https://www.iana.org/assignments/media-types/application/json");
-            var conformsTo = getArray(service, DCT_CONFORMS_TO, conformsToKey(service));
+            var conformsTo = getArray(service, DCT_CONFORMS_TO, "dct:conformsTo");
             assertThat(conformsTo).singleElement()
                     .satisfies(value -> assertThat(getString(value.asJsonObject(), DCT_TITLE, "dct:title"))
                             .isEqualTo("Binding Kafka-specific information on AsyncAPI"));
@@ -894,18 +742,10 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
                     .isEqualTo("Order Created Event AsyncAPI Specification");
             assertThat(getString(serviceLessDistribution, DCT_MODIFIED, "dct:modified"))
                     .isEqualTo("2023-11-19T04:54:00Z");
-            assertThat(getString(serviceLessDistribution, DCT_CONFORMS_TO, conformsToKey(serviceLessDistribution)))
+            assertThat(getString(serviceLessDistribution, DCT_CONFORMS_TO, "dct:conformsTo"))
                     .isEqualTo("https://datatracker.ietf.org/doc/html/rfc4648");
             assertThat(getString(serviceLessDistribution, DCT_TYPE, "dct:type"))
                     .isEqualTo("ASYNC_API_SPECIFICATION");
-        }
-
-        /**
-         * EDC 0.18 (eclipse-edc/Connector#5780) defines the "conformsTo" term in the EDC DSP JSON-LD context, so the
-         * federated catalog (compacted with that context) returns "conformsTo" where 0.16 returned "dct:conformsTo".
-         */
-        private String conformsToKey(JsonObject object) {
-            return object.containsKey("conformsTo") ? "conformsTo" : "dct:conformsTo";
         }
 
         private JsonObject getObject(JsonObject object, String expandedKey, String compactKey) {
@@ -1726,8 +1566,9 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
 
         @Test
         void transfer_with_nested_array_property_single_selector() {
-            // Tests a single selector on a property two arrays deep: dcat:distribution[].dct:conformsTo[].@id
-            // This verifies the asset selector walks nested JSON-LD arrays without indices.
+            // Tests single selector matching nested array property: narrower notation = "990"
+            // This verifies that the contract definition's asset selector correctly traverses
+            // nested JSON-LD arrays without indices (e.g., skos:hasTopConcept.skos:narrower.notation)
             var transferProcessId = negotiationContractAndStartTransfer(CONSUMER, PROVIDER, ASSET_ID_ORDER_CREATED_EVENT);
 
             var contractId = getContractIdFromTransferProcess(CONSUMER, transferProcessId);
@@ -1741,9 +1582,9 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
 
         @Test
         void transfer_with_nested_array_property_multiple_selectors() {
-            // Tests multiple selectors on a nested array property: mediaType = "application/yaml" AND accessURL = ".../file/907".
-            // Both selectors must match the asset (AND). Each one is checked on its own across all distributions,
-            // so this does not guarantee both values come from the same distribution.
+            // Tests multiple correlated selectors on nested array properties: top notation = "50" AND narrower = "990"
+            // This verifies that when multiple selectors are combined with AND logic, both conditions must be satisfied
+            // without incorrectly matching assets where only one condition applies (e.g., top concept "60" also has narrower "990")
             var transferProcessId = negotiationContractAndStartTransfer(CONSUMER, PROVIDER, ASSET_ID_ORDER_CREATED_EVENT_V1);
 
             var contractId = getContractIdFromTransferProcess(CONSUMER, transferProcessId);

@@ -45,6 +45,4 @@ CMD ["java", \
      "-Dotel.javaagent.configuration-file=/app/opentelemetry.properties", \
      "-Djava.security.egd=file:/dev/urandom", \
      "-jar", \
-     "federatedcatalogfilter.jar", \
-     "--no-color", \
-     "--log-level=INFO"]
+     "federatedcatalogfilter.jar"]

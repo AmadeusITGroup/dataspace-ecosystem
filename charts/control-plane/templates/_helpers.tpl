@@ -51,28 +51,8 @@ helm.sh/chart: {{ include "dse.chart" . }}
 app.kubernetes.io/version: {{ .Values.controlplane.image.tag | quote }}
 {{- end }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
-app.kubernetes.io/component: {{ include "dse.controlplane.component" . }}
+app.kubernetes.io/component: edc-controlplane
 app.kubernetes.io/part-of: edc
-{{- end }}
-
-{{/*
-Control Plane - app.kubernetes.io/component value.
-*/}}
-{{- define "dse.controlplane.component" -}}
-edc-controlplane
-{{- end }}
-
-{{/*
-Control Plane - extra labels for the pod template or the Service: the given
-labels plus app.kubernetes.io/component. Merged as a map, so a consumer that
-already sets app.kubernetes.io/component keeps its value and no key is
-written twice. Never used in selectorLabels: Deployment selectors are
-immutable.
-Usage: include "dse.controlplane.extraLabels" (dict "labels" .Values.controlplane.podLabels "context" $)
-*/}}
-{{- define "dse.controlplane.extraLabels" -}}
-{{- $labels := merge (dict) (.labels | default dict) (dict "app.kubernetes.io/component" (include "dse.controlplane.component" .context)) -}}
-{{- toYaml $labels -}}
 {{- end }}
 
 {{/*
@@ -109,7 +89,7 @@ Control Plane - Management URL
 {{- printf "http://%s%s" .hostname $.Values.controlplane.endpoints.management.path -}}
 {{- end }}{{/* end if tls */}}
 {{- else }}{{/* else when ingress not enabled */}}
-{{- printf "%s://%s:%v%s" (ternary "https" "http" $.Values.controlplane.internalTls.enabled) (include "dse.fullname" $ ) $.Values.controlplane.endpoints.management.port $.Values.controlplane.endpoints.management.path -}}
+{{- printf "http://%s:%v%s" (include "dse.fullname" $ ) $.Values.controlplane.endpoints.management.port $.Values.controlplane.endpoints.management.path -}}
 {{- end }}{{/* end if ingress */}}
 {{- end }}{{/* end with ingress */}}
 {{- end }}{{/* end if .Values.controlplane.url.management */}}
@@ -130,8 +110,8 @@ Control Plane - Protocol URL
 {{- printf "http://%s%s" .hostname $.Values.controlplane.endpoints.protocol.path -}}
 {{- end }}{{/* end if tls */}}
 {{- else }}{{/* else when ingress not enabled */}}
-{{- /* In-cluster URL: the Service speaks HTTPS exactly when internalTls is enabled (same rule as dse.controlplane.url.control and the probes). Do NOT derive the scheme from did.web.useHttps / global.useHttps: those describe DID resolution / public-URL preferences, not what the Service serves. */ -}}
-{{- printf "%s://%s:%v%s" (ternary "https" "http" $.Values.controlplane.internalTls.enabled) (include "dse.fullname" $ ) $.Values.controlplane.endpoints.protocol.port $.Values.controlplane.endpoints.protocol.path -}}
+{{- /* The in-cluster Service serves plain HTTP; TLS/https is only terminated for externally exposed (ingress/route) URLs. Do NOT derive the internal scheme from did.web.useHttps / global.useHttps (those describe DID resolution / public-URL preferences), otherwise EDC_DSP_CALLBACK_ADDRESS advertises https against a Service that only speaks http, breaking inter-component calls. */ -}}
+{{- printf "http://%s:%v%s" (include "dse.fullname" $ ) $.Values.controlplane.endpoints.protocol.port $.Values.controlplane.endpoints.protocol.path -}}
 {{- end }}{{/* end if ingress */}}
 {{- end }}{{/* end with ingress */}}
 {{- end }}{{/* end if .Values.controlplane.url.protocol */}}
@@ -307,13 +287,13 @@ otel.instrumentation.micrometer.enabled=true
 
 {{/*
 Control Plane - config.properties. Reproduces the static/derivable EDC
-settings the Terraform reference always injects (trustedissuer authority id
+settings the Terraform reference always injects (trusted-issuer authority id
 + credential revocation mimetype), then appends any extra component config
 supplied via .Values.controlplane.config (e.g. state-machine tuning, keystore
 paths — the environment-specific lines still supplied through values).
 */}}
 {{- define "dse.controlplane.configProperties" -}}
-edc.iam.trustedissuer.authority.id={{ include "dse.controlplane.authorityDid" . }}
+edc.iam.trusted-issuer.authority.id={{ include "dse.controlplane.authorityDid" . }}
 edc.iam.credential.revocation.mimetype=application/json
 {{- with .Values.controlplane.config }}
 {{ . }}

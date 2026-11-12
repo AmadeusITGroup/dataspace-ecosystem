@@ -20,7 +20,9 @@ spec:
       {{- end}}
       labels:
         {{- include "dse.telemetrystorage.selectorLabels" . | nindent 8}}
-        {{- include "dse.telemetrystorage.extraLabels" (dict "labels" .Values.telemetrystorage.podLabels "context" $) | nindent 8 }}
+          {{- with .Values.telemetrystorage.podLabels}}
+          {{- toYaml . | nindent 8}}
+          {{- end}}
     spec:
       {{- with .Values.imagePullSecrets}}
       imagePullSecrets:
@@ -121,14 +123,6 @@ spec:
             secretKeyRef:
               name: {{ .Values.telemetrystorage.internalTls.keystoreSecretName | required ".Values.telemetrystorage.internalTls.keystoreSecretName is required when internalTls.enabled" | quote }}
               key: {{ .Values.telemetrystorage.internalTls.keystoreSecretPasswordKey | quote }}
-        {{- with .Values.telemetrystorage.internalTls.keystorePath }}
-        - name: "EDC_WEB_HTTPS_KEYSTORE_PATH"
-          value: {{ . | quote }}
-        {{- end }}
-        {{- with .Values.telemetrystorage.internalTls.keystoreType }}
-        - name: "EDC_WEB_HTTPS_KEYSTORE_TYPE"
-          value: {{ . | quote }}
-        {{- end }}
       {{- end }}
 
         ##############
@@ -169,6 +163,8 @@ spec:
         #############
         # SSI / DID #
         #############
+        - name: "EDC_IAM_ISSUER_ID"
+          value: {{ include "dse.telemetrystorage.didWebUrl" . | quote }}
         - name: "EDC_IDENTITY_DID_URL"
           value: {{ include "dse.telemetrystorage.didWebUrl" . | quote }}
         - name: "EDC_IAM_DID_WEB_USE_HTTPS"

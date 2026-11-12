@@ -52,27 +52,6 @@ public class AbstractEndToEndTests {
     }
 
     /**
-     * Queries the federated catalog directly (authority's {@code /v1alpha/catalog/query}) and
-     * returns the raw cached {@link JsonObject} for the given participant's catalog, retrying
-     * until the crawler has cached it.
-     * <p>
-     * Unlike {@link #queryParticipantDatasets}, this returns the catalog object itself rather
-     * than its flattened dataset list - needed for catalog-level properties such as
-     * {@code dcat:themeTaxonomy}, which live on the catalog, not on individual datasets.
-     */
-    protected JsonObject queryParticipantCatalog(AbstractAuthority authority, String participantDid, String catalogUrl) {
-        AtomicReference<JsonObject> catalog = new AtomicReference<>();
-        await().atMost(TEST_TIMEOUT)
-                .pollInterval(TEST_POLL_INTERVAL)
-                .untilAsserted(() -> catalog.set(authority.queryCatalog(MAPPER, JSON_LD, catalogUrl).stream()
-                        .filter(isCatalogOf(participantDid))
-                        .findFirst()
-                        .orElseThrow(() -> new AssertionError("Failed to find Catalog for participant %s".formatted(participantDid)))));
-
-        return catalog.get();
-    }
-
-    /**
      * Queries the federated catalog directly (authority's {@code /v1alpha/catalog/query}) with a
      * full {@code QuerySpec} body supporting {@code filterExpression}, {@code sortField},
      * {@code sortOrder}, {@code offset}, and {@code limit}.

@@ -27,7 +27,6 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -42,6 +41,7 @@ import static org.eclipse.edc.util.io.Ports.getFreePort;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 
 @EndToEndTest
 class DcatDistributionTransformationEndToEndTest {
@@ -50,12 +50,6 @@ class DcatDistributionTransformationEndToEndTest {
     private static final String DSP_CONTEXT = "https://w3id.org/dspace/2025/1/context.jsonld";
     private static final String EDC_CONTEXT = "https://w3id.org/edc/dspace/v0.0.1";
     private static final List<String> CONTEXT = List.of(DSP_CONTEXT, EDC_CONTEXT);
-    // The real catalog response also carries the prefixes DseJsonLdNamespacesExtension (#419)
-    // registers for DSP 2025-1, so "@context" has more than just DSP_CONTEXT/EDC_CONTEXT in it.
-    private static final Map<String, String> DSE_NAMESPACES_CONTEXT_ENTRY = Map.of(
-            "skos", "http://www.w3.org/2004/02/skos/core#",
-            "prov", "http://www.w3.org/ns/prov#",
-            "adms", "http://www.w3.org/ns/adms#");
 
     @RegisterExtension
     static RuntimeExtension runtime = new RuntimePerClassExtension() {
@@ -73,10 +67,6 @@ class DcatDistributionTransformationEndToEndTest {
             config.put("web.http.version.path", "/version");
             config.put("edc.participant.id", "test-provider");
             config.put("edc.dsp.callback.address", "http://localhost:" + PROTOCOL_PORT + "/protocol");
-            // The theme taxonomy extension needs the category whitelist, otherwise the runtime does not start.
-            config.put("dse.category.whitelist.enabled", "true");
-            config.put("dse.category.whitelist.path",
-                    Path.of("src/test/resources/category-whitelist.json").toAbsolutePath().toString());
             setConfiguration(config);
         }
     };
@@ -125,7 +115,7 @@ class DcatDistributionTransformationEndToEndTest {
                 .statusCode(200)
                 .contentType(JSON)
                 .body("participantId", notNullValue())
-                .body("'@context'", containsInAnyOrder(DSP_CONTEXT, EDC_CONTEXT, DSE_NAMESPACES_CONTEXT_ENTRY))
+                .body("'@context'", containsInAnyOrder(DSP_CONTEXT, EDC_CONTEXT))
                 .body("dataset", notNullValue());
     }
 

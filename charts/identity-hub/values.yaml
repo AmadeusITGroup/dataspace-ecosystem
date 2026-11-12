@@ -181,11 +181,6 @@ identityhub:
       # list or a JSON array string. When empty, derives the participant DSP
       # and Credential Service URLs.
       services: []
-      # -- When the participant context already exists, update the services of
-      # its DID document that differ from `services` (matched by id) and publish
-      # it again. Services not listed in `services` are never touched. When
-      # false, the differences are only logged as warnings at startup.
-      syncServices: false
 
   # -- Postgresql database configuration
   postgresql:
@@ -348,13 +343,6 @@ identityhub:
     keystoreSecretName: ""
     # -- Key within internalTls.keystoreSecretName holding the keystore/keymanager password
     keystoreSecretPasswordKey: "password"
-    # -- Path (inside the pod) to the keystore holding the pod-to-pod TLS certificate, set as
-    # EDC_WEB_HTTPS_KEYSTORE_PATH. The internalTls.secretName secret is mounted at /internal-certs
-    # (e.g. "/internal-certs/keystore.p12" for a cert-manager PKCS12 keystore). Empty: not set by
-    # the chart, so edc.web.https.keystore.path in `config` applies.
-    keystorePath: ""
-    # -- Keystore type (e.g. "PKCS12"), set as EDC_WEB_HTTPS_KEYSTORE_TYPE. Empty: not set by the chart.
-    keystoreType: ""
   # -- declare where to mount [volumes](https://kubernetes.io/docs/concepts/storage/volumes/) into the container
   volumeMounts: []
   # -- [volume](https://kubernetes.io/docs/concepts/storage/volumes/) directories

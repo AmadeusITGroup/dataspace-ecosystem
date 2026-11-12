@@ -4,7 +4,6 @@ plugins {
 
 dependencies {
     runtimeOnly(project(":extensions:common:participant-context-config-seed"))
-    runtimeOnly(project(":extensions:identity-hub:legacy-participant-id-path"))
     runtimeOnly(project(":extensions:issuer-service:membership-attestation-api"))
     runtimeOnly(project(":extensions:issuer-service:domain-attestation-api"))
     runtimeOnly(project(":extensions:issuer-service:visibility-attestation-api"))

@@ -211,7 +211,7 @@ Content-Type: application/json
     },
     "@type": "ContractRequest",
     "counterPartyAddress": "{{protocol}}://{{apiGatewayHost}}/cp/dsp/{{providerId}}",
-    "protocol": "dataspace-protocol-http:2025-1",
+    "protocol": "dataspace-protocol-http",
     "policy": {
       "@id": "{{policyId}}",
       "@type": "http://www.w3.org/ns/odrl/2/Offer",
@@ -277,7 +277,7 @@ Content-Type: application/json
     "@vocab": "https://w3id.org/edc/v0.0.1/ns/"
   },
   "counterPartyAddress": "{{protocol}}://{{apiGatewayHost}}/cp/dsp/{{providerId}}",
-  "protocol": "dataspace-protocol-http:2025-1",
+  "protocol": "dataspace-protocol-http",
   "querySpec": {
     "limit": 50
   }
@@ -303,7 +303,7 @@ Content-Type: application/json
     "@type": "TransferRequest",
     "connectorId": "{{providerDIDNoBase64}}",
     "counterPartyAddress": "{{protocol}}://{{apiGatewayHost}}/cp/dsp/{{providerId}}",
-    "protocol": "dataspace-protocol-http:2025-1",
+    "protocol": "dataspace-protocol-http",
     "contractId": "{{contractAgreementId}}",
     "privateProperties": {},
     "transferType": "HttpData-PULL"

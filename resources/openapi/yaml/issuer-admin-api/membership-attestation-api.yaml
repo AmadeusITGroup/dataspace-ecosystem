@@ -4,7 +4,7 @@ info:
   title: Issuer Service Membership Attestation API
   version: "1"
 paths:
-  /v1beta/participants/{participantContextId}/attestation-membership:
+  /v1alpha/participants/{participantContextId}/attestation-membership:
     post:
       description: Adds a new membership attestation.
       operationId: createMembershipAttestation
@@ -86,7 +86,7 @@ paths:
             found.
       tags:
       - Membership Attestation Admin API
-  /v1beta/participants/{participantContextId}/attestation-membership/request:
+  /v1alpha/participants/{participantContextId}/attestation-membership/request:
     post:
       description: Gets all membership attestations for a certain query.
       operationId: queryMembershipAttestations
@@ -120,7 +120,7 @@ paths:
           description: "Request body was malformed, or the request could not be processed"
       tags:
       - Membership Attestation Admin API
-  /v1beta/participants/{participantContextId}/attestation-membership/{id}:
+  /v1alpha/participants/{participantContextId}/attestation-membership/{id}:
     delete:
       description: Delete membership attestation.
       operationId: deleteMembershipAttestation

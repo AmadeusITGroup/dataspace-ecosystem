@@ -51,7 +51,7 @@ helm.sh/chart: {{ include "dse.chart" . }}
 app.kubernetes.io/version: {{ .Values.dataplane.image.tag | quote }}
 {{- end }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
-app.kubernetes.io/component: {{ include "dse.dataplane.component" . }}
+app.kubernetes.io/component: edc-dataplane
 app.kubernetes.io/part-of: edc
 {{- end }}
 
@@ -427,23 +427,4 @@ active for this component").
 */}}
 {{- define "dse.dataplane.vaultAzureEnabled" -}}
 {{- if or .Values.dataplane.vault.azure.name (and .Values.global.vault.azure.name (or (eq .Values.global.vaultProvider "azure") (eq .Values.global.vaultProvider "azurevault"))) -}}true{{- end -}}
-{{- end }}
-
-{{/*
-dataplane - app.kubernetes.io/component value.
-*/}}
-{{- define "dse.dataplane.component" -}}
-edc-dataplane
-{{- end }}
-
-{{/*
-dataplane - extra labels for the pod template or the Service: the given labels plus
-app.kubernetes.io/component. Merged as a map, so a consumer that already sets
-app.kubernetes.io/component keeps its value and no key is written twice. Never
-used in selectorLabels: Deployment selectors are immutable.
-Usage: include "dse.dataplane.extraLabels" (dict "labels" .Values.dataplane.podLabels "context" $)
-*/}}
-{{- define "dse.dataplane.extraLabels" -}}
-{{- $labels := merge (dict) (.labels | default dict) (dict "app.kubernetes.io/component" (include "dse.dataplane.component" .context)) -}}
-{{- toYaml $labels -}}
 {{- end }}

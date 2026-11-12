@@ -11,9 +11,6 @@ dependencies {
     implementation(libs.edc.spi.jsonld)
     implementation(libs.edc.spi.participant)
     implementation(libs.edc.spi.transform)
-    implementation(libs.edc.lib.transform)
-    implementation(libs.edc.lib.jerseyproviders)
-    implementation(libs.edc.lib.catalog.util)
     implementation(libs.edc.spi.web)
     implementation(libs.edc.dsp.spi.v2025)
     implementation(libs.edc.runtime.metamodel)
@@ -21,8 +18,6 @@ dependencies {
 
     testImplementation(libs.edc.core.junit)
     testImplementation(libs.edc.ext.jsonld)
-    testImplementation(testFixtures(libs.edc.core.jersey))
-    testImplementation(libs.restAssured)
 }
 
 tasks.test {

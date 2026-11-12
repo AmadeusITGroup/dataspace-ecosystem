@@ -20,7 +20,9 @@ spec:
       {{- end }}
       labels:
         {{- include "dse.federatedcatalogfilter.selectorLabels" . | nindent 8 }}
-        {{- include "dse.federatedcatalogfilter.extraLabels" (dict "labels" .Values.federatedcatalogfilter.podLabels "context" $) | nindent 8 }}
+        {{- with .Values.federatedcatalogfilter.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
     spec:
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
@@ -121,14 +123,6 @@ spec:
               secretKeyRef:
                 name: {{ .Values.federatedcatalogfilter.internalTls.keystoreSecretName | required ".Values.federatedcatalogfilter.internalTls.keystoreSecretName is required when internalTls.enabled" | quote }}
                 key: {{ .Values.federatedcatalogfilter.internalTls.keystoreSecretPasswordKey | quote }}
-          {{- with .Values.federatedcatalogfilter.internalTls.keystorePath }}
-          - name: "EDC_WEB_HTTPS_KEYSTORE_PATH"
-            value: {{ . | quote }}
-          {{- end }}
-          {{- with .Values.federatedcatalogfilter.internalTls.keystoreType }}
-          - name: "EDC_WEB_HTTPS_KEYSTORE_TYPE"
-            value: {{ . | quote }}
-          {{- end }}
         {{- end }}
 
         {{- with .Values.federatedcatalogfilter.postgresql }}
@@ -224,6 +218,8 @@ spec:
           #######
           # DID #
           #######
+          - name: "EDC_IAM_ISSUER_ID"
+            value: {{ include "dse.federatedcatalogfilter.didWebUrl" . | quote }}
           - name: "EDC_IDENTITY_DID_URL"
             value: {{ include "dse.federatedcatalogfilter.didWebUrl" . | quote }}
           - name: "EDC_IAM_DID_WEB_USE_HTTPS"

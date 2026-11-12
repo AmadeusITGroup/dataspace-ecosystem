@@ -17,7 +17,6 @@ import org.eclipse.edc.transform.spi.TypeTransformerRegistry;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -47,10 +46,6 @@ class TransformerRegistryOverrideTest {
             config.put("web.http.version.path", "/version");
             config.put("edc.participant.id", "test-participant");
             config.put("edc.dsp.callback.address", "http://localhost:" + PROTOCOL_PORT + "/protocol");
-            // The theme taxonomy extension needs the category whitelist, otherwise the runtime does not start.
-            config.put("dse.category.whitelist.enabled", "true");
-            config.put("dse.category.whitelist.path",
-                    Path.of("src/test/resources/category-whitelist.json").toAbsolutePath().toString());
             setConfiguration(config);
         }
     };

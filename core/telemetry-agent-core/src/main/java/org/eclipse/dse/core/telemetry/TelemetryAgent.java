@@ -8,6 +8,7 @@ import org.eclipse.dse.edc.spi.telemetryagent.TelemetryRecordStore;
 import org.eclipse.edc.spi.query.Criterion;
 import org.eclipse.edc.statemachine.AbstractStateEntityManager;
 import org.eclipse.edc.statemachine.Processor;
+import org.eclipse.edc.statemachine.ProcessorImpl;
 import org.eclipse.edc.statemachine.StateMachineManager;
 
 import java.util.Collection;
@@ -15,6 +16,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
 
+import static java.util.function.Predicate.isEqual;
 import static org.eclipse.edc.spi.persistence.StateEntityStore.hasState;
 
 public class TelemetryAgent extends AbstractStateEntityManager<TelemetryRecord, TelemetryRecordStore> {
@@ -85,22 +87,15 @@ public class TelemetryAgent extends AbstractStateEntityManager<TelemetryRecord, 
                     }
                     return hasBeenProcessed;
                 })
-                .filter(Boolean::booleanValue)
+                .filter(isEqual(true))
                 .count();
     }
 
     private Processor completedRecordsProcessor() {
-        Function<TelemetryRecord, Boolean> delete = telemetry.contextPropagationMiddleware(this::deleteRecord);
-        return () -> getRecordsWithType(TelemetryRecordStates.SENT).stream()
-                .map((TelemetryRecord record) -> {
-                    var processed = delete.apply(record);
-                    if (!processed) {
-                        breakLease(record);
-                    }
-                    return processed;
-                })
-                .filter(Boolean::booleanValue)
-                .count();
+        return ProcessorImpl.Builder.newInstance(() -> this.getRecordsWithType(TelemetryRecordStates.SENT))
+                .process(telemetry.contextPropagationMiddleware(this::deleteRecord))
+                .onNotProcessed(this::breakLease)
+                .build();
     }
 
     private Collection<TelemetryRecord> getRecordsWithType(TelemetryRecordStates state) {
@@ -108,21 +103,9 @@ public class TelemetryAgent extends AbstractStateEntityManager<TelemetryRecord, 
         return store.nextNotLeased(batchSize, criteria);
     }
 
-    /**
-     * Deletes one record. Never throws: a failure is logged and reported as {@code false}, so the caller breaks the
-     * lease of this record and carries on with the rest of the batch.
-     */
     private Boolean deleteRecord(TelemetryRecord record) {
-        try {
-            var result = store.deleteById(record.getId());
-            if (result.failed()) {
-                monitor.warning("Failed to delete telemetry record %s: %s".formatted(record.getId(), result.getFailureDetail()));
-            }
-            return result.succeeded();
-        } catch (Exception e) {
-            monitor.warning("Failed to delete telemetry record %s".formatted(record.getId()), e);
-            return Boolean.FALSE;
-        }
+        store.deleteById(record.getId());
+        return Boolean.TRUE;
     }
 
     private void transitionToCompleted(TelemetryRecord record) {

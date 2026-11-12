@@ -2,11 +2,12 @@
 format.version = "1.1"
 
 [versions]
-edc = "0.18.1"
-edc-azure = "0.18.0"
-edc-ih = "0.18.1"
-edc-is = "0.18.1"
-edc-build = "1.5.2"
+edc = "0.16.1"
+edc-azure = "0.16.0"
+edc-ih = "0.16.0"
+edc-fc = "0.16.0"
+edc-is = "0.16.0"
+edc-build = "1.1.5"
 wiremock = "3.0.1"
 
 assertj = "3.27.3"
@@ -14,18 +15,20 @@ azure-identity = "1.18.1"
 azure-storageblob = "12.30.0"
 azureMessagingEventHub = "5.21.3"
 awaitility = "4.2.0"
-nimbus = "10.9.1"
+nimbus = "9.45"
 jackarta-json = "2.0.1"
 jackson = "2.22.0"
 jacksonAnnotations = "2.22"
 rsApi = "4.0.0"
 servletApi = "5.0.2"
-restAssured = "6.0.0"
+restAssured = "5.5.0"
 httpMockServer = "5.15.0"
 jersey = "4.0.2"
-jupiter = "6.0.3"
-postgres = "42.7.11"
-swagger = "2.2.50"
+jupiter = "5.11.4"
+postgres = "42.7.9"
+swagger = "2.2.27"
+swagger-parser = "2.1.27"
+jena = "5.5.0"
 micrometer = "1.14.2"
 jjwt = "0.13.0"
 netty = "4.2.4.Final"
@@ -34,7 +37,6 @@ bouncycastle = "1.84"
 
 [libraries]
 edc-spi-core = { module = "org.eclipse.edc:core-spi", version.ref = "edc" }
-edc-spi-protocol = { module = "org.eclipse.edc:protocol-spi", version.ref = "edc" }
 edc-spi-web = { module = "org.eclipse.edc:web-spi", version.ref = "edc" }
 edc-spi-http = { module = "org.eclipse.edc:http-spi", version.ref = "edc" }
 edc-spi-policy-engine = { module = "org.eclipse.edc:policy-engine-spi", version.ref = "edc" }
@@ -75,6 +77,7 @@ edc-core-sql = { module = "org.eclipse.edc:sql-core", version.ref = "edc" }
 edc-transaction-local = { module = "org.eclipse.edc:transaction-local", version.ref = "edc" }
 edc-observability-api = { module = "org.eclipse.edc:api-observability", version.ref = "edc" }
 edc-configuration-filesystem = { module = "org.eclipse.edc:configuration-filesystem", version.ref = "edc" }
+edc-jdklogger = { module = "org.eclipse.edc:monitor-jdk-logger", version.ref = "edc" }
 edc-sql-contract-negotiation = { module = "org.eclipse.edc:contract-negotiation-store-sql", version.ref = "edc" }
 edc-lib-util = { module = "org.eclipse.edc:util-lib", version.ref = "edc" }
 edc-lib-query = { module = "org.eclipse.edc:query-lib", version.ref = "edc" }
@@ -87,7 +90,6 @@ edc-lib-token = { module = "org.eclipse.edc:token-lib", version.ref = "edc" }
 edc-lib-jsonld = { module = "org.eclipse.edc:json-ld-lib", version.ref = "edc" }
 edc-lib-controlplane-policies = { module = "org.eclipse.edc:control-plane-policies-lib", version.ref = "edc" }
 edc-ext-jsonld = { module = "org.eclipse.edc:json-ld", version.ref = "edc" }
-edc-ext-jetty-core = { module = "org.eclipse.edc:jetty-core", version.ref = "edc" }
 edc-lib-sql = { module = "org.eclipse.edc:sql-lib", version.ref = "edc" }
 edc-lib-transform = { module = "org.eclipse.edc:transform-lib", version.ref = "edc" }
 edc-spi-transform = { module = "org.eclipse.edc:transform-spi", version.ref = "edc" }
@@ -137,8 +139,7 @@ edc-dsp-spi-v2025 = { module = "org.eclipse.edc:dsp-spi-2025", version.ref = "ed
 # Participant Context (new in 0.15.1)
 edc-spi-connector-participantcontext = { module = "org.eclipse.edc:connector-participant-context-spi", version.ref = "edc" }
 edc-spi-participantcontext-config = { module = "org.eclipse.edc:participant-context-config-spi", version.ref = "edc" }
-edc-core-participantcontext = { module = "org.eclipse.edc:participant-context-core", version.ref = "edc" }
-edc-core-participantcontext-connector-classic = { module = "org.eclipse.edc:participant-context-connector-classic-core", version.ref = "edc" }
+edc-core-participantcontext-single = { module = "org.eclipse.edc:participant-context-single-core", version.ref = "edc" }
 edc-core-participantcontext-config = { module = "org.eclipse.edc:participant-context-config-core", version.ref = "edc" }
 
 # Control Plane Aggregate Services (new in 0.15.1)
@@ -153,9 +154,6 @@ edc-controlplane-bom = { module = "org.eclipse.edc:controlplane-dcp-bom", versio
 edc-controlplane-base-bom = { module = "org.eclipse.edc:controlplane-base-bom", version.ref = "edc" }
 edc-controlplane-sql-bom = { module = "org.eclipse.edc:controlplane-feature-sql-bom", version.ref = "edc" }
 edc-controlplane-core = { module = "org.eclipse.edc:control-plane-core", version.ref = "edc" }
-# Legacy data plane signaling (deprecated since 0.16, removed in EDC 1.0). EDC 0.18 BOMs ship the new DPS
-# protocol in the control plane, but the data plane BOM still speaks the legacy protocol.
-edc-transfer-data-plane-signaling = { module = "org.eclipse.edc:transfer-data-plane-signaling", version.ref = "edc" }
 edc-iam-mock = { module = "org.eclipse.edc:iam-mock", version.ref = "edc" }
 
 # Data Plane
@@ -184,13 +182,11 @@ edc-issuerservice-api-holder = { module = "org.eclipse.edc:holder-api", version.
 edc-issuerservice-api-admin-config = { module = "org.eclipse.edc:issuer-admin-api-configuration", version.ref = "edc-is" }
 
 # Federated Catalog dependencies
-edc-federatedcatalog-spi-core = { module = "org.eclipse.edc:federated-catalog-spi", version.ref = "edc" }
-edc-federatedcatalog-bom = { module = "org.eclipse.edc:federatedcatalog-dcp-bom", version.ref = "edc" }
+edc-federatedcatalog-spi-core = { module = "org.eclipse.edc:federated-catalog-spi", version.ref = "edc-fc" }
+edc-federatedcatalog-bom = { module = "org.eclipse.edc:federatedcatalog-dcp-bom", version.ref = "edc-fc" }
 edc-protocol-dsp-catalog = { module = "org.eclipse.edc:dsp-catalog-transform-lib", version.ref = "edc" }
-edc-protocol-dsp-catalog-v2025 = { module = "org.eclipse.edc:dsp-catalog-transform-2025", version.ref = "edc" }
-edc-lib-catalog-util = { module = "org.eclipse.edc:catalog-util-lib", version.ref = "edc" }
 edc-lib-jerseyproviders = { module = "org.eclipse.edc:jersey-providers-lib", version.ref = "edc" }
-edc-federated-catalog-core = { module = "org.eclipse.edc:catalog-crawler-core", version.ref = "edc" }
+edc-federated-catalog-core = { module = "org.eclipse.edc:federated-catalog-core-2025", version.ref = "edc-fc" }
 # Other dependencies
 micrometer = { module = "io.micrometer:micrometer-core", version.ref = "micrometer" }
 assertj = { module = "org.assertj:assertj-core", version.ref = "assertj" }
@@ -199,8 +195,6 @@ restAssured = { module = "io.rest-assured:rest-assured", version.ref = "restAssu
 jakarta-rsApi = { module = "jakarta.ws.rs:jakarta.ws.rs-api", version.ref = "rsApi" }
 jakartaJson = { module = "org.glassfish:jakarta.json", version.ref = "jackarta-json" }
 jetty-jakarta-servletApi = { module = "org.eclipse.jetty.toolchain:jetty-jakarta-servlet-api", version.ref = "servletApi" }
-jetty-server = { module = "org.eclipse.jetty:jetty-server", version.ref = "jetty" }
-jetty-util = { module = "org.eclipse.jetty:jetty-util", version.ref = "jetty" }
 jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref = "jackson" }
 jackson-core = { module = "com.fasterxml.jackson.core:jackson-core", version.ref = "jackson" }
 jackson-datatypeJsr310 = { module = "com.fasterxml.jackson.datatype:jackson-datatype-jsr310", version.ref = "jackson" }
@@ -220,18 +214,20 @@ jjwt-api = { module = "io.jsonwebtoken:jjwt-api", version.ref = "jjwt" }
 jjwt-impl = { module = "io.jsonwebtoken:jjwt-impl", version.ref = "jjwt" }
 jjwt-jackson = { module = "io.jsonwebtoken:jjwt-jackson", version.ref = "jjwt" }
 jackson-annotations = { module = "com.fasterxml.jackson.core:jackson-annotations", version.ref = "jacksonAnnotations" }
+swagger-parser = { module = "io.swagger.parser.v3:swagger-parser", version.ref = "swagger-parser" }
+jena-core = { module = "org.apache.jena:jena-core", version.ref = "jena" }
 
 # Security fix for PSMP-984
 netty-codec-http2 = { module = "io.netty:netty-codec-http2", version.ref = "netty" }
 
 
 [bundles]
-connector = ["edc-core-boot", "edc-core-connector", "edc-observability-api",
+connector = ["edc-core-boot", "edc-core-connector", "edc-observability-api", "edc-jdklogger",
     "edc-configuration-filesystem", "edc-core-micrometer", "edc-transaction-local", "edc-http", "edc-core-token", "edc-core-runtime"]
 coresql = ["edc-core-sql", "edc-sql-lease", "edc-ext-sql-pool-apache-commons", "postgres"]
 identity = ["edc-identity-did-core", "edc-identity-did-web"]
 
 [plugins]
-shadow = { id = "com.gradleup.shadow", version = "9.4.1" }
+shadow = { id = "com.github.johnrengelman.shadow", version = "8.1.1" }
 swagger = { id = "io.swagger.core.v3.swagger-gradle-plugin", version.ref = "swagger" }
 edc-build = { id = "org.eclipse.edc.edc-build", version.ref = "edc-build" }

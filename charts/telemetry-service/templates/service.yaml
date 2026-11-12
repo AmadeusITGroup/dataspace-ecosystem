@@ -9,7 +9,9 @@ metadata:
   namespace: {{ .Release.Namespace | default "default" | quote }}
   labels:
     {{- include "dse.labels" . | nindent 4 }}
-    {{- include "dse.telemetryservice.extraLabels" (dict "labels" .Values.telemetryservice.service.labels "context" $) | nindent 4 }}
+    {{- with .Values.telemetryservice.service.labels }}
+      {{- toYaml . | nindent 4 }}
+    {{- end }}
 spec:
   type: {{ .Values.telemetryservice.service.type }}
   ports:

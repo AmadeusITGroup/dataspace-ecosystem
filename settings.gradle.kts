@@ -21,10 +21,8 @@ include(":extensions:identity-hub:resilient-revocation-service")
 include(":extensions:common:metrics:custom-micrometer")
 include(":extensions:common:store:sql:telemetry-store-sql")
 include(":extensions:common:participant-context-config-seed")
-include(":extensions:common:jsonld-namespaces")
 
 include(":extensions:identity-hub:did-web-parser")
-include(":extensions:identity-hub:legacy-participant-id-path")
 include(":extensions:identity-hub:identity-hub-iatp")
 include(":extensions:identity-hub:superuser-seed")
 
@@ -32,12 +30,11 @@ include(":extensions:data-plane:data-plane-public-api-v2")
 include(":extensions:data-plane:data-plane-data-consumption-metrics")
 
 include(":extensions:control-plane:asset-custom-property-subscriber")
+include(":extensions:control-plane:asset-ontology-validation")
 include(":extensions:control-plane:asset-property-lookup")
-include(":extensions:control-plane:category-whitelist-config")
 include(":extensions:control-plane:control-plane-federated-catalog-filter")
 include(":extensions:control-plane:contract-validation")
 include(":extensions:control-plane:dcat-distribution-transformation")
-include(":extensions:control-plane:jetty-mtls")
 
 include(":extensions:issuer-service:membership-attestation-api")
 include(":extensions:issuer-service:membership-attestation-store-sql")
@@ -182,3 +179,8 @@ dependencyResolutionManagement {
         }
     }
 }
+include("launchers:federated-catalog-filter")
+include("launchers:federated-catalog-filter:federated-catalog-filter-base")
+findProject(":launchers:federated-catalog-filter:federated-catalog-filter-base")?.name = "federated-catalog-filter-base"
+include("launchers:federated-catalog-filter:federated-catalog-filter-postgress-hashicorp")
+findProject(":launchers:federated-catalog-filter:federated-catalog-filter-postgress-hashicorp")?.name = "federated-catalog-filter-postgress-hashicorp"

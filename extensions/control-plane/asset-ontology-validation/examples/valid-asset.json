@@ -1,0 +1,40 @@
+{
+  "@id": "urn:dse:demo:dxp-ontology-valid",
+  "@type": "Asset",
+  "properties": {
+    "name": "DXP ontology valid demo",
+    "description": "Asset whose OpenAPI response conforms to the INRIA DXP IATA ontology.",
+    "contenttype": "application/json",
+    "dcat:distribution": [
+      {
+        "@id": "urn:dse:demo:dxp-ontology-valid:distribution",
+        "@type": "dcat:Distribution",
+        "dcat:accessService": {
+          "@id": "urn:dse:demo:dxp-ontology-valid:service",
+          "@type": "dcat:DataService",
+          "dcterms:conformsTo": {
+            "@id": "https://w3id.org/dse/profile/inria-iata/24.4.0"
+          },
+          "dcat:endpointDescription": {
+            "@id": "http://10.89.0.4:18080/valid-openapi.yaml"
+          },
+          "dcat:endpointURL": {
+            "@id": "https://api.example.com/ack"
+          }
+        }
+      }
+    ]
+  },
+  "dataAddress": {
+    "@type": "DataAddress",
+    "type": "HttpData",
+    "baseUrl": "https://api.example.com/ack",
+    "proxyPath": "true"
+  },
+  "@context": {
+    "@vocab": "https://w3id.org/edc/v0.0.1/ns/",
+    "edc": "https://w3id.org/edc/v0.0.1/ns/",
+    "dcat": "http://www.w3.org/ns/dcat#",
+    "dcterms": "http://purl.org/dc/terms/"
+  }
+}

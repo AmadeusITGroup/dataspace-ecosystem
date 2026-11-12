@@ -48,7 +48,6 @@ The main extension that creates the super-user participant context:
    Query ParticipantContextService
    → If participant exists:
      → Log "already exists"
-     → Check the DID document services (see "DID Document Services Sync")
      → Skip creation
    → If not exists:
      → Continue with creation
@@ -77,40 +76,6 @@ The main extension that creates the super-user participant context:
    → If successful: Done
    → If failed: Throw EdcException
    ```
-
-## DID Document Services Sync
-
-`edc.ih.api.superuser.services` is only used when the participant context is created. Without the sync, changing a
-service endpoint in the configuration (for example the `FederatedCatalogService` URL) never reaches an environment that
-already exists.
-
-When the participant already exists, the extension compares the configured services with the stored DID document,
-matching them by `id`. A configured service is outdated if its id is missing, present more than once, or has a different
-`type` or `serviceEndpoint`.
-
-| `edc.ih.api.superuser.services.sync` | Behaviour |
-|---|---|
-| `false` (default) | Each outdated service is logged as a `WARNING` (old and new value). Nothing is written. |
-| `true` | In one transaction, each outdated service replaces all entries with its id (at the position of the first one, or appended when absent), the DID resource is stored, and the DID document is published again. |
-
-- Services whose id is not in the configuration (e.g. added through the Identity API) are never touched.
-- Keys, credentials and the participant context are not changed.
-- The upstream `PATCH /dids/{did}/endpoints` (`DidDocumentService.replaceService`) is not used: in IdentityHub 0.18.1 it
-  appends the new entry instead of replacing it. Duplicates it left behind are removed by the sync.
-- A failed store update fails the startup. A failed re-publication (failed result or exception) is only logged: a
-  document that is already published is served from the store, so the new value is visible anyway.
-- An invalid configuration (a service without `id`, `type` or `serviceEndpoint`, or an id configured twice) is logged
-  as a `WARNING` and the check is skipped; the startup continues.
-- The DID resolvers pick a service by `type` (first match). Another stored entry with the type of a configured service
-  but a different id is not touched by the sync and is logged as a `WARNING`: remove it through the Identity API.
-- No row lock: a change made to the same DID document through the Identity API while the sync runs can be overwritten.
-  Do not edit the Super-User DID document while IdentityHub pods are starting with `true`.
-
-Chart value: `identityhub.participantcontext.superuser.syncServices` (env `EDC_IH_API_SUPERUSER_SERVICES_SYNC`).
-
-**Rollout:** deploy with `false` and check the `WARNING` lines in each environment, then set `true` for one deployment.
-Once the warnings are gone, set it back to `false`: with `false` and an up-to-date document only one `INFO` line (the
-parsed value) is logged, and while an environment still differs every restart repeats the warnings.
 
 ## Administrative Role
 

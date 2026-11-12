@@ -62,6 +62,4 @@ CMD ["java", \
      "-Dotel.javaagent.configuration-file=/app/opentelemetry.properties", \
      "-Djava.security.egd=file:/dev/urandom", \
      "-jar", \
-     "issuerservice.jar", \
-     "--no-color", \
-     "--log-level=INFO"]
+     "issuerservice.jar"]
