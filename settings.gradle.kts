@@ -129,21 +129,26 @@ include(":system-tests:dcat-distribution-transformation-test")
 
 // Amadeus Artifactory virtual repository (proxies Maven Central). Registered first so CI
 // runners on the Amadeus network avoid repo.maven.apache.org rate limiting (HTTP 429).
-// Credentials are optional: mvn-public allows anonymous reads internally, and when the
-// repo is unreachable (forks, external contributors) Gradle falls back to mavenCentral().
+// It is only registered when Artifactory credentials are provided (ARTIFACTORY_USERNAME/PASSWORD or
+// -PartifactoryUser/-PartifactoryPassword) or with -PuseArtifactory=true (anonymous read, internal network).
+// Otherwise (public mirror, forks, external contributors) an unreachable Artifactory would make Gradle
+// stop resolving instead of falling back, so only the Plugin Portal / Maven Central are used.
 pluginManagement {
     repositories {
-        maven {
-            name = "AmadeusArtifactory"
-            url = uri("https://repository.rnd.amadeus.net/mvn-public/")
-            val user = providers.environmentVariable("ARTIFACTORY_USERNAME")
-                .orElse(providers.gradleProperty("artifactoryUser")).orNull
-            val password = providers.environmentVariable("ARTIFACTORY_PASSWORD")
-                .orElse(providers.gradleProperty("artifactoryPassword")).orNull
-            if (user != null && password != null) {
-                credentials {
-                    username = user
-                    this.password = password
+        val artifactoryUser = providers.environmentVariable("ARTIFACTORY_USERNAME")
+            .orElse(providers.gradleProperty("artifactoryUser")).orNull?.takeIf { it.isNotBlank() }
+        val artifactoryPassword = providers.environmentVariable("ARTIFACTORY_PASSWORD")
+            .orElse(providers.gradleProperty("artifactoryPassword")).orNull?.takeIf { it.isNotBlank() }
+        val hasArtifactoryCredentials = artifactoryUser != null && artifactoryPassword != null
+        if (hasArtifactoryCredentials || providers.gradleProperty("useArtifactory").orNull == "true") {
+            maven {
+                name = "AmadeusArtifactory"
+                url = uri("https://repository.rnd.amadeus.net/mvn-public/")
+                if (hasArtifactoryCredentials) {
+                    credentials {
+                        username = artifactoryUser
+                        password = artifactoryPassword
+                    }
                 }
             }
         }
@@ -161,17 +166,20 @@ dependencyResolutionManagement {
     // default PREFER_PROJECT mode those would silently replace the list below and bypass Artifactory.
     repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
     repositories {
-        maven {
-            name = "AmadeusArtifactory"
-            url = uri("https://repository.rnd.amadeus.net/mvn-public/")
-            val user = providers.environmentVariable("ARTIFACTORY_USERNAME")
-                .orElse(providers.gradleProperty("artifactoryUser")).orNull
-            val password = providers.environmentVariable("ARTIFACTORY_PASSWORD")
-                .orElse(providers.gradleProperty("artifactoryPassword")).orNull
-            if (user != null && password != null) {
-                credentials {
-                    username = user
-                    this.password = password
+        val artifactoryUser = providers.environmentVariable("ARTIFACTORY_USERNAME")
+            .orElse(providers.gradleProperty("artifactoryUser")).orNull?.takeIf { it.isNotBlank() }
+        val artifactoryPassword = providers.environmentVariable("ARTIFACTORY_PASSWORD")
+            .orElse(providers.gradleProperty("artifactoryPassword")).orNull?.takeIf { it.isNotBlank() }
+        val hasArtifactoryCredentials = artifactoryUser != null && artifactoryPassword != null
+        if (hasArtifactoryCredentials || providers.gradleProperty("useArtifactory").orNull == "true") {
+            maven {
+                name = "AmadeusArtifactory"
+                url = uri("https://repository.rnd.amadeus.net/mvn-public/")
+                if (hasArtifactoryCredentials) {
+                    credentials {
+                        username = artifactoryUser
+                        password = artifactoryPassword
+                    }
                 }
             }
         }
