@@ -72,9 +72,9 @@ jobs:
             federated-catalog-${{ env.VERSION }}:latest \
             issuer-service-${{ env.VERSION }}:latest \
             telemetry-service-${{ env.VERSION }}:latest \
-            telemetry-storage-${{ env.VERSION }}:latest \
+            telemetry-storage:latest \
             telemetry-agent-${{ env.VERSION }}:latest \
-            telemetry-csv-manager-${{ env.VERSION }}:latest \
+            telemetry-csv-manager:latest \
             backend-service-provider:latest \
             kafka-proxy-entra-auth:latest \
             kafka-proxy-k8s-manager:latest \
