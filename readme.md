@@ -91,6 +91,21 @@ system. These tests ensure that the system works as a whole.
 - Build: Gradle (Kotlin DSL)
 - Testing: JUnit
 
+### 4.1. EDC 0.18.x: parts intentionally kept
+
+DSE follows upstream EDC 0.18.1 as is. A few parts of the older EDC stack are still used because EDC 0.18.x has
+no replacement for them; they are expected to go away with EDC 1.0. Do not add new code on top of them.
+
+| Kept | Why | When it goes |
+|---|---|---|
+| Legacy data plane (`dataplane-base-bom`), legacy data plane signaling (`transfer-data-plane-signaling`, the control plane excludes `data-plane-signaling*`) | EDC 0.18.x ships no production data plane for the new Data Plane Signaling; the new data planes are built on the Dataplane SDK, which upstream adopts in EDC 1.0 | EDC 1.0 (upstream removes the data plane modules) |
+| `extensions/data-plane/data-plane-public-api-v2` (DSE copy) | Deprecated upstream and removed from EDC, with no replacement module in 0.18.x | Together with the data plane above |
+| Management API v3 still served by the runtimes | Every EDC 0.18.1 management module registers its v3 and v4 controllers together, with no setting to turn v3 off. DSE tools, tests and Bruno use v4 only | EDC 1.0 (upstream removes v3); until then it can only be blocked at the gateway |
+| `extensions/identity-hub/resilient-revocation-service` | Retries HTTP 5xx when downloading status list credentials (PSMP-10687). The upstream fix ([eclipse-edc/Connector#6049](https://github.com/eclipse-edc/Connector/pull/6049)) is only in EDC 1.0 | EDC 1.0 |
+
+The migration notes (upgrade order, configuration and behaviour changes) are in
+[`sql-migrations/v0.18/UPGRADE.md`](sql-migrations/v0.18/UPGRADE.md).
+
 ## 5. Prerequisites
 
 * JDK 17

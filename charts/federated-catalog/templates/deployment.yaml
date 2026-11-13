@@ -39,6 +39,10 @@ spec:
           # either use the specified image, or use the default one
           image: {{ include "dse.federatedcatalog.image.repository" . | trim }}:{{ .Values.federatedcatalog.image.tag | default .Chart.AppVersion }}
           imagePullPolicy: {{ .Values.federatedcatalog.image.pullPolicy }}
+          {{- with .Values.federatedcatalog.logLevel }}
+          args:
+            - "--log-level={{ . }}"
+          {{- end }}
           ports:
           {{- range $key,$value := .Values.federatedcatalog.endpoints }}
             - name: {{ $key }}
@@ -169,14 +173,12 @@ spec:
               secretKeyRef:
                 name: {{ include "dse.federatedcatalog.vault.hashicorp.tokenSecretName" . | quote }}
                 key: {{ .Values.federatedcatalog.vault.hashicorp.token.secret.tokenKey | required ".Values.federatedcatalog.vault.hashicorp.token.secret.tokenKey is required" | quote }}
-          - name: "EDC_VAULT_HASHICORP_TOKEN_SCHEDULED-RENEW-ENABLED"
+          - name: "EDC_VAULT_HASHICORP_TOKEN_SCHEDULEDRENEW_ENABLED"
             value: {{ .Values.federatedcatalog.vault.hashicorp.token.renewal.enabled | quote }}
           - name: "EDC_VAULT_HASHICORP_TOKEN_RENEW-BUFFER"
             value: {{ .Values.federatedcatalog.vault.hashicorp.token.renewal.renewBuffer | quote }}
           - name: "EDC_VAULT_HASHICORP_TOKEN_TTL"
             value: {{ .Values.federatedcatalog.vault.hashicorp.token.renewal.ttl | quote }}
-          - name: "EDC_VAULT_HASHICORP_TIMEOUT_SECONDS"
-            value: {{ .Values.federatedcatalog.vault.hashicorp.timeout | quote }}
           - name: "EDC_VAULT_HASHICORP_HEALTH_CHECK_ENABLED"
             value: {{ .Values.federatedcatalog.vault.hashicorp.healthCheck.enabled | quote }}
           - name: "EDC_VAULT_HASHICORP_HEALTH_CHECK_STANDBY_OK"
@@ -187,7 +189,7 @@ spec:
             value: {{ include "dse.federatedcatalog.vault.hashicorp.folder" . | quote }}
           - name: "EDC_VAULT_HASHICORP_API_HEALTH_CHECK_PATH"
             value: {{ .Values.federatedcatalog.vault.hashicorp.paths.health | quote }}
-          - name: "EDC_VAULT_HASHICORP_ALLOW_FALLBACK"
+          - name: "EDC_VAULT_HASHICORP_ALLOWFALLBACK"
             value: {{ .Values.federatedcatalog.vault.hashicorp.allowFallback | quote }}
           {{- end }}
 
@@ -233,8 +235,6 @@ spec:
             #############################
             # FEDERATED CATALOG CRAWLER #
             #############################
-          - name: "EDC_CATALOG_CACHE_LOADER_BATCH_SIZE"
-            value: {{ .Values.federatedcatalog.crawler.cache.loaderBatchSize | required ".Values.federatedcatalog.crawler.cache.loaderBatchSize is required" | quote }}
           - name: "EDC_CATALOG_CACHE_EXECUTION_DELAY_SECONDS"
             value: {{ .Values.federatedcatalog.crawler.cache.executionDelaySeconds | required ".Values.federatedcatalog.crawler.cache.executionDelaySeconds is required" | quote }}
           - name: "EDC_CATALOG_CACHE_EXECUTION_PERIOD_SECONDS"
@@ -243,8 +243,6 @@ spec:
           #######
           # DID #
           #######
-          - name: "EDC_IDENTITY_DID_URL"
-            value: {{ include "dse.federatedcatalog.didWebUrl" . | quote }}
           - name: "EDC_IAM_DID_WEB_USE_HTTPS"
             value: {{ include "dse.federatedcatalog.didWebUseHttps" . | quote }}
 

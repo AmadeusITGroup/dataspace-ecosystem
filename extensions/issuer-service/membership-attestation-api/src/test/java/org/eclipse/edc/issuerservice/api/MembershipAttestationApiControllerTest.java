@@ -14,7 +14,6 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
-import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -41,7 +40,7 @@ class MembershipAttestationApiControllerTest extends RestControllerTestBase {
 
     private RequestSpecification baseRequest() {
         return given()
-                .baseUri("http://localhost:" + port + Versions.UNSTABLE + "/participants/" + Base64.getUrlEncoder().encodeToString(PARTICIPANT_ID.getBytes()) + "/attestation-membership")
+                .baseUri("http://localhost:" + port + Versions.UNSTABLE + "/participants/" + PARTICIPANT_ID + "/attestation-membership")
                 .when();
     }
 

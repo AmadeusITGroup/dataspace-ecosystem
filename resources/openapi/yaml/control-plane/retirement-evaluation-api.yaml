@@ -1,15 +1,16 @@
 openapi: 3.0.1
 info:
-  description: With this API clients can retire an active Contract Agreement. Clients can also list all retired agreements.
+  description: With this API clients can retire an active Contract Agreement. Clients
+    can also list all retired agreements.
   title: Agreements Retirement API
-  version: 1.0.0
-servers:
-- url: /
+security:
+- bearerAuth: []
+- apiKeyAuth: []
 paths:
-  /v3/contractagreements/retirements:
+  /v4/contractagreements/retirements:
     post:
       description: Retires an active contract agreement.
-      operationId: retireAgreementV3
+      operationId: retireAgreementV4
       requestBody:
         content:
           application/json:
@@ -30,10 +31,17 @@ paths:
           description: The contract agreement is already retired
       tags:
       - Agreements Retirement
-  /v3/contractagreements/retirements/request:
+  /v4/contractagreements/retirements/request:
     post:
       description: Get all retired contract agreements.
-      operationId: getAllRetiredV3
+      operationId: getAllRetiredV4
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: https://w3id.org/edc/connector/management/schema/v4/query-spec-schema.json
+        description: Optional QuerySpec (no body = all entries). A present body must
+          have the compact @type QuerySpec (management v4).
       responses:
         "200":
           description: A list of retired contract agreements
@@ -47,10 +55,11 @@ paths:
           description: Request body was malformed
       tags:
       - Agreements Retirement
-  /v3/contractagreements/retirements/{agreementId}:
+  /v4/contractagreements/retirements/{agreementId}:
     delete:
-      description: "Removes a contract agreement from the retired list, reactivating it."
-      operationId: reactivateRetiredV3
+      description: "Removes a contract agreement from the retired list, reactivating\
+        \ it."
+      operationId: reactivateRetiredV4
       parameters:
       - description: The contract agreement id
         in: path
@@ -86,10 +95,85 @@ components:
           type: string
         type:
           type: string
-    RetirementExample:
+    JsonArray:
+      type: array
+      items:
+        $ref: "#/components/schemas/JsonValue"
+      properties:
+        empty:
+          type: boolean
+        valueType:
+          type: string
+          enum:
+          - ARRAY
+          - OBJECT
+          - STRING
+          - NUMBER
+          - "TRUE"
+          - "FALSE"
+          - "NULL"
+    JsonObject:
+      type: object
+      additionalProperties:
+        $ref: "#/components/schemas/JsonValue"
+      properties:
+        empty:
+          type: boolean
+        valueType:
+          type: string
+          enum:
+          - ARRAY
+          - OBJECT
+          - STRING
+          - NUMBER
+          - "TRUE"
+          - "FALSE"
+          - "NULL"
+    JsonValue:
       type: object
       properties:
-        '@id':
+        valueType:
           type: string
-        reason:
+          enum:
+          - ARRAY
+          - OBJECT
+          - STRING
+          - NUMBER
+          - "TRUE"
+          - "FALSE"
+          - "NULL"
+    RetirementExample:
+      type: object
+      example:
+        '@context':
+          dse: https://w3id.org/dse/v0.0.1/ns/
+          edc: https://w3id.org/edc/v0.0.1/ns/
+        '@type': AgreementsRetirementEntry
+        edc:agreementId: contract-agreement-id
+        dse:reason: This contract agreement was retired since the physical counterpart
+          is no longer valid.
+      properties:
+        '@context':
+          type: object
+        '@type':
           type: string
+          enum:
+          - AgreementsRetirementEntry
+        dse:reason:
+          type: string
+        edc:agreementId:
+          type: string
+      required:
+      - '@context'
+      - '@type'
+      - dse:reason
+      - edc:agreementId
+  securitySchemes:
+    apiKeyAuth:
+      in: header
+      name: x-api-key
+      type: apiKey
+    bearerAuth:
+      bearerFormat: JWT
+      scheme: bearer
+      type: http

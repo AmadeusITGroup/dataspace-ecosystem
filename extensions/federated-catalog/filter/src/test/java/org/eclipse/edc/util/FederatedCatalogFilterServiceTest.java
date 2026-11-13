@@ -1,6 +1,8 @@
 package org.eclipse.edc.util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.json.Json;
+import jakarta.json.JsonObject;
 import org.eclipse.dse.iam.core.DefaultScopeExtractor;
 import org.eclipse.dse.iam.core.RequestCatalogDiscoveryContext;
 import org.eclipse.dse.iam.policy.CatalogDiscoveryConstraintFunction;
@@ -17,8 +19,10 @@ import org.eclipse.edc.dse.common.DseNamespaceConfig;
 import org.eclipse.edc.iam.verifiablecredentials.spi.model.CredentialSubject;
 import org.eclipse.edc.iam.verifiablecredentials.spi.model.Issuer;
 import org.eclipse.edc.iam.verifiablecredentials.spi.model.VerifiableCredential;
+import org.eclipse.edc.jsonld.CachedDocumentRegistry;
 import org.eclipse.edc.jsonld.TitaniumJsonLd;
 import org.eclipse.edc.jsonld.spi.JsonLd;
+import org.eclipse.edc.jsonld.spi.JsonLdKeywords;
 import org.eclipse.edc.participant.spi.ParticipantIdMapper;
 import org.eclipse.edc.policy.engine.PolicyEngineImpl;
 import org.eclipse.edc.policy.engine.RuleBindingRegistryImpl;
@@ -35,20 +39,30 @@ import org.eclipse.edc.protocol.dsp.catalog.transform.v2025.to.JsonObjectToCatal
 import org.eclipse.edc.query.CriterionOperatorRegistryImpl;
 import org.eclipse.edc.spi.iam.ClaimToken;
 import org.eclipse.edc.spi.monitor.Monitor;
+import org.eclipse.edc.spi.query.QuerySpec;
 import org.eclipse.edc.spi.result.Result;
 import org.eclipse.edc.spi.types.TypeManager;
 import org.eclipse.edc.transform.TypeTransformerRegistryImpl;
 import org.eclipse.edc.transform.spi.TypeTransformerRegistry;
+import org.eclipse.edc.transform.transformer.edc.from.JsonObjectFromQuerySpecTransformer;
 import org.eclipse.edc.transform.transformer.edc.to.JsonObjectToCriterionTransformer;
 import org.eclipse.edc.transform.transformer.edc.to.JsonObjectToQuerySpecTransformer;
 import org.eclipse.edc.transform.transformer.edc.to.JsonValueToGenericTypeTransformer;
+import org.eclipse.edc.web.spi.exception.BadGatewayException;
+import org.eclipse.edc.web.spi.exception.InvalidRequestException;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.ArgumentCaptor;
 
 import java.io.IOException;
+import java.io.StringReader;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -56,18 +70,26 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Flow;
 
 import static org.eclipse.dse.iam.policy.CatalogDiscoveryPolicyContext.CATALOG_DISCOVERY_SCOPE;
 import static org.eclipse.dse.iam.policy.PolicyConstants.DOMAIN_CREDENTIAL_TYPE;
 import static org.eclipse.dse.iam.policy.PolicyConstants.MEMBERSHIP_CREDENTIAL_TYPE;
+import static org.eclipse.edc.VcCatalogFilterExtension.CATALOG_FILTER_SCOPE;
 import static org.eclipse.edc.connector.controlplane.contract.spi.policy.ContractNegotiationPolicyContext.NEGOTIATION_SCOPE;
 import static org.eclipse.edc.connector.controlplane.contract.spi.policy.TransferProcessPolicyContext.TRANSFER_SCOPE;
+import static org.eclipse.edc.jsonld.spi.Namespaces.DSPACE_CONTEXT_2025_1;
+import static org.eclipse.edc.jsonld.spi.Namespaces.EDC_DSPACE_CONTEXT;
 import static org.eclipse.edc.jsonld.spi.PropertyAndTypeNames.ODRL_USE_ACTION_ATTRIBUTE;
 import static org.eclipse.edc.spi.constants.CoreConstants.JSON_LD;
 import static org.eclipse.edc.util.IdentityServiceValidator.READ_ALL_CREDENTIAL_SCOPE;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -183,7 +205,7 @@ public class FederatedCatalogFilterServiceTest {
         var service = new FederatedCatalogService(policyEngine, monitor, didResolverRegistry, transformerRegistry,
                 jsonLd, httpClient);
         var catalogs = service.retrieveCatalog(null);
-        var ownerDid = "did:web:consumer-identityhub%3A8383:api:did";
+        var ownerDid = "did:web:consumer-identityhub:api:did";
         var tokens = ClaimToken.Builder.newInstance().claim("vc", List.of()).build();
 
         var result = service.filterCatalog(catalogs, service.createContext(tokens, ownerDid), ownerDid);
@@ -233,6 +255,180 @@ public class FederatedCatalogFilterServiceTest {
         var result = service.filterCatalog(List.of(foreignCatalog), mock(CatalogDiscoveryPolicyContext.class), PARTICIPANT_DID);
 
         assertTrue(result.iterator().next().getDatasets().isEmpty());
+    }
+
+    @Test
+    void retrieveCatalog_withQuerySpec_postsCompactedQuerySpecAsJson() throws IOException, InterruptedException {
+        var registry = new TypeTransformerRegistryImpl(mock(Monitor.class));
+        registry.register(new JsonObjectFromQuerySpecTransformer(Json.createBuilderFactory(Map.of())));
+        registry.register(new JsonObjectToCatalogTransformer());
+        registry.register(new JsonObjectToDatasetTransformer());
+        registry.register(new JsonObjectToPolicyTransformer(participantIdMapper));
+        registry.register(new JsonObjectToDataServiceTransformer());
+        registry.register(new JsonObjectToDistributionTransformer());
+        registry.register(new JsonObjectToPermissionTransformer());
+        registry.register(new JsonObjectToActionTransformer());
+        registry.register(new JsonObjectToConstraintTransformer());
+        registry.register(new JsonObjectToOperatorTransformer());
+        registry.register(new JsonValueToGenericTypeTransformer(typeManager, JSON_LD));
+        HttpClient capturingClient = mock();
+        var requestCaptor = ArgumentCaptor.forClass(HttpRequest.class);
+        when(capturingClient.send(requestCaptor.capture(), any(HttpResponse.BodyHandler.class))).thenReturn(httpResponse);
+        // same contexts as VcCatalogFilterExtension registers for CATALOG_FILTER_SCOPE in production
+        var scopedJsonLd = new TitaniumJsonLd(monitor);
+        CachedDocumentRegistry.getDocuments().forEach(document -> document
+                .onSuccess(context -> scopedJsonLd.registerCachedDocument(context.url(), context.resource())));
+        scopedJsonLd.registerContext(DSPACE_CONTEXT_2025_1, CATALOG_FILTER_SCOPE);
+        scopedJsonLd.registerContext(EDC_DSPACE_CONTEXT, CATALOG_FILTER_SCOPE);
+        var service = new FederatedCatalogService(policyEngine, monitor, didResolverRegistry, registry, scopedJsonLd, capturingClient);
+
+        var catalogs = service.retrieveCatalog(QuerySpec.Builder.newInstance().offset(3).limit(9)
+                .sortField("properties.'http://purl.org/dc/terms/title'").build());
+
+        assertFalse(catalogs.isEmpty());
+        var request = requestCaptor.getValue();
+        assertEquals("POST", request.method());
+        assertEquals("application/json", request.headers().firstValue("Content-Type").orElseThrow());
+        var body = Json.createReader(new StringReader(readBody(request))).readObject();
+        assertEquals("QuerySpec", body.getString(JsonLdKeywords.TYPE), body.toString());
+        assertEquals(3, body.getInt("offset"), body.toString());
+        assertEquals(9, body.getInt("limit"), body.toString());
+        // compact "sortField": the key the federated catalog v4 validation reads (DatasetSortFieldValidator)
+        assertEquals("properties.'http://purl.org/dc/terms/title'", body.getString("sortField"), body.toString());
+    }
+
+    @Test
+    void retrieveCatalog_whenQuerySpecCannotBeTransformed_doesNotCallTheCatalog() {
+        TypeTransformerRegistry failingRegistry = mock();
+        when(failingRegistry.transform(any(QuerySpec.class), eq(JsonObject.class))).thenReturn(Result.failure("boom"));
+        HttpClient unusedClient = mock();
+        var service = new FederatedCatalogService(policyEngine, monitor, didResolverRegistry, failingRegistry, jsonLd, unusedClient);
+
+        var exception = assertThrows(RuntimeException.class, () -> service.retrieveCatalog(QuerySpec.none()));
+
+        assertTrue(exception.getMessage().contains("QuerySpec transform failed"));
+        verifyNoInteractions(unusedClient);
+    }
+
+    @Test
+    void federatedCatalogError_400_keepsEveryMessageOfTheEdcErrorBody() {
+        var error = FederatedCatalogService.federatedCatalogError(400,
+                "[{\"message\":\"first\",\"type\":\"ValidationFailure\",\"path\":\"sortField\",\"invalidValue\":\"x\"}," +
+                        "{\"message\":\"second\",\"type\":\"ValidationFailure\",\"path\":null,\"invalidValue\":null}]");
+
+        assertInstanceOf(InvalidRequestException.class, error);
+        assertEquals(List.of("first", "second"), error.getMessages());
+    }
+
+    @ParameterizedTest
+    @CsvSource({"400, InvalidRequest", "401, AuthenticationFailed", "403, NotAuthorized", "409, ObjectConflict"})
+    void federatedCatalogError_statusWithEdcException_keepsTheStatusAndTheMessage(int status, String type) {
+        var error = FederatedCatalogService.federatedCatalogError(status, "[{\"message\":\"no\",\"type\":\"X\"}]");
+
+        assertEquals(type, error.getType());
+        assertEquals(List.of("no"), error.getMessages());
+    }
+
+    @Test
+    void federatedCatalogError_withNonJsonBody_doesNotForwardTheBody() {
+        var error = FederatedCatalogService.federatedCatalogError(400, "<html><body><h2>HTTP ERROR 400 Bad Request</h2></body></html>");
+
+        assertEquals(List.of("The federated catalog replied HTTP 400"), error.getMessages());
+    }
+
+    @Test
+    void federatedCatalogError_withJsonThatIsNotAnEdcErrorBody_doesNotForwardTheBody() {
+        var error = FederatedCatalogService.federatedCatalogError(403, "{\"statusCode\":403,\"message\":\"Access denied\"}");
+
+        assertEquals(List.of("The federated catalog replied HTTP 403"), error.getMessages());
+    }
+
+    @Test
+    void federatedCatalogError_withoutBody_stillHasMessage() {
+        var error = FederatedCatalogService.federatedCatalogError(400, "");
+
+        assertEquals(List.of("The federated catalog replied HTTP 400"), error.getMessages());
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {404, 500, 502, 503, 504})
+    void federatedCatalogError_statusWithoutEdcException_isBadGatewayWithTheStatusAndTheMessage(int status) {
+        var error = FederatedCatalogService.federatedCatalogError(status, "[{\"message\":\"upstream says no\",\"type\":\"X\"}]");
+
+        assertInstanceOf(BadGatewayException.class, error);
+        assertEquals("The federated catalog query failed with HTTP %d: upstream says no".formatted(status), error.getMessage());
+    }
+
+    @Test
+    void federatedCatalogError_500WithTheJettyErrorPage_isBadGatewayWithTheStatusOnly() {
+        var error = FederatedCatalogService.federatedCatalogError(500, "<html><body><h2>HTTP ERROR 500 Internal Server Error</h2></body></html>");
+
+        assertInstanceOf(BadGatewayException.class, error);
+        assertEquals(List.of("The federated catalog query failed with HTTP 500"), error.getMessages());
+    }
+
+    @Test
+    void retrieveCatalog_whenTheUrlCannotBeResolved_isBadGateway() {
+        AuthorityCatalogFilterDidResolver failingResolver = mock();
+        when(failingResolver.fetchCatalogFilterUrl()).thenReturn(Result.failure("no FederatedCatalogService"));
+        HttpClient unusedClient = mock();
+        var service = new FederatedCatalogService(policyEngine, monitor, failingResolver, transformerRegistry, jsonLd, unusedClient);
+
+        var exception = assertThrows(BadGatewayException.class, () -> service.retrieveCatalog(null));
+
+        assertTrue(exception.getMessage().contains("no FederatedCatalogService"), exception.getMessage());
+        verifyNoInteractions(unusedClient);
+    }
+
+    @Test
+    void retrieveCatalog_whenTheFederatedCatalogCannotBeReached_isBadGateway() throws IOException, InterruptedException {
+        HttpClient failingClient = mock();
+        when(failingClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class))).thenThrow(new IOException("Connection refused"));
+        var service = new FederatedCatalogService(policyEngine, monitor, didResolverRegistry, transformerRegistry, jsonLd, failingClient);
+
+        var exception = assertThrows(BadGatewayException.class, () -> service.retrieveCatalog(null));
+
+        assertTrue(exception.getMessage().startsWith("Could not reach the federated catalog http://example.com/catalog"), exception.getMessage());
+    }
+
+    @Test
+    void retrieveCatalog_whenTheFederatedCatalogRepliesWithAnError_throwsTheMappedException() throws IOException, InterruptedException {
+        HttpClient errorClient = mock();
+        HttpResponse<String> errorResponse = mock();
+        when(errorResponse.statusCode()).thenReturn(400);
+        when(errorResponse.body()).thenReturn("[{\"message\":\"Cannot sort by 'x': field does not exist in Dataset\",\"type\":\"InvalidRequest\"}]");
+        when(errorClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class))).thenReturn(errorResponse);
+        var service = new FederatedCatalogService(policyEngine, monitor, didResolverRegistry, transformerRegistry, jsonLd, errorClient);
+
+        var exception = assertThrows(InvalidRequestException.class, () -> service.retrieveCatalog(null));
+
+        assertEquals(List.of("Cannot sort by 'x': field does not exist in Dataset"), exception.getMessages());
+    }
+
+    private static String readBody(HttpRequest request) {
+        var body = new StringBuilder();
+        request.bodyPublisher().orElseThrow().subscribe(new Flow.Subscriber<>() {
+            @Override
+            public void onSubscribe(Flow.Subscription subscription) {
+                subscription.request(Long.MAX_VALUE);
+            }
+
+            @Override
+            public void onNext(ByteBuffer item) {
+                body.append(StandardCharsets.UTF_8.decode(item));
+            }
+
+            @Override
+            public void onError(Throwable throwable) {
+                throw new IllegalStateException(throwable);
+            }
+
+            @Override
+            public void onComplete() {
+                // nothing to do
+            }
+        });
+        return body.toString();
     }
 
     private static VerifiableCredential createVc(String type, Map<String, Object> claims) {

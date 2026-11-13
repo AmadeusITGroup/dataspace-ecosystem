@@ -7,7 +7,7 @@ import jakarta.json.JsonObject;
 import jakarta.json.JsonValue;
 import org.apache.http.HttpStatus;
 import org.eclipse.dse.spi.issuerservice.VisibilityScope;
-import org.eclipse.edc.iam.verifiablecredentials.spi.model.CredentialFormat;
+import org.eclipse.edc.identityhub.spi.verifiablecredentials.model.CredentialProfile;
 import org.eclipse.edc.issuerservice.api.DomainAttestationDto;
 import org.eclipse.edc.issuerservice.api.MembershipAttestationDto;
 import org.eclipse.edc.issuerservice.api.VisibilityAttestationDto;
@@ -36,7 +36,7 @@ abstract class AbstractAuthority extends AbstractEntity {
 
     @Override
     protected String did() {
-        return "did:web:" + name() + "-identityhub%3A8383:api:did";
+        return "did:web:" + name() + "-identityhub:api:did";
     }
 
     @Override
@@ -57,8 +57,11 @@ abstract class AbstractAuthority extends AbstractEntity {
         return "%s://%s/%s/ih/identity".formatted(SCHEME, CLUSTER_HOSTNAME, name());
     }
 
-    protected String catalogUrl() {
-        return "%s://%s/%s/catalog".formatted(SCHEME, CLUSTER_HOSTNAME, name());
+    /**
+     * Management API of the federated catalog, which serves the catalog query ({@code /v4/catalogs/request}) and the DSE asset count ({@code /v4/catalogs/query/count}).
+     */
+    protected String federatedCatalogManagementUrl() {
+        return "%s://%s/%s/fc/management".formatted(SCHEME, CLUSTER_HOSTNAME, name());
     }
 
     protected String issuerServiceAdminUrl() {
@@ -88,7 +91,7 @@ abstract class AbstractAuthority extends AbstractEntity {
                 .body(dto)
                 .contentType(JSON)
                 .when()
-                .post("/v1beta/participants/%s/attestation-visibility".formatted(toBase64(did())))
+                .post("/v1beta/participants/%s/attestation-visibility".formatted(did()))
                 .then()
                 .statusCode(isStatus2xxOrConflict());
     }
@@ -109,6 +112,7 @@ abstract class AbstractAuthority extends AbstractEntity {
                             "@context": {
                                 "@vocab": "https://w3id.org/edc/v0.0.1/ns/"
                             },
+                            "@type": "QuerySpec",
                             "filterExpression": [],
                             "limit": 100,
                             "offset": 0
@@ -142,7 +146,7 @@ abstract class AbstractAuthority extends AbstractEntity {
                 .body(dto)
                 .contentType(JSON)
                 .when()
-                .post("/v1beta/participants/%s/attestations".formatted(toBase64(did())))
+                .post("/v1beta/participants/%s/attestations".formatted(did()))
                 .then()
                 .statusCode(isStatus2xxOrConflict());
 
@@ -164,7 +168,7 @@ abstract class AbstractAuthority extends AbstractEntity {
                 .body(dto)
                 .contentType(JSON)
                 .when()
-                .post("/v1beta/participants/%s/attestations".formatted(toBase64(did())))
+                .post("/v1beta/participants/%s/attestations".formatted(did()))
                 .then()
                 .statusCode(isStatus2xxOrConflict());
 
@@ -188,7 +192,7 @@ abstract class AbstractAuthority extends AbstractEntity {
                 .body(dto)
                 .contentType(JSON)
                 .when()
-                .post("/v1beta/participants/%s/attestations".formatted(toBase64(did())))
+                .post("/v1beta/participants/%s/attestations".formatted(did()))
                 .then()
                 .statusCode(isStatus2xxOrConflict());
 
@@ -200,7 +204,7 @@ abstract class AbstractAuthority extends AbstractEntity {
                 .attestation(attestationId)
                 .credentialType("MembershipCredential")
                 .id("membership-credential-def-1")
-                .format(CredentialFormat.VC1_0_JWT.name())
+                .format(CredentialProfile.DCP_PROFILE_VC11)
                 .validity(TimeUnit.DAYS.toSeconds(365 * 10))
                 .jsonSchemaUrl("https://example.com/schema/membership-credential.json")
                 .mapping(new MappingDefinition("name", "credentialSubject.name", true))
@@ -214,7 +218,7 @@ abstract class AbstractAuthority extends AbstractEntity {
                 .body(dto)
                 .contentType(JSON)
                 .when()
-                .post("/v1beta/participants/%s/credentialdefinitions".formatted(toBase64(did())))
+                .post("/v1beta/participants/%s/credentialdefinitions".formatted(did()))
                 .then()
                 .statusCode(isStatus2xxOrConflict());
 
@@ -225,7 +229,7 @@ abstract class AbstractAuthority extends AbstractEntity {
                 .attestation(attestationId)
                 .credentialType(DOMAIN_CREDENTIAL_TYPE)
                 .id("domain-credential-def-1")
-                .format(CredentialFormat.VC1_0_JWT.name())
+                .format(CredentialProfile.DCP_PROFILE_VC11)
                 .validity(TimeUnit.DAYS.toSeconds(365 * 10))
                 .jsonSchemaUrl("https://example.com/schema/domain-credential.json")
                 .mapping(new MappingDefinition("domain", "credentialSubject.domain", true))
@@ -236,7 +240,7 @@ abstract class AbstractAuthority extends AbstractEntity {
                 .body(dto)
                 .contentType(JSON)
                 .when()
-                .post("/v1beta/participants/%s/credentialdefinitions".formatted(toBase64(did())))
+                .post("/v1beta/participants/%s/credentialdefinitions".formatted(did()))
                 .then()
                 .statusCode(isStatus2xxOrConflict());
 
@@ -247,7 +251,7 @@ abstract class AbstractAuthority extends AbstractEntity {
                 .attestation(attestationId)
                 .credentialType(VISIBILITY_CREDENTIAL_TYPE)
                 .id("visibility-credential-def-1")
-                .format(CredentialFormat.VC1_0_JWT.name())
+                .format(CredentialProfile.DCP_PROFILE_VC11)
                 .validity(TimeUnit.DAYS.toSeconds(365 * 10))
                 .jsonSchemaUrl("https://example.com/schema/visibility-credential.json")
                 .mapping(new MappingDefinition("visibility_scope", "credentialSubject.visibility_scope", true))
@@ -258,7 +262,7 @@ abstract class AbstractAuthority extends AbstractEntity {
                 .body(dto)
                 .contentType(JSON)
                 .when()
-                .post("/v1beta/participants/%s/credentialdefinitions".formatted(toBase64(did())))
+                .post("/v1beta/participants/%s/credentialdefinitions".formatted(did()))
                 .then()
                 .statusCode(isStatus2xxOrConflict());
     }
@@ -271,7 +275,7 @@ abstract class AbstractAuthority extends AbstractEntity {
                 .body(dto)
                 .contentType(JSON)
                 .when()
-                .post("/v1beta/participants/%s/holders".formatted(toBase64(did())))
+                .post("/v1beta/participants/%s/holders".formatted(did()))
                 .then()
                 .statusCode(isStatus2xxOrConflict());
     }
@@ -283,7 +287,7 @@ abstract class AbstractAuthority extends AbstractEntity {
                 .body(dto)
                 .contentType(JSON)
                 .when()
-                .post("/v1beta/participants/%s/attestation-membership".formatted(toBase64(did())))
+                .post("/v1beta/participants/%s/attestation-membership".formatted(did()))
                 .then()
                 .statusCode(isStatus2xxOrConflict());
 
@@ -300,7 +304,7 @@ abstract class AbstractAuthority extends AbstractEntity {
                 .body(dto)
                 .contentType(JSON)
                 .when()
-                .post("/v1beta/participants/%s/attestation-domain".formatted(toBase64(did())))
+                .post("/v1beta/participants/%s/attestation-domain".formatted(did()))
                 .then()
                 .statusCode(isStatus2xxOrConflict());
     }
@@ -316,7 +320,7 @@ abstract class AbstractAuthority extends AbstractEntity {
                 .body(dto)
                 .contentType(JSON)
                 .when()
-                .post("/v1beta/participants/%s/attestation-domain".formatted(toBase64(did())))
+                .post("/v1beta/participants/%s/attestation-domain".formatted(did()))
                 .then()
                 .statusCode(HttpStatus.SC_FORBIDDEN);
     }

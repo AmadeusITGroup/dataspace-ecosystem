@@ -51,12 +51,12 @@ ENV ENV_JVM_ARGS=$JVM_ARGS
 # Execute the container as non-root user
 USER appuser
 
-CMD ["java", \
-    "-javaagent:/app/opentelemetry-javaagent.jar", \
-    "-Djava.util.logging.config.file=/app/logging.properties", \
-    "-Dotel.javaagent.configuration-file=/app/opentelemetry.properties", \
-    "-Djava.security.egd=file:/dev/urandom", \
-    "-jar", \
-    "controlplane.jar", \
-    "--no-color", \
-    "--log-level=INFO"]
+ENTRYPOINT ["java", \
+     "-javaagent:/app/opentelemetry-javaagent.jar", \
+     "-Djava.util.logging.config.file=/app/logging.properties", \
+     "-Dotel.javaagent.configuration-file=/app/opentelemetry.properties", \
+     "-Djava.security.egd=file:/dev/urandom", \
+     "-jar", \
+     "controlplane.jar", \
+     "--no-color"]
+CMD ["--log-level=INFO"]

@@ -35,4 +35,3 @@ identityhub:
     sts:
       privateKeyAlias: ci-test-sts-private-key
       publicKeyAlias: ci-test-sts-public-key
-      publicKeyId: ci-test-sts-key-id

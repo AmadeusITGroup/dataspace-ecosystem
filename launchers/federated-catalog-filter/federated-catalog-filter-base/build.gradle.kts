@@ -27,8 +27,8 @@ dependencies {
         exclude(group = "org.eclipse.edc", module = "data-plane-signaling-core")
         exclude(group = "org.eclipse.edc", module = "data-plane-signaling-oauth2")
         // EDC 0.17 added the federated catalog query API and crawler to the control plane BOM. DSE runs a
-        // dedicated federated catalog runtime; in a connector they start an empty crawler and register the
-        // DSP 2025 JSON-LD contexts on the management scope, which changes management API v3 output keys.
+        // dedicated federated catalog runtime; in a connector they would start an empty crawler, serve an empty
+        // catalog query API on the management context and add the DSP 2025 contexts to the v3 management scope.
         exclude(group = "org.eclipse.edc", module = "federated-catalog-api")
         exclude(group = "org.eclipse.edc", module = "catalog-crawler-core")
     }

@@ -1,0 +1,10 @@
+apiVersion: v2
+name: migration
+description: >-
+  EDC 0.7.x -> 0.18.1 migration as Helm hook Jobs (schema migration, DID re-key,
+  credential reissue + old-identity cleanup). Modeled on the CLE argocd
+  preinstall-hook pattern so the same chart runs under both Terraform (helm_release)
+  and ArgoCD (native Helm hooks). All steps are idempotent.
+type: application
+version: 0.1.0
+appVersion: "0.18.1"

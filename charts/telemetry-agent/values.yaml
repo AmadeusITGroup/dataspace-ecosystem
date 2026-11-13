@@ -143,21 +143,16 @@ telemetryagent:
       # default) when unset.
       alias: ""
 
-  # -- decentralized identity used by this component to authenticate via STS.
-  # This is typically the participant's Identity Hub DID (see
-  # global.identityHub.didWebUrl).
+  # -- decentralized identity used by this component to authenticate via STS:
+  # the participant's Identity Hub DID. Required unless
+  # global.identityHub.didWebUrl is set: the chart fails to render without a DID
+  # (the telemetry agent publishes no DID document of its own).
   did:
     web:
       url: ""
       # -- Whether DID Web resolution uses HTTPS. When unset, falls back to
       # global.useHttps and then false for standalone compatibility.
       useHttps: null
-      # -- port used to derive a fallback did:web URL (see
-      # dse.telemetryagent.did.web.url) when did.web.url/
-      # global.identityHub.didWebUrl are unset and ingress is disabled.
-      # Not exposed on the Service (unlike telemetryagent.endpoints.*)
-      # since it's only used for this URL derivation, not for routing traffic.
-      port: ""
 
   # -- Secure Token Service remote configuration used to obtain access tokens
   # from this participant's Identity Hub.
@@ -210,7 +205,6 @@ telemetryagent:
           name: ""
           # -- secret key containing the token
           tokenKey: ""
-      timeout: 30
       healthCheck:
         enabled: true
         standbyOk: true
@@ -218,8 +212,11 @@ telemetryagent:
         secret: /v1/secret
         folder: ""
         health: /v1/sys/health
-      # -- allow fallback to env-based vault token if participant-context token not available
-      allowFallback: false
+      # -- edc.vault.hashicorp.allowfallback: a participant context without a vault config of its own
+      # (edc.vault.hashicorp.config in its participant-context config) uses the vault configured above.
+      # true is the upstream default. false requires a per-participant vault partition: without it,
+      # every secret lookup of that participant fails.
+      allowFallback: true
 
     # -- Azure Key Vault
     azure:
@@ -371,6 +368,9 @@ telemetryagent:
     otel.javaagent.enabled=false
     otel.javaagent.debug=false
   # -- configuration of the [Java Util Logging Facade](https://docs.oracle.com/javase/7/docs/technotes/guides/logging/overview.html)
+  # EDC log level (ConsoleMonitor). One of DEBUG, INFO, WARNING, SEVERE.
+  # Rendered as the container arg --log-level=<value>. Unset => image default (INFO).
+  logLevel: INFO
   logging: |-
     .level=INFO
     org.eclipse.edc.level=ALL

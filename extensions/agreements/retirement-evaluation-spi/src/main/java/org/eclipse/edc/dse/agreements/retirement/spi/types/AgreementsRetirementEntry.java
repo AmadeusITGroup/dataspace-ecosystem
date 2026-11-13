@@ -33,7 +33,8 @@ import static org.eclipse.edc.spi.constants.CoreConstants.EDC_NAMESPACE;
  */
 public class AgreementsRetirementEntry extends Entity {
     
-    public static final String AR_ENTRY_TYPE = EDC_NAMESPACE + "AgreementsRetirementEntry";
+    public static final String AR_ENTRY_TYPE_TERM = "AgreementsRetirementEntry";
+    public static final String AR_ENTRY_TYPE = EDC_NAMESPACE + AR_ENTRY_TYPE_TERM;
     public static final String AR_ENTRY_AGREEMENT_ID = EDC_NAMESPACE + "agreementId";
     
     /**

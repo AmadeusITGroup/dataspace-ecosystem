@@ -1,0 +1,98 @@
+{{- if and .Values.enabled .Values.didCutover }}
+# STEP 2 — DID re-key (idempotent: second run re-keys 0 rows). POST-upgrade, hook-weight 10.
+# post-upgrade => runs AFTER the new 0.18.1 pods are up, so the new port-less DID already exists in
+# participant_context (created by the upgraded IdentityHub at startup). A short bounded readiness
+# check remains for safety, but it is no longer load-bearing.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-rekey
+  namespace: {{ .Values.namespace }}
+  labels:
+    app.kubernetes.io/name: {{ .Release.Name }}-rekey
+    app.kubernetes.io/component: migration-rekey
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "10"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 3
+  activeDeadlineSeconds: 900
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ .Release.Name }}-rekey
+        app.kubernetes.io/component: migration-rekey
+    spec:
+      restartPolicy: Never
+      volumes:
+        - name: sql
+          configMap:
+            name: {{ .Release.Name }}-rekey
+            defaultMode: 0755
+      containers:
+        - name: migration-rekey
+          image: {{ .Values.images.postgres }}
+          volumeMounts:
+            - name: sql
+              mountPath: /migration
+          env:
+            - name: DB_HOST
+              value: {{ .Values.db.host | quote }}
+            - name: DB_PORT
+              value: {{ .Values.db.port | quote }}
+            - name: PGUSER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.db.adminSecretName }}
+                  key: {{ .Values.db.adminUserKey }}
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.db.adminSecretName }}
+                  key: {{ .Values.db.adminPasswordKey }}
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -eu
+              until pg_isready -h "$DB_HOST" -p "$DB_PORT" >/dev/null 2>&1; do sleep 2; done
+              {{- range .Values.rekey }}
+              echo "→ re-key {{ .db }}: confirming new DID present (post-upgrade; should already exist)"
+              tries=0
+              until [ "$(psql -h "$DB_HOST" -p "$DB_PORT" -d {{ .db }} -tAc "SELECT 1 FROM participant_context WHERE participant_context_id='{{ .newDid }}'" 2>/dev/null)" = "1" ]; do
+                tries=$((tries+1)); [ "$tries" -gt 30 ] && { echo "✗ new DID not in {{ .db }} after 2m" >&2; exit 1; }
+                sleep 4
+              done
+              echo "→ re-key {{ .db }}: {{ .oldDid }} -> {{ .newDid }}"
+              psql -X -v ON_ERROR_STOP=1 -h "$DB_HOST" -p "$DB_PORT" -d {{ .db }} \
+                -v old_did='{{ .oldDid }}' -v new_did='{{ .newDid }}' \
+                -f /migration/participant-rekey-did.sql
+              echo "→ cleanup {{ .db }}: ARCHIVE then remove stale OLD-DID wallet credentials (S5-2)"
+              # Archive the old-DID credentials into a backup table BEFORE removing them, so the
+              # documented rollback (which relies on the 0.7.x credentials) can restore them.
+              # ON_ERROR_STOP=1 and no '|| true': a connection/SQL failure fails the Job so Kubernetes
+              # retries, instead of letting reissue proceed with stale credentials. Deleting 0 rows
+              # succeeds naturally, so the Job stays idempotent.
+              psql -X -v ON_ERROR_STOP=1 -h "$DB_HOST" -p "$DB_PORT" -d {{ .db }} \
+                -c "CREATE TABLE IF NOT EXISTS credential_resource_premigration_backup (LIKE credential_resource INCLUDING ALL);"
+              psql -X -v ON_ERROR_STOP=1 -h "$DB_HOST" -p "$DB_PORT" -d {{ .db }} \
+                -c "INSERT INTO credential_resource_premigration_backup SELECT * FROM credential_resource WHERE participant_context_id='{{ .oldDid }}' ON CONFLICT DO NOTHING;"
+              psql -X -v ON_ERROR_STOP=1 -h "$DB_HOST" -p "$DB_PORT" -d {{ .db }} \
+                -c "DELETE FROM credential_resource WHERE participant_context_id='{{ .oldDid }}';"
+              {{- end }}
+              echo "→ billing: add new DIDs to billingdb.participant_id (idempotent, keep old rows)"
+              # Telemetry/billing keys participants by DID (UPGRADE.md step 3). After cut-over,
+              # telemetry events use the new DIDs; without a matching participant_id row the insert
+              # fails the telemetry_event_participant_did_fk constraint. Copy each old row to its new
+              # DID, preserving the old rows (old events still reference them). Idempotent.
+              {{- range .Values.rekey }}
+              psql -X -v ON_ERROR_STOP=1 -h "$DB_HOST" -p "$DB_PORT" -d {{ $.Values.db.billingDb }} \
+                -c "INSERT INTO participant_id (id, email, name, timestamp) SELECT '{{ .newDid }}', email, name, now() FROM participant_id WHERE id='{{ .oldDid }}' ON CONFLICT (id) DO NOTHING;"
+              {{- end }}
+              echo "✓ DID re-key complete"
+          resources:
+            requests:
+              ephemeral-storage: {{ .Values.resources.ephemeralStorage | quote }}
+            limits:
+              ephemeral-storage: {{ .Values.resources.ephemeralStorage | quote }}
+{{- end }}

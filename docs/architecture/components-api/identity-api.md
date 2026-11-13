@@ -4,7 +4,7 @@ The Identity API provides endpoints for managing decentralized identities, verif
 
 ## Base URLs
 
-Old `v1alpha` URLs are still accepted via the legacy-participant-id-path rewrite (temporary).
+The participant-scoped paths use the upstream form `/v1beta/participants/<participantContextId>/…`. The `participantContextId` is the participant DID as is (e.g. `did:web:provider-identityhub:api:did`): no base64 encoding, and no port in the DID (see [DID Format](#did-format)).
 
 ### Identity Hub API
 ```
@@ -38,22 +38,25 @@ participant: {{participant}}
 Where:
 - `{{participantDID}}`: Can be `{{providerDID}}`, `{{consumerDID}}`, or `{{authorityDID}}`
 - `{{participant}}`: Can be `name of the participant` (for Provider/Consumer) or `authority` (for Authority)
+- `holderPid`: the holder-side id of this request. IdentityHub 0.18 rejects a request whose `holderPid` already exists (`409 Conflict`), so send a new value every time, e.g. a UUID (the Bruno requests generate one in their pre-request script). If it is omitted, IdentityHub assigns a random one. The request state is returned by `GET …/v1beta/participants/{{participantDID}}/credentials/request/<holderPid>`.
 
 **Request:**
 
 ```json
 {
     "issuerDid": "{{authorityDID}}",
-    "holderPid": "{{participantDID}}",
+    "holderPid": "<new UUID per request>",
     "credentials": [
     {
         "id": "membership-credential-id",
         "type": "MembershipCredential",
-        "format": "VC1_0_JWT"
+        "format": "vc11-sl2021/jwt"
     }
     ]
 }
 ```
+
+`format` is a DCP credential profile: `vc11-sl2021/jwt` (VC 1.1 as JWT, the profile of the DSE credential definitions) or `vc20-bssl/jwt` (VC 2.0). IdentityHub 0.18 accepts the old `CredentialFormat` enum names only as a fallback.
 
 ## Issuer Administration API
 
@@ -99,9 +102,7 @@ Content-Type: application/json
     "dataModel": "V_1_1",
     "id": "membership-credential-def-1",
     "jsonSchema": "{}",
-    "formats": [
-        "VC1_0_JWT"
-    ],
+    "format": "vc11-sl2021/jwt",
     "validity": 315576000,
     "jsonSchemaUrl": "https://example.com/schema/membership-credential.json",
     "mappings": [
@@ -138,9 +139,9 @@ Content-Type: application/json
 
 ```json
 {
-    "holderId": "did:web:{{participantId}}-identityhub%3A8383:api:did",
+    "holderId": "did:web:{{participantId}}-identityhub:api:did",
     "name": "{{participantId}}",
-    "did": "did:web:{{participantId}}-identityhub%3A8383:api:did"
+    "did": "did:web:{{participantId}}-identityhub:api:did"
 }
 ```
 
@@ -157,9 +158,9 @@ Content-Type: application/json
 
 ```json
 {
-    "id": "did:web:{{participantId}}-identityhub%3A8383:api:did",
+    "id": "did:web:{{participantId}}-identityhub:api:did",
     "name": "{{participantId}}",
-    "holderId": "did:web:{{participantId}}-identityhub%3A8383:api:did",
+    "holderId": "did:web:{{participantId}}-identityhub:api:did",
     "membershipType": "FullMember"
 }
 ```
@@ -168,13 +169,15 @@ Content-Type: application/json
 
 Participant DIDs follow the pattern:
 ```
-did:web:{{participantId}}-identityhub%3A8383:api:did
+did:web:{{participantId}}-identityhub:api:did
 ```
 
 Where:
 - `{{participantId}}`: The participant identifier (providerId, consumerId, authorityId)
-- `identityhub%3A8383`: URL-encoded identity hub service endpoint
+- `{{participantId}}-identityhub`: the identity hub Kubernetes Service, without port. The Service exposes the DID endpoint (container port 8383) on the default port of the scheme, 443 (80 when `did.web.useHttps` is false), so the DID resolves to `https://{{participantId}}-identityhub/api/did/did.json`
 - `api:did`: API path for DID document
+
+The DID is also the `participantContextId` in the Identity and Issuer-admin API paths, used as is: `/v1beta/participants/did:web:{{participantId}}-identityhub:api:did/…`. A DID with a port (`%3A8383`) cannot be used there: it would need `%253A` in the path, which Jetty rejects (`400 Ambiguous URI path encoding`).
 
 ## Environment Variables Used
 
@@ -195,7 +198,7 @@ The following variables are commonly used in identity API requests:
 
 Standard credential type for dataspace membership:
 
-**Format**: `VC1_0_JWT`
+**Format**: `vc11-sl2021/jwt`
 **Schema**: `https://example.com/schema/membership-credential.json`
 
 **Subject Structure**:

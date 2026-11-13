@@ -31,7 +31,8 @@ An event subscriber that applies decorators to assets:
 - Implements `EventSubscriber` to receive event notifications
 - Supports registering multiple `AssetDecorator` instances
 - Retrieves the asset from the `AssetIndex` based on the event
-- Rebuilds the asset with decorated properties
+- Rebuilds the asset from `Asset.toBuilder()` with decorated properties, so every other field of the stored asset is
+  kept (private properties, data address, dataplane metadata, `createdAt`, participant context id)
 - Persists the updated asset back to the index
 
 ### Decorator Interface

@@ -15,9 +15,7 @@
 package org.eclipse.edc.dse.catalog.cache;
 
 import org.eclipse.edc.connector.controlplane.catalog.spi.Dataset;
-import org.eclipse.edc.dse.common.lib.DseReflectionUtil;
 import org.eclipse.edc.spi.query.SortOrder;
-import org.eclipse.edc.util.reflection.ReflectionException;
 
 import java.io.Serializable;
 import java.lang.reflect.InvocationTargetException;
@@ -25,10 +23,14 @@ import java.util.Comparator;
 
 /**
  * A {@link Comparator} for {@link Dataset} objects that resolves sort values via
- * {@link DseReflectionUtil}, supporting dot-notation paths, {@code Map} key lookups,
+ * {@link DatasetFieldPaths#sortValue(String, Dataset)}, supporting dot-notation paths, {@code Map} key lookups,
  * and JSON-LD {@code @value} unwrapping.
  *
  * <p>Null values are sorted last on ASC and first on DESC.
+ *
+ * <p>A path with a field that does not exist in a dataset is an {@link IllegalArgumentException}. Management v4
+ * requests with such a sort field are already rejected by {@link DatasetSortFieldValidator}, which applies the same
+ * rule; this check stays as a defence for any other query of the cache.
  */
 public class DatasetComparator implements Comparator<Dataset>, Serializable {
 
@@ -44,16 +46,7 @@ public class DatasetComparator implements Comparator<Dataset>, Serializable {
 
     @Override
     public int compare(Dataset d1, Dataset d2) {
-        int result;
-        try {
-            Object v1 = DseReflectionUtil.getFieldValue(path, d1);
-            Object v2 = DseReflectionUtil.getFieldValue(path, d2);
-            result = compareValues(v1, v2);
-
-        } catch (ReflectionException e) {
-            throw new IllegalArgumentException(
-                    "Cannot sort by '%s': field does not exist in Dataset".formatted(path), e);
-        }
+        var result = compareValues(DatasetFieldPaths.sortValue(path, d1), DatasetFieldPaths.sortValue(path, d2));
 
         if (sortOrder == SortOrder.DESC) {
             result = -result;

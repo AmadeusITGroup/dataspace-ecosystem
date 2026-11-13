@@ -14,6 +14,10 @@
 -- Transfer process data destinations: DSE pins the legacy data plane signaling, so 0.18.1 keeps
 -- writing edc_transfer_process.data_destination as 0.16.1 expects.
 --
+-- Data keyed by the DID is a separate step: if participant-rekey-did.sql was run (DIDs without
+-- port), run participant-rekey-did-rollback.sql on each participant database before deploying
+-- 0.16.1 again (UPGRADE.md, Rollback).
+--
 -- Only if the schema itself must be reverted (e.g. restoring an exact 0.16.1 schema), run the
 -- statements below manually. They DROP data and are therefore commented out on purpose.
 -- ============================================================

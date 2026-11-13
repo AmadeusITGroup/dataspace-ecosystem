@@ -38,6 +38,10 @@ spec:
           # either use the specified image, or use the default one
           image: {{ include "dse.telemetrycsvmanager.image.repository" . | trim }}:{{ .Values.telemetrycsvmanager.image.tag | default .Chart.AppVersion }}
           imagePullPolicy: {{.Values.telemetrycsvmanager.image.pullPolicy}}
+          {{- with .Values.telemetrycsvmanager.logLevel }}
+          args:
+            - "--log-level={{ . }}"
+          {{- end }}
           ports:
         {{- range $key,$value := .Values.telemetrycsvmanager.endpoints}}
             - name: {{$key}}
@@ -169,8 +173,6 @@ spec:
             #############
             # SSI / DID #
             #############
-            - name: "EDC_IDENTITY_DID_URL"
-              value: {{ include "dse.telemetrycsvmanager.didWebUrl" . | quote }}
             - name: "EDC_IAM_DID_WEB_USE_HTTPS"
               value: {{ include "dse.telemetrycsvmanager.didWebUseHttps" . | quote }}
 

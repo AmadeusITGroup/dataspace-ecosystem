@@ -47,11 +47,11 @@ graph TB
 
 RESTful API for managing all control plane resources:
 
-- [/v3/assets](../components-api/control-plane-api.md#assets) - Asset management
-- [/v3/policies](../components-api/control-plane-api.md#policy-definitions) - Policy definitions
-- [/v3/contractdefinitions](../components-api/control-plane-api.md#contract-definitions) - Contract definitions
-- [/v3/contractnegotiations](../components-api/control-plane-api.md#contract-negotiations) - Contract negotiations
-- [/v3/catalog](../components-api/control-plane-api.md#catalog) - Catalog operations
+- [/v4/assets](../components-api/control-plane-api.md#assets) - Asset management
+- [/v4/policydefinitions](../components-api/control-plane-api.md#policy-definitions) - Policy definitions
+- [/v4/contractdefinitions](../components-api/control-plane-api.md#contract-definitions) - Contract definitions
+- [/v4/contractnegotiations](../components-api/control-plane-api.md#contract-negotiations) - Contract negotiations
+- [/v4/catalog](../components-api/control-plane-api.md#catalog) - Catalog operations
 
 ### Asset Service
 

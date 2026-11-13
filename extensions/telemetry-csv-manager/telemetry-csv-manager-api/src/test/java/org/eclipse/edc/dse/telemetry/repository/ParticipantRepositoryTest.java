@@ -59,8 +59,8 @@ public class ParticipantRepositoryTest {
     @Test
     @DisplayName("Should find all participants successfully")
     void shouldSucceed_WhenFindAllParticipants() {
-        repo.saveTransactional(new ParticipantId("did:web:p2-identityhub%3A8383:api:did", "u2@example.com", "p2"));
-        repo.saveTransactional(new ParticipantId("did:web:p3-identityhub%3A8383:api:did", "u3@example.com", "p3"));
+        repo.saveTransactional(new ParticipantId("did:web:p2-identityhub:api:did", "u2@example.com", "p2"));
+        repo.saveTransactional(new ParticipantId("did:web:p3-identityhub:api:did", "u3@example.com", "p3"));
         List<ParticipantId> all = repo.findAll();
         assertEquals(2, all.size());
     }

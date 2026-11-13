@@ -24,7 +24,6 @@ include(":extensions:common:participant-context-config-seed")
 include(":extensions:common:jsonld-namespaces")
 
 include(":extensions:identity-hub:did-web-parser")
-include(":extensions:identity-hub:legacy-participant-id-path")
 include(":extensions:identity-hub:identity-hub-iatp")
 include(":extensions:identity-hub:superuser-seed")
 
@@ -47,6 +46,8 @@ include(":extensions:issuer-service:domain-attestation-api")
 include(":extensions:issuer-service:domain-attestation-store-sql")
 include(":extensions:issuer-service:visibility-attestation-api")
 include(":extensions:issuer-service:visibility-attestation-store-sql")
+// Temporary shim (W3, Q5b), IssuerService only: remove once the portful holders are deleted in every environment
+include(":extensions:issuer-service:issueradmin-uri-compliance-shim")
 
 include(":extensions:federated-catalog:participant-registry-node-directory")
 include(":extensions:federated-catalog:filter")

@@ -47,13 +47,6 @@ resource "helm_release" "issuerservice" {
           "tag" : "latest"
         },
         "keys" : {
-          "sts" : {
-            "privateKeyAlias" : local.publickey_alias
-            "publicKeyId" : "${local.did_url}#my-key"
-          }
-          "statuslist" : {
-            "privateKeyAlias" : local.privatekey_alias,
-          }
           "encryption" : {
             "aesKeyAlias" : local.aes_key_alias
           }
@@ -75,8 +68,8 @@ resource "helm_release" "issuerservice" {
                EOT
 
         "config" : <<EOT
-edc.vault.hashicorp.token.scheduled-renew-enabled=false
-edc.vault.hashicorp.allow.fallback=true
+edc.vault.hashicorp.token.scheduledrenew.enabled=false
+edc.vault.hashicorp.allowfallback=true
 ${local.tls_config_props}
         EOT
 

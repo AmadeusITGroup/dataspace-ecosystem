@@ -120,7 +120,7 @@ identityhub:
   
   did:
     web:
-      url: "did:web:identityhub%3A8383:api:did"
+      url: "did:web:identityhub:api:did"
       useHttps: false
 ```
 
@@ -225,7 +225,7 @@ Convert properties to environment variables by:
 
 ```bash
 # dse.authority.did -> DSE_AUTHORITY_DID
-export DSE_AUTHORITY_DID="did:web:authority:8383:api:did"
+export DSE_AUTHORITY_DID="did:web:authority-identityhub:api:did"
 
 # edc.datasource.default.url -> EDC_DATASOURCE_DEFAULT_URL
 export EDC_DATASOURCE_DEFAULT_URL="jdbc:postgresql://localhost:5432/edc"

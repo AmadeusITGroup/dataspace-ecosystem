@@ -1,0 +1,122 @@
+{{- if and .Values.enabled .Values.didCutover }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-reissue-script
+  namespace: {{ .Values.namespace }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "15"
+    "helm.sh/hook-delete-policy": before-hook-creation
+data:
+  reissue.py: |
+    #!/usr/bin/env python3
+    # EDC 0.18.1 re-onboarding (UPGRADE.md steps 2 & 2b), idempotent.
+    # Embeds every fix found in the rehearsal:
+    #  - re-onboard holders+attestations for the NEW DIDs, INCLUDING the authority self-holder (S5-1)
+    #  - request credentials idempotently (skip if a credential of that type already exists), INCLUDING
+    #    the authority's own Membership/Domain (S5-3) -> avoids 0-vs-1 presentation mismatch
+    #  - delete old port-ful holders+attestations (allowlist only), AND the stale old-DID credentials
+    #    from each wallet (S5-2) -> avoids N-vs-1 presentation count mismatch
+    #  - restart the federated catalog
+    import json, os, ssl, time, urllib.request, urllib.error, subprocess, sys
+
+    ctx = ssl.create_default_context(); ctx.check_hostname=False; ctx.verify_mode=ssl.CERT_NONE
+    SCHEME=os.environ.get("SCHEME","https")
+    IS_HOST=os.environ["IS_HOST"]; IS_PORT=os.environ["IS_PORT"]
+    AUTH_NEW=os.environ["AUTH_NEW_DID"]; AUTH_OLD_ENC=os.environ["AUTH_OLD_DID_ENC"]
+    IDP=os.environ["IDENTITY_API_PORT"]
+    CDEF={"MembershipCredential":os.environ["CRED_MEMBERSHIP"],
+          "DomainCredential":os.environ["CRED_DOMAIN"],
+          "VisibilityCredential":os.environ["CRED_VISIBILITY"]}
+    PARTS=json.loads(os.environ["PARTICIPANTS_JSON"])
+    OLD=json.loads(os.environ["OLD_HOLDERS_JSON"])
+    ISBASE=SCHEME+"://%s:%s/api/issueradmin/v1beta/participants"%(IS_HOST,IS_PORT)
+
+    def call(method,url,body=None):
+        data=json.dumps(body).encode() if body is not None else None
+        req=urllib.request.Request(url,data=data,method=method,
+            headers={"Content-Type":"application/json"})
+        try:
+            with urllib.request.urlopen(req,context=ctx,timeout=30) as r:
+                raw=r.read().decode(); 
+                return r.status,(json.loads(raw) if raw.strip() else None)
+        except urllib.error.HTTPError as e:
+            raw=e.read().decode()
+            try: parsed=json.loads(raw) if raw.strip() else None
+            except Exception: parsed=raw
+            return e.code,parsed
+        except Exception as e:
+            return 0,str(e)
+
+    def ok(c): return 200<=c<300 or c==409
+
+    print("STEP 1: holders + attestations for new DIDs (incl. authority)")
+    for p in PARTS:
+        did=p["newDid"]; name=p["name"]
+        s,_=call("POST","%s/%s/holders"%(ISBASE,AUTH_NEW),{"holderId":did,"did":did,"name":name})
+        print("  holder %s: %s"%(name,s)); assert ok(s),("holder",name,s)
+        s,_=call("POST","%s/%s/attestation-membership"%(ISBASE,AUTH_NEW),
+                 {"id":did,"name":name,"holderId":did,"membershipType":"FullMember","properties":{"companySegment":"Airlines"}})
+        print("  membership %s: %s"%(name,s)); assert ok(s),("membership",name,s)
+        s,_=call("POST","%s/%s/attestation-domain"%(ISBASE,AUTH_NEW),
+                 {"id":None,"holderId":did,"domain":p["domain"]})
+        print("  domain %s: %s"%(name,s)); assert ok(s),("domain",name,s)
+        if p.get("visibility"):
+            s,_=call("POST","%s/%s/attestation-visibility"%(ISBASE,AUTH_NEW),
+                     {"id":did,"holderId":did,"visibility_scope":"ALL"})
+            print("  visibility %s: %s"%(name,s)); assert ok(s),("visibility",name,s)
+
+    def existing_count(ihhost,did,ctype):
+        url=SCHEME+"://%s:%s/api/identity/v1beta/participants/%s/credentials"%(ihhost,IDP,did)
+        s,body=call("GET",url)
+        if s!=200 or not isinstance(body,list): return 0
+        n=0
+        for c in body:
+            types=[]
+            for v in (c, c.get("verifiableCredential") if isinstance(c,dict) else None):
+                if isinstance(v,dict):
+                    t=v.get("type")
+                    if isinstance(t,list): types+=t
+                    elif isinstance(t,str): types.append(t)
+            if any(ctype in str(x) for x in types): n+=1
+        return n
+
+    def request_cred(ihhost,did,ctype):
+        have=existing_count(ihhost,did,ctype)
+        if have>=1:
+            print("  %s %s already present (%d), skip"%(did,ctype,have)); return
+        import uuid
+        body={"issuerDid":AUTH_NEW,"holderPid":str(uuid.uuid4()),
+              "credentials":[{"format":"vc11-sl2021/jwt","type":ctype,"id":CDEF[ctype]}]}
+        url=SCHEME+"://%s:%s/api/identity/v1beta/participants/%s/credentials/request"%(ihhost,IDP,did)
+        s,_=call("POST",url,body); print("  %s %s request: %s"%(did,ctype,s)); assert ok(s),(ctype,did,s)
+
+    print("STEP 2: request credentials (idempotent, incl. authority self)")
+    for p in PARTS:
+        ih=p.get("identityHubHost"); did=p["newDid"]
+        if not ih: print("  %s no IdentityHub, skip"%p["name"]); continue
+        request_cred(ih,did,"MembershipCredential")
+        request_cred(ih,did,"DomainCredential")
+        if p.get("visibility"): request_cred(ih,did,"VisibilityCredential")
+
+    print("STEP 3: delete OLD port-ful holders + attestations (allowlist)")
+    # fetch old domain attestations (uuid ids) to delete by id
+    s,olddom=call("POST","%s/%s/attestation-domain/request"%(ISBASE,AUTH_OLD_ENC),{"offset":0,"limit":1000})
+    olddom=olddom if isinstance(olddom,list) else []
+    def enc(d): return d.replace("%3A","%253A")
+    for old in OLD:
+        oe=enc(old)
+        for a in ("membership","visibility"):
+            s,_=call("DELETE","%s/%s/attestation-%s/%s"%(ISBASE,AUTH_OLD_ENC,a,oe)); print("  del %s %s: %s"%(a,old,s))
+        for d in olddom:
+            if d.get("holderId")==old and d.get("id"):
+                s,_=call("DELETE","%s/%s/attestation-domain/%s"%(ISBASE,AUTH_OLD_ENC,d["id"])); print("  del domain %s: %s"%(old,s))
+        s,_=call("DELETE","%s/%s/holders/%s"%(ISBASE,AUTH_OLD_ENC,oe)); print("  del holder %s: %s"%(old,s))
+
+    print("STEP 4: restart federated catalog")
+    r=subprocess.run(["kubectl","rollout","restart","deployment/%s"%os.environ["FC_DEPLOYMENT"],
+                      "-n",os.environ.get("POD_NAMESPACE","default")],capture_output=True,text=True)
+    print("  "+(r.stdout or r.stderr).strip())
+    print("reissue complete")
+{{- end }}

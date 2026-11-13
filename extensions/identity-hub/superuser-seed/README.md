@@ -20,7 +20,7 @@ In a fresh Identity Hub deployment:
 The main extension that creates the super-user participant context:
 - Implements `ServiceExtension` to integrate with EDC runtime
 - Runs during the `start()` lifecycle phase
-- Creates a participant context with admin role
+- Creates a participant context with the admin scopes (see "Administrative Scopes")
 - Configures DID, keys, and service endpoints
 
 **Extension Name:** `"Root User Seeding"`
@@ -70,7 +70,7 @@ The main extension that creates the super-user participant context:
      - did: same as participantId
      - active: true
      - key: KeyDescriptor with public/private key aliases
-     - roles: [ROLE_ADMIN]
+     - scopes: [identity-api:admin, issuer-admin-api:admin]
      - serviceEndpoints: from configuration
    
    Create participant context
@@ -112,16 +112,21 @@ Chart value: `identityhub.participantcontext.superuser.syncServices` (env `EDC_I
 Once the warnings are gone, set it back to `false`: with `false` and an up-to-date document only one `INFO` line (the
 parsed value) is logged, and while an environment still differs every restart repeats the warnings.
 
-## Administrative Role
+## Administrative Scopes
 
-### ROLE_ADMIN
+IdentityHub 0.18 replaced the participant roles with scopes (eclipse-edc/IdentityHub#1010). The super-user is created
+with the two admin scopes (`ParticipantManifest.scopes`):
 
-The super-user is automatically assigned the `ROLE_ADMIN` role, which grants:
-- Full access to all Identity Hub APIs
-- Ability to create and manage other participants
-- Ability to issue and revoke credentials
-- Ability to manage keys and DID documents
-- All administrative operations
+| Constant | Value | Upstream meaning |
+|---|---|---|
+| `IdentityApiScopes.ADMIN` | `identity-api:admin` | Satisfies every Identity API scope (`admin` ⊇ `write` ⊇ `read`, any resource) and gives access to the resources of every participant context. Required by the admin-only endpoints: create a participant, change its scopes, list all participants, DIDs, key pairs and credentials. |
+| `IssuerAdminApiScopes.ADMIN` | `issuer-admin-api:admin` | The same for the Issuer Admin API: holders, attestations, credential definitions and credentials of every participant context. |
+
+The scopes are only checked by the upstream API authentication and authorization modules. DSE excludes them from the
+launchers (`identityhub-api-authentication` and `identityhub-api-authorization` in the IdentityHub,
+`issuer-admin-api-authentication` and `identityhub-api-authorization` in the IssuerService), so the scopes are stored
+with the participant context but not enforced: the Identity and Issuer-admin APIs have no application-level
+authentication and must be protected at network level (see `sql-migrations/v0.18/UPGRADE.md`).
 
 ## Dependencies
 

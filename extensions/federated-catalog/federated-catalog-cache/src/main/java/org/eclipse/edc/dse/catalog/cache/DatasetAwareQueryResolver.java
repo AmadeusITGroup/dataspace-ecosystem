@@ -48,8 +48,6 @@ import java.util.stream.Stream;
  */
 public class DatasetAwareQueryResolver implements QueryResolver<Catalog> {
 
-    private static final String DATASETS_PREFIX = "datasets.";
-
     private final CriterionOperatorRegistry criterionOperatorRegistry;
 
     public DatasetAwareQueryResolver(CriterionOperatorRegistry criterionOperatorRegistry) {
@@ -87,9 +85,7 @@ public class DatasetAwareQueryResolver implements QueryResolver<Catalog> {
         // Sort at dataset level; sentinel entries stay after real datasets.
         var sortField = spec.getSortField();
         if (sortField != null) {
-            var datasetPath = sortField.startsWith(DATASETS_PREFIX)
-                    ? sortField.substring(DATASETS_PREFIX.length())
-                    : sortField;
+            var datasetPath = DatasetFieldPaths.toDatasetPath(sortField);
             var comparator = new DatasetComparator(datasetPath, spec.getSortOrder());
             allFilteredEntries.sort((DatasetEntry e1, DatasetEntry e2) -> compareEntries(e1, e2, comparator));
         }
@@ -192,10 +188,7 @@ public class DatasetAwareQueryResolver implements QueryResolver<Catalog> {
      * delegates to the {@link CriterionOperatorRegistry}.
      */
     private Predicate<Dataset> toDatasetLevelPredicate(Criterion criterion) {
-        var operandLeft = criterion.getOperandLeft().toString();
-        var datasetPath = operandLeft.startsWith(DATASETS_PREFIX)
-                ? operandLeft.substring(DATASETS_PREFIX.length())
-                : operandLeft;
+        var datasetPath = DatasetFieldPaths.toDatasetPath(criterion.getOperandLeft().toString());
         var datasetCriterion = new Criterion(datasetPath, criterion.getOperator(), criterion.getOperandRight());
         return criterionOperatorRegistry.<Dataset>toPredicate(datasetCriterion);
     }

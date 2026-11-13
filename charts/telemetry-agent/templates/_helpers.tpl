@@ -64,22 +64,20 @@ app.kubernetes.io/instance: {{ .Values.telemetryagent.instanceOverride | default
 {{- end }}
 
 {{/*
-Did Web URL
+Did Web URL. The telemetry agent authenticates via STS as the participant's
+Identity Hub identity and publishes no DID document (its Service only exposes
+the default API), so the DID has to be configured: telemetryagent.did.web.url,
+or global.identityHub.didWebUrl from the umbrella. A DID derived from this
+release or its ingress hostname would not resolve, so rendering fails instead.
 */}}
 {{- define "dse.telemetryagent.did.web.url" -}}
 {{- if .Values.telemetryagent.did.web.url }}{{/* if did web url has been specified explicitly */}}
 {{- .Values.telemetryagent.did.web.url }}
-{{- else if .Values.global.identityHub.didWebUrl }}{{/* else if the umbrella/global identity hub DID has been supplied - this component authenticates as the identity hub's participant identity via STS */}}
+{{- else if .Values.global.identityHub.didWebUrl }}{{/* else the umbrella/global identity hub DID - this component authenticates as the identity hub's participant identity via STS */}}
 {{- .Values.global.identityHub.didWebUrl }}
-{{- else }}{{/* else when did api url has not been specified explicitly */}}
-{{- with .Values.telemetryagent.ingress }}
-{{- if and .enabled .hostname }}{{/* if ingress enabled and hostname defined */}}
-{{- printf "did:web:%s:webdid" .hostname -}}
-{{- else }}{{/* else when ingress not enabled */}}
-{{- printf "did:web:%s%3A%v:api:did" (include "dse.fullname" $ ) (required "telemetryagent.did.web.port is required when did.web.url/global.identityHub.didWebUrl are unset and ingress is disabled" $.Values.telemetryagent.did.web.port) -}}
-{{- end }}{{/* end if ingress */}}
-{{- end }}{{/* end with ingress */}}
-{{- end }}{{/* end if .Values.ssi.did.web.url */}}
+{{- else }}
+{{- fail "telemetryagent.did.web.url or global.identityHub.didWebUrl is required: the telemetry agent authenticates with the DID of the participant's Identity Hub (e.g. did:web:<participant>-identityhub:api:did)" }}
+{{- end }}
 {{- end }}
 
 {{/*

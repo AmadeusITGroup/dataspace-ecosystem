@@ -162,17 +162,6 @@ false
 {{- end -}}
 {{- end }}
 
-{{/* Status list private key alias with global fallback */}}
-{{- define "dse.issuerservice.keys.statuslist.privateKeyAlias" -}}
-{{- if .Values.issuerservice.keys.statuslist.privateKeyAlias -}}
-{{- .Values.issuerservice.keys.statuslist.privateKeyAlias -}}
-{{- else if .Values.global.keys.privateKeyAlias -}}
-{{- .Values.global.keys.privateKeyAlias -}}
-{{- else -}}
-{{- required "issuerservice.keys.statuslist.privateKeyAlias or global.keys.privateKeyAlias is required" .Values.issuerservice.keys.statuslist.privateKeyAlias -}}
-{{- end -}}
-{{- end }}
-
 {{/* AES key alias with global fallback */}}
 {{- define "dse.issuerservice.keys.encryption.aesKeyAlias" -}}
 {{- if .Values.issuerservice.keys.encryption.aesKeyAlias -}}

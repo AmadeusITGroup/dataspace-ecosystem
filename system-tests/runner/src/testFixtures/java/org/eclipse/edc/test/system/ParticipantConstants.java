@@ -2,7 +2,6 @@ package org.eclipse.edc.test.system;
 
 public interface ParticipantConstants {
 
-    int IDENTITY_HUB_DID_PORT = 8383;
     int CONTROL_PLANE_DSP_PORT = 8282;
 
     // Whether TLS is enabled for the cluster (affects both ingress and pod-to-pod communication)
@@ -29,7 +28,6 @@ public interface ParticipantConstants {
         System.out.println("Scheme: " + SCHEME);
         System.out.println("Cluster Hostname: " + CLUSTER_HOSTNAME);
         System.out.println("Kubectl Context: " + KUBECTL_CONTEXT);
-        System.out.println("Identity Hub Port: " + IDENTITY_HUB_DID_PORT);
         System.out.println("Control Plane DSP Port: " + CONTROL_PLANE_DSP_PORT);
         System.out.println("=================================");
     }

@@ -19,8 +19,16 @@
 #   participant-migration.sql -> consumerdb, providerdb
 #   authority-migration.sql   -> authoritydb
 #
-# Both scripts are idempotent and additive: no legacy column is dropped, so a rollback to
-# v0.16.1 stays possible. See rollback.sql for the reverse direction.
+# Both scripts are idempotent and additive (ADD COLUMN IF NOT EXISTS, nullable or defaulted
+# columns, nothing dropped), so the v0.16.1 binaries still run on the migrated schema and a
+# rollback needs no DB step. rollback.sql changes nothing (it only prints a note): it documents
+# this, and its commented-out DROP statements are only for restoring the exact v0.16.1 schema by
+# hand (they drop data).
+#
+# Not run here: participant-rekey-did.sql and participant-rekey-did-rollback.sql. They re-key the
+# data of one participant database from its old DID (with port) to its new DID and back, with
+# explicit psql variables per participant, after the new runtimes are deployed (UPGRADE.md,
+# re-onboarding step 1b, and Rollback).
 # =============================================================================
 
 set -euo pipefail
@@ -83,8 +91,8 @@ log_ok "Connected to PostgreSQL at ${DB_HOST}:${DB_PORT}"
 
 # =============================================================================
 # Participant databases (consumerdb, providerdb)
-#   - edc_transfer_process.data_address_alias
-#   - participant_context identity/properties migration
+#   - edc_contract_agreement.claims
+#   - edc_transfer_process.claims, edc_transfer_process.data_address_owner
 # =============================================================================
 PARTICIPANT_SCRIPT="${MIGRATIONS_DIR}/participant-migration.sql"
 for db in consumerdb providerdb; do
@@ -95,7 +103,7 @@ done
 
 # =============================================================================
 # Authority database (authoritydb)
-#   - participant_context identity/properties migration
+#   - credential_definitions.additional_context
 # =============================================================================
 AUTHORITY_SCRIPT="${MIGRATIONS_DIR}/authority-migration.sql"
 log_info "Running authority-migration.sql on authoritydb..."

@@ -1,0 +1,95 @@
+# Migration chart values — EDC 0.7.x -> 0.18.1.
+# Mirrors the CLE argocd preinstall-hook conventions (hook Jobs, idempotent scripts).
+
+# Master switch. When false the chart renders nothing (safe to install on 0.7.5).
+enabled: true
+
+# Two-phase migration:
+#  - schemaMigration (pre-upgrade hook): additive/idempotent SQL. Safe to run on EVERY sync, like
+#    the CLE preinstall-hook. Keep true.
+#  - didCutover (post-upgrade hook): the ONE-TIME 0.7.x->0.18.1 identity cut-over — DID re-key +
+#    credential reissue/cleanup. Runs AFTER the new 0.18.1 pods are up (needs the new IdentityHub).
+#    Set true ONLY for the cut-over release, then set back to false.
+schemaMigration: true
+didCutover: true
+
+namespace: default
+
+images:
+  # psql-capable image for the SQL + re-key jobs
+  postgres: postgres:15.3-alpine3.18
+  # kubectl + curl + python capable image for the reissue/cleanup job.
+  # Default is the same runner image the CLE argocd preinstall-hook uses. For the local kind
+  # rehearsal this is overridden to localhost/dse-migration-tools:local with toolsPullPolicy=Never.
+  tools: docker-production-agp.nce.dockerhub.rnd.amadeus.net/eonax/actions-runner/gms-runner-eonax-infra:0.2
+  # Pull policy for the tools image. Default IfNotPresent pulls from the registry when absent.
+  # Use Never ONLY when the image is explicitly preloaded on the node (local kind rehearsal).
+  toolsPullPolicy: IfNotPresent
+
+# Postgres admin connection (the rehearsal secret created by the db module).
+db:
+  host: postgres
+  port: "5432"
+  adminSecretName: postgresql
+  adminUserKey: POSTGRES_USER
+  adminPasswordKey: POSTGRES_PASSWORD
+  participantDbs:
+    - consumerdb
+    - providerdb
+  authorityDb: authoritydb
+  # telemetry/billing DB whose participant_id table keys participants by DID (UPGRADE.md step 3)
+  billingDb: billingdb
+
+# DID re-key pairs: one entry per participant database.
+rekey:
+  - db: providerdb
+    oldDid: "did:web:provider-identityhub%3A8383:api:did"
+    newDid: "did:web:provider-identityhub:api:did"
+  - db: consumerdb
+    oldDid: "did:web:consumer-identityhub%3A8383:api:did"
+    newDid: "did:web:consumer-identityhub:api:did"
+
+# Re-onboarding / credential reissue.
+reissue:
+  # URL scheme for the in-cluster API calls. https when internal TLS is on (chart default),
+  # http when tls_enabled=false. Terraform derives this from var.tls_enabled (see migration.tf).
+  scheme: "https"
+  # In-cluster service base. Issuer admin is on the authority issuerservice :8181.
+  issuerServiceHost: "authority-issuerservice"
+  issuerServicePort: "8181"
+  authorityNewDid: "did:web:authority-identityhub:api:did"
+  # old authority DID for the issueradmin path, %3A must be sent as %253A
+  authorityOldDidEnc: "did:web:authority-identityhub%253A8383:api:did"
+  # federated catalog deployment to restart after cleanup
+  federatedCatalogDeployment: "authority-federatedcatalog"
+  # participants to (re)onboard. authority included (self-holder + self credentials).
+  #   name | newDid | identityHubHost | domain | visibility(true/false) | hasOwnIdentityHub(true/false)
+  participants:
+    - name: authority
+      newDid: "did:web:authority-identityhub:api:did"
+      identityHubHost: "authority-identityhub"
+      domain: "route"
+      visibility: false
+    - name: provider
+      newDid: "did:web:provider-identityhub:api:did"
+      identityHubHost: "provider-identityhub"
+      domain: "route"
+      visibility: false
+    - name: consumer
+      newDid: "did:web:consumer-identityhub:api:did"
+      identityHubHost: "consumer-identityhub"
+      domain: "route"
+      visibility: true
+  identityApiPort: "8181"
+  # old port-ful identities to delete on cleanup (explicit allowlist; NEVER pattern-match %3A)
+  oldHolders:
+    - "did:web:provider-identityhub%3A8383:api:did"
+    - "did:web:consumer-identityhub%3A8383:api:did"
+    - "did:web:authority-identityhub%3A8383:api:did"
+  credentialDefs:
+    membership: "membership-credential-def-1"
+    domain: "domain-credential-def-1"
+    visibility: "visibility-credential-def-1"
+
+resources:
+  ephemeralStorage: 512Mi

@@ -19,6 +19,11 @@ spec:
       port: {{ $value.port }}
       protocol: TCP
     {{- end }}
+    # DID endpoint on the default port of the did:web scheme: the DID carries no port
+    - name: did-web
+      targetPort: did
+      port: {{ include "dse.identityhub.did.web.servicePort" . }}
+      protocol: TCP
     {{- if .Values.global.telemetry.enabled }}
     - name: metrics
       targetPort: metrics

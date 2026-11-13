@@ -146,9 +146,14 @@ identityhub:
   # -- decentralized identity
   did:
     web:
+      # -- did:web of this identity hub. When empty (and global.identityHub.didWebUrl
+      # is empty), defaults to did:web:<ingress hostname>:webdid with ingress, else
+      # did:web:<fullname>:api:did (no port: the Service also exposes the DID
+      # endpoint on port 443, or 80 when useHttps is false).
       url: ""
       # -- Whether DID Web resolution uses HTTPS. When unset, falls back to
-      # global.useHttps and then false for standalone compatibility.
+      # global.useHttps and then false for standalone compatibility. Also selects
+      # the default-port Service entry of the DID endpoint (443 / 80).
       useHttps: null
 
   # -- Private/public keys information
@@ -159,7 +164,6 @@ identityhub:
     sts:
       privateKeyAlias: ""
       publicKeyAlias: ""
-      publicKeyId: ""
     encryption:
       # -- Vault alias of the AES key used to encrypt participant-context
       # config, required since EDC 0.16.0's encryption-algorithm registry
@@ -228,7 +232,6 @@ identityhub:
           name: ""
           # -- secret key containing the token
           tokenKey: ""
-      timeout: 30
       healthCheck:
         enabled: true
         standbyOk: true
@@ -236,8 +239,11 @@ identityhub:
         secret: /v1/secret
         folder: ""
         health: /v1/sys/health
-      # -- allow fallback to env-based vault token if participant-context token not available
-      allowFallback: false
+      # -- edc.vault.hashicorp.allowfallback: a participant context without a vault config of its own
+      # (edc.vault.hashicorp.config in its participant-context config) uses the vault configured above.
+      # true is the upstream default. false requires a per-participant vault partition: without it,
+      # every secret lookup of that participant fails.
+      allowFallback: true
 
     # -- Azure Key Vault
     azure:
@@ -382,6 +388,9 @@ identityhub:
     otel.javaagent.enabled=false
     otel.javaagent.debug=false
   # -- configuration of the [Java Util Logging Facade](https://docs.oracle.com/javase/7/docs/technotes/guides/logging/overview.html)
+  # EDC log level (ConsoleMonitor). One of DEBUG, INFO, WARNING, SEVERE.
+  # Rendered as the container arg --log-level=<value>. Unset => image default (INFO).
+  logLevel: INFO
   logging: |-
     .level=INFO
     org.eclipse.edc.level=ALL

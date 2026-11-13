@@ -42,6 +42,10 @@ spec:
           # either use the specified image, or use the default one
           image: {{ include "dse.controlplane.imageRepository" . }}:{{ .Values.controlplane.image.tag | required ".Values.controlplane.image.tag is required" }}
           imagePullPolicy: {{.Values.controlplane.image.pullPolicy}}
+          {{- with .Values.controlplane.logLevel }}
+          args:
+            - "--log-level={{ . }}"
+          {{- end }}
           ports:
         {{- range $key,$value := .Values.controlplane.endpoints}}
             - name: {{$key}}
@@ -202,14 +206,12 @@ spec:
               secretKeyRef:
                 name: {{ include "dse.controlplane.vaultTokenSecretName" . | quote }}
                 key: {{ .Values.controlplane.vault.hashicorp.token.secret.tokenKey | required ".Values.controlplane.vault.hashicorp.token.secret.tokenKey is required" | quote }}
-          - name: "EDC_VAULT_HASHICORP_TOKEN_SCHEDULED-RENEW-ENABLED"
+          - name: "EDC_VAULT_HASHICORP_TOKEN_SCHEDULEDRENEW_ENABLED"
             value: {{ .Values.controlplane.vault.hashicorp.token.renewal.enabled | quote }}
           - name: "EDC_VAULT_HASHICORP_TOKEN_RENEW-BUFFER"
             value: {{ .Values.controlplane.vault.hashicorp.token.renewal.renewBuffer | quote }}
           - name: "EDC_VAULT_HASHICORP_TOKEN_TTL"
             value: {{ .Values.controlplane.vault.hashicorp.token.renewal.ttl | quote }}
-          - name: "EDC_VAULT_HASHICORP_TIMEOUT_SECONDS"
-            value: {{ .Values.controlplane.vault.hashicorp.timeout | quote }}
           - name: "EDC_VAULT_HASHICORP_HEALTH_CHECK_ENABLED"
             value: {{ .Values.controlplane.vault.hashicorp.healthCheck.enabled | quote }}
           - name: "EDC_VAULT_HASHICORP_HEALTH_CHECK_STANDBY_OK"
@@ -220,7 +222,7 @@ spec:
             value: {{ include "dse.controlplane.vaultFolder" . | quote }}
           - name: "EDC_VAULT_HASHICORP_API_HEALTH_CHECK_PATH"
             value: {{ .Values.controlplane.vault.hashicorp.paths.health | quote }}
-          - name: "EDC_VAULT_HASHICORP_ALLOW_FALLBACK"
+          - name: "EDC_VAULT_HASHICORP_ALLOWFALLBACK"
             value: {{ .Values.controlplane.vault.hashicorp.allowFallback | quote }}
         {{- end }}
 
@@ -266,8 +268,6 @@ spec:
           #######
           # DID #
           #######
-          - name: "EDC_IDENTITY_DID_URL"
-            value: {{ include "dse.controlplane.identityHubDidWebUrl" . | quote }}
           - name: "EDC_IAM_DID_WEB_USE_HTTPS"
             value: {{ include "dse.controlplane.did.web.useHttps" . | quote }}
           - name: "DSE_AUTHORITY_DID"

@@ -29,6 +29,6 @@
     "https://w3id.org/edc/v0.0.1/ns/type": "HttpData",
     "https://w3id.org/edc/v0.0.1/ns/baseUrl": "https://jsonplaceholder.typicode.com/"
   },
-  "participant_context_id": "did:web:provider-identityhub%3A8383:api:did",
+  "participant_context_id": "did:web:provider-identityhub:api:did",
   "dataplane_metadata": null
 }

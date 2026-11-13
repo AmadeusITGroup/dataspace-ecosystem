@@ -95,8 +95,8 @@ Did Web URL
 {{- with .Values.identityhub.ingress }}
 {{- if and .enabled .hostname }}{{/* if ingress enabled and hostname defined */}}
 {{- printf "did:web:%s:webdid" .hostname -}}
-{{- else }}{{/* else when ingress not enabled */}}
-{{- printf "did:web:%s%3A%v:api:did" (include "dse.fullname" $ ) $.Values.identityhub.endpoints.did.port -}}
+{{- else }}{{/* else when ingress not enabled: no port in the DID, the Service exposes the DID endpoint on the default port (see dse.identityhub.did.web.servicePort) */}}
+{{- printf "did:web:%s:api:did" (include "dse.fullname" $ ) -}}
 {{- end }}{{/* end if ingress */}}
 {{- end }}{{/* end with ingress */}}
 {{- end }}{{/* end if .Values.ssi.did.web.url */}}
@@ -158,24 +158,12 @@ from global.db.serverFqdn/name.
 {{- end }}
 
 {{/*
-Identity Hub - STS public key id. Uses the explicit value if set, otherwise
-derives it from this identity hub's own DID Web URL ("<didWebUrl>#my-key").
+Identity Hub - default port of the did:web scheme (443 with https, 80 with
+http). The Service exposes the DID endpoint on this port as well, so that a
+did:web without port (did:web:<service>:api:did) resolves to this pod.
 */}}
-{{- define "dse.identityhub.stsPublicKeyId" -}}
-{{- if .Values.identityhub.keys.sts.publicKeyId -}}
-{{- .Values.identityhub.keys.sts.publicKeyId -}}
-{{- else -}}
-{{- printf "%s#my-key" (include "dse.identityhub.did.web.url" .) -}}
-{{- end -}}
-{{- end }}
-
-{{/*
-Identity Hub - base64 url-safe (no padding) encoding of this identity hub's
-own DID Web URL. Reusable wherever Terraform previously computed
-`did_url_base64_url` (e.g. participant-context key/service URLs).
-*/}}
-{{- define "dse.identityhub.didWebUrlBase64" -}}
-{{- (include "dse.identityhub.did.web.url" .) | b64enc | replace "+" "-" | replace "/" "_" | replace "=" "" -}}
+{{- define "dse.identityhub.did.web.servicePort" -}}
+{{- ternary 443 80 (eq (include "dse.identityhub.did.web.useHttps" .) "true") -}}
 {{- end }}
 
 {{/*
@@ -194,7 +182,7 @@ endpoints using the same shape as the Terraform deployment.
 {{- $scheme := ternary "https" "http" .Values.identityhub.internalTls.enabled -}}
 {{- $participantName := default (trimSuffix "-identityhub" .Release.Name) .Values.global.participantName -}}
 {{- $dspEndpoint := printf "%s://%s-controlplane:8282/api/dsp/2025-1" $scheme $participantName -}}
-{{- $credentialsEndpoint := printf "%s://%s:%v%s/v1/participants/%s" $scheme (include "dse.fullname" .) .Values.identityhub.endpoints.credentials.port (trimSuffix "/" .Values.identityhub.endpoints.credentials.path) (include "dse.identityhub.didWebUrlBase64" .) -}}
+{{- $credentialsEndpoint := printf "%s://%s:%v%s/v1/participants/%s" $scheme (include "dse.fullname" .) .Values.identityhub.endpoints.credentials.port (trimSuffix "/" .Values.identityhub.endpoints.credentials.path) (include "dse.identityhub.did.web.url" .) -}}
 {{- list (dict "id" "dsp-url" "type" "DSPMessaging" "serviceEndpoint" $dspEndpoint) (dict "id" "credential-service-url" "type" "CredentialService" "serviceEndpoint" $credentialsEndpoint) | toJson -}}
 {{- end -}}
 {{- end }}

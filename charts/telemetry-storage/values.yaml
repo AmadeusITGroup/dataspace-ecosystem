@@ -240,6 +240,9 @@ telemetrystorage:
     otel.javaagent.enabled=false
     otel.javaagent.debug=false
   # -- configuration of the [Java Util Logging Facade](https://docs.oracle.com/javase/7/docs/technotes/guides/logging/overview.html)
+  # EDC log level (ConsoleMonitor). One of DEBUG, INFO, WARNING, SEVERE.
+  # Rendered as the container arg --log-level=<value>. Unset => image default (INFO).
+  logLevel: INFO
   logging: |-
     .level=INFO
     org.eclipse.edc.level=ALL

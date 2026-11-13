@@ -5,12 +5,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.json.JsonArray;
 import jakarta.json.JsonObject;
 import jakarta.json.JsonValue;
-import org.eclipse.edc.iam.verifiablecredentials.spi.model.CredentialFormat;
 import org.eclipse.edc.identityhub.api.verifiablecredentials.v1.unstable.model.CredentialDescriptor;
 import org.eclipse.edc.identityhub.api.verifiablecredentials.v1.unstable.model.CredentialRequestDto;
+import org.eclipse.edc.identityhub.spi.verifiablecredentials.model.CredentialProfile;
 import org.hamcrest.core.AnyOf;
 
-import java.util.Base64;
 import java.util.List;
 
 import static io.restassured.RestAssured.given;
@@ -31,13 +30,13 @@ abstract class AbstractEntity {
 
     public void requestCredential(String issuerDid, String credentialType, String credentialDefinitionId) {
         var dto = new CredentialRequestDto(issuerDid, did() + credentialType, List.of(
-                new CredentialDescriptor(CredentialFormat.VC1_0_JWT.name(), credentialType, credentialDefinitionId)));
+                new CredentialDescriptor(CredentialProfile.DCP_PROFILE_VC11, credentialType, credentialDefinitionId)));
         given()
                 .baseUri(identityHubIdentityUrl())
                 .body(dto)
                 .contentType(JSON)
                 .when()
-                .post("/v1beta/participants/%s/credentials/request".formatted(toBase64(did())))
+                .post("/v1beta/participants/%s/credentials/request".formatted(did()))
                 .then()
                 .statusCode(isStatus2xxOrConflict());
     }
@@ -47,16 +46,12 @@ abstract class AbstractEntity {
                 .baseUri(identityHubIdentityUrl())
                 .when()
                 .contentType(JSON)
-                .get("/v1beta/participants/%s/credentials".formatted(toBase64(did())))
+                .get("/v1beta/participants/%s/credentials".formatted(did()))
                 .then()
                 .statusCode(isStatus2xx()).extract().body().asString();
         return mapper.readValue(credentials, JsonArray.class).stream()
                 .map(JsonValue::asJsonObject)
                 .toList();
-    }
-
-    protected String toBase64(String s) {
-        return Base64.getUrlEncoder().encodeToString(s.getBytes());
     }
 
     protected AnyOf<Integer> isStatus2xx() {

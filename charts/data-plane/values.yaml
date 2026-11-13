@@ -186,7 +186,6 @@ dataplane:
           name: ""
           # -- secret key containing the token
           tokenKey: ""
-      timeout: 30
       healthCheck:
         enabled: true
         standbyOk: true
@@ -194,8 +193,11 @@ dataplane:
         secret: /v1/secret
         folder: ""
         health: /v1/sys/health
-      # -- allow fallback to env-based vault token if participant-context token not available
-      allowFallback: false
+      # -- edc.vault.hashicorp.allowfallback: a participant context without a vault config of its own
+      # (edc.vault.hashicorp.config in its participant-context config) uses the vault configured above.
+      # true is the upstream default. false requires a per-participant vault partition: without it,
+      # every secret lookup of that participant fails.
+      allowFallback: true
 
     # -- Azure Key Vault
     azure:
@@ -354,6 +356,9 @@ dataplane:
     otel.javaagent.enabled=false
     otel.javaagent.debug=false
   # -- configuration of the [Java Util Logging Facade](https://docs.oracle.com/javase/7/docs/technotes/guides/logging/overview.html)
+  # EDC log level (ConsoleMonitor). One of DEBUG, INFO, WARNING, SEVERE.
+  # Rendered as the container arg --log-level=<value>. Unset => image default (INFO).
+  logLevel: INFO
   logging: |-
     .level=INFO
     org.eclipse.edc.level=ALL

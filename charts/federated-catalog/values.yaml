@@ -111,12 +111,6 @@ federatedcatalog:
       port: 8282
       # -- path for incoming api calls
       path: /api/dsp
-    # -- federated catalog api
-    catalog:
-      # -- port for incoming api calls
-      port: 8383
-      # -- path for incoming api calls
-      path: /api/catalog
 
   # -- api configuration
   api:
@@ -129,8 +123,6 @@ federatedcatalog:
   # -- federated Catalog crawler configuration
   crawler:
     cache:
-      # -- loader batch size
-      loaderBatchSize: 1
       # -- initial delay before crawling starts
       executionDelaySeconds: 10
       # -- period between each crawler iteration
@@ -169,7 +161,6 @@ federatedcatalog:
           name: ""
           # -- secret key containing the token
           tokenKey: ""
-      timeout: 30
       healthCheck:
         enabled: true
         standbyOk: true
@@ -177,8 +168,11 @@ federatedcatalog:
         secret: /v1/secret
         folder: ""
         health: /v1/sys/health
-      # -- allow fallback to env-based vault token if participant-context token not available
-      allowFallback: false
+      # -- edc.vault.hashicorp.allowfallback: a participant context without a vault config of its own
+      # (edc.vault.hashicorp.config in its participant-context config) uses the vault configured above.
+      # true is the upstream default. false requires a per-participant vault partition: without it,
+      # every secret lookup of that participant fails.
+      allowFallback: true
 
     # -- Azure Key Vault
     azure:
@@ -286,9 +280,6 @@ federatedcatalog:
     # -- ingress for protocol api
     - port: 8282
       path: /api/dsp
-    # -- ingress for catalog api
-    - port: 8383
-      path: /api/catalog
     # -- Defines the [ingress class](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class)  to use
     className: ""
     # -- TLS [tls class](https://kubernetes.io/docs/concepts/services-networking/ingress/#tls) applied to the ingress resource
@@ -346,6 +337,9 @@ federatedcatalog:
     otel.javaagent.enabled=false
     otel.javaagent.debug=false
   # -- configuration of the [Java Util Logging Facade](https://docs.oracle.com/javase/7/docs/technotes/guides/logging/overview.html)
+  # EDC log level (ConsoleMonitor). One of DEBUG, INFO, WARNING, SEVERE.
+  # Rendered as the container arg --log-level=<value>. Unset => image default (INFO).
+  logLevel: INFO
   logging: |-
     .level=INFO
     org.eclipse.edc.level=ALL

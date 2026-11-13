@@ -142,7 +142,7 @@ class DseAssetPropertyLookupTest {
         assertThat(asset.getDataAddress().getStringProperty("https://w3id.org/edc/v0.0.1/ns/type")).isEqualTo("HttpData");
         assertThat(asset.getDataAddress().getStringProperty("https://w3id.org/edc/v0.0.1/ns/baseUrl"))
                 .isEqualTo("https://jsonplaceholder.typicode.com/");
-        assertThat(asset.getParticipantContextId()).isEqualTo("did:web:provider-identityhub%3A8383:api:did");
+        assertThat(asset.getParticipantContextId()).isEqualTo("did:web:provider-identityhub:api:did");
     }
 
     @SuppressWarnings("unchecked")

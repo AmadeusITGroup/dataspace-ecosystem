@@ -31,6 +31,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.eclipse.dse.common.jsonld.DseJsonLdNamespacesExtension.ADMS_NAMESPACE;
 import static org.eclipse.dse.common.jsonld.DseJsonLdNamespacesExtension.PROV_NAMESPACE;
 import static org.eclipse.dse.common.jsonld.DseJsonLdNamespacesExtension.SKOS_NAMESPACE;
+import static org.eclipse.edc.api.management.ManagementApi.MANAGEMENT_SCOPE;
+import static org.eclipse.edc.api.management.ManagementApi.MANAGEMENT_SCOPE_V4;
 import static org.eclipse.edc.protocol.dsp.spi.type.Dsp2025Constants.DSP_SCOPE_V_2025_1;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -61,7 +63,7 @@ class DseJsonLdNamespacesExtensionTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"MANAGEMENT_API", DSP_SCOPE_V_2025_1, "CATALOG_FILTER_API", "CATALOG_QUERY_API"})
+    @ValueSource(strings = {MANAGEMENT_SCOPE, MANAGEMENT_SCOPE_V4, DSP_SCOPE_V_2025_1, "CATALOG_FILTER_API"})
     void compaction_usesRegisteredPrefixes(String scope, DseJsonLdNamespacesExtension extension, ServiceExtensionContext context) {
         extension.initialize(context);
 
@@ -75,8 +77,22 @@ class DseJsonLdNamespacesExtensionTest {
     }
 
     @Test
+    void compaction_managementV4_keepsUpstreamOdrlIris(DseJsonLdNamespacesExtension extension, ServiceExtensionContext context) {
+        extension.initialize(context);
+        var dataset = Json.createObjectBuilder(expandedDataset())
+                .add("http://www.w3.org/ns/odrl/2/hasPolicy", Json.createArrayBuilder().add(Json.createObjectBuilder().add("@id", "offer-1")))
+                .build();
+
+        var compacted = jsonLd.compact(dataset, MANAGEMENT_SCOPE_V4).orElseThrow(f -> new AssertionError(f.getFailureDetail()));
+
+        assertThat(compacted)
+                .containsKeys("http://www.w3.org/ns/odrl/2/hasPolicy", "skos:prefLabel", "prov:wasAttributedTo", "adms:versionNotes")
+                .doesNotContainKey("odrl:hasPolicy");
+    }
+
+    @Test
     void compaction_withoutExtension_keepsFullIris() {
-        var compacted = jsonLd.compact(expandedDataset(), "MANAGEMENT_API").orElseThrow(f -> new AssertionError(f.getFailureDetail()));
+        var compacted = jsonLd.compact(expandedDataset(), MANAGEMENT_SCOPE).orElseThrow(f -> new AssertionError(f.getFailureDetail()));
 
         assertThat(compacted).containsKey(SKOS_NAMESPACE + "prefLabel").doesNotContainKey("skos:prefLabel");
     }

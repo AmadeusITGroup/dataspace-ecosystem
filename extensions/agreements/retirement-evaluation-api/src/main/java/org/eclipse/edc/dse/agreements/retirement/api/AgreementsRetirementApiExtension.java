@@ -20,29 +20,37 @@
 package org.eclipse.edc.dse.agreements.retirement.api;
 
 import jakarta.json.Json;
+import org.eclipse.edc.api.management.schema.ManagementApiJsonSchema;
 import org.eclipse.edc.dse.agreements.retirement.api.transform.JsonObjectFromAgreementRetirementTransformer;
 import org.eclipse.edc.dse.agreements.retirement.api.transform.JsonObjectToAgreementsRetirementEntryTransformer;
-import org.eclipse.edc.dse.agreements.retirement.api.v3.AgreementsRetirementApiV3Controller;
+import org.eclipse.edc.dse.agreements.retirement.api.v4.AgreementsRetirementApiV4Controller;
 import org.eclipse.edc.dse.agreements.retirement.spi.service.AgreementsRetirementService;
 import org.eclipse.edc.dse.agreements.retirement.spi.types.AgreementConstants;
 import org.eclipse.edc.dse.common.DseNamespaceConfig;
+import org.eclipse.edc.jsonld.spi.JsonLd;
 import org.eclipse.edc.runtime.metamodel.annotation.Extension;
 import org.eclipse.edc.runtime.metamodel.annotation.Inject;
 import org.eclipse.edc.spi.monitor.Monitor;
 import org.eclipse.edc.spi.system.ServiceExtension;
 import org.eclipse.edc.spi.system.ServiceExtensionContext;
+import org.eclipse.edc.spi.types.TypeManager;
 import org.eclipse.edc.transform.spi.TypeTransformerRegistry;
 import org.eclipse.edc.validator.spi.JsonObjectValidatorRegistry;
+import org.eclipse.edc.web.jersey.providers.jsonld.JerseyJsonLdInterceptor;
 import org.eclipse.edc.web.spi.WebService;
 import org.eclipse.edc.web.spi.configuration.ApiContext;
 
 import java.util.Map;
 
+import static org.eclipse.edc.api.management.ManagementApi.MANAGEMENT_API_CONTEXT;
+import static org.eclipse.edc.api.management.ManagementApi.MANAGEMENT_SCOPE_V4;
 import static org.eclipse.edc.dse.agreements.retirement.api.AgreementsRetirementApiExtension.NAME;
+import static org.eclipse.edc.spi.constants.CoreConstants.JSON_LD;
 
 
 @Extension(value = NAME)
 public class AgreementsRetirementApiExtension implements ServiceExtension {
+
 
     public static final String NAME = "Contract Agreement Retirement API ";
 
@@ -63,17 +71,23 @@ public class AgreementsRetirementApiExtension implements ServiceExtension {
     private Monitor monitor;
     @Inject
     private DseNamespaceConfig namespaceConfig;
+    @Inject
+    private JsonLd jsonLd;
+    @Inject
+    private TypeManager typeManager;
 
     @Override
     public void initialize(ServiceExtensionContext context) {
         var jsonFactory = Json.createBuilderFactory(Map.of());
-        var managementTypeTransformerRegistry = transformerRegistry.forContext("management-api");
+        var managementTypeTransformerRegistry = transformerRegistry.forContext(MANAGEMENT_API_CONTEXT);
         var agreementConstants = new AgreementConstants(namespaceConfig);
 
         managementTypeTransformerRegistry.register(new JsonObjectFromAgreementRetirementTransformer(jsonFactory, agreementConstants));
         managementTypeTransformerRegistry.register(new JsonObjectToAgreementsRetirementEntryTransformer(agreementConstants));
 
-        webService.registerResource(ApiContext.MANAGEMENT, new AgreementsRetirementApiV3Controller(agreementsRetirementService, managementTypeTransformerRegistry, validator, monitor));
+        webService.registerResource(ApiContext.MANAGEMENT, new AgreementsRetirementApiV4Controller(agreementsRetirementService, managementTypeTransformerRegistry, validator, monitor));
+        webService.registerDynamicResource(ApiContext.MANAGEMENT, AgreementsRetirementApiV4Controller.class,
+                new JerseyJsonLdInterceptor(jsonLd, typeManager, JSON_LD, MANAGEMENT_SCOPE_V4, validator, ManagementApiJsonSchema.V4.version()));
     }
 
 }

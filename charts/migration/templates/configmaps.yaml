@@ -1,0 +1,33 @@
+{{- if and .Values.enabled .Values.schemaMigration }}
+# Schema-migration SQL — present during the PRE-upgrade phase (Job 1).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-sql
+  namespace: {{ .Values.namespace }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": before-hook-creation
+data:
+  participant-migration.sql: |
+{{ .Files.Get "files/participant-migration.sql" | indent 4 }}
+  authority-migration.sql: |
+{{ .Files.Get "files/authority-migration.sql" | indent 4 }}
+{{- end }}
+{{- if and .Values.enabled .Values.didCutover }}
+---
+# Re-key SQL — present during the POST-upgrade phase (Job 2).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-rekey
+  namespace: {{ .Values.namespace }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "5"
+    "helm.sh/hook-delete-policy": before-hook-creation
+data:
+  participant-rekey-did.sql: |
+{{ .Files.Get "files/participant-rekey-did.sql" | indent 4 }}
+{{- end }}

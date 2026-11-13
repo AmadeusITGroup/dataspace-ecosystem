@@ -23,6 +23,8 @@ import org.eclipse.edc.spi.system.ServiceExtensionContext;
 import java.util.List;
 import java.util.Map;
 
+import static org.eclipse.edc.api.management.ManagementApi.MANAGEMENT_SCOPE;
+import static org.eclipse.edc.api.management.ManagementApi.MANAGEMENT_SCOPE_V4;
 import static org.eclipse.edc.protocol.dsp.spi.type.Dsp2025Constants.DSP_SCOPE_V_2025_1;
 
 /**
@@ -55,25 +57,17 @@ public class DseJsonLdNamespacesExtension implements ServiceExtension {
             ADMS_PREFIX, ADMS_NAMESPACE);
 
     /**
-     * Management API (EDC {@code ManagementApiConfigurationExtension}).
-     */
-    public static final String MANAGEMENT_API_SCOPE = "MANAGEMENT_API";
-    /**
-     * Dataspace Protocol 2025-1. Taken from EDC so it follows upstream: EDC 0.18 renamed it
-     * from {@code DSP:2025-1} to {@code DSP:dataspace-protocol-http:2025-1}.
-     */
-    public static final String DSP_2025_1_SCOPE = DSP_SCOPE_V_2025_1;
-    /**
      * DSE catalog filter API ({@code VcCatalogFilterExtension.CATALOG_FILTER_SCOPE}).
      */
     public static final String CATALOG_FILTER_API_SCOPE = "CATALOG_FILTER_API";
-    /**
-     * Federated catalog query API (EDC FC {@code CATALOG_QUERY_SCOPE}).
-     */
-    public static final String CATALOG_QUERY_API_SCOPE = "CATALOG_QUERY_API";
 
+    /**
+     * Management API v3 and v4 (the v4 scope is compacted with the upstream {@code management/v2} context), Dataspace
+     * Protocol 2025-1 and the DSE catalog filter API. Only the DSE Event-model vocabularies are added; upstream terms
+     * (e.g. ODRL in management v4) keep the shape of the upstream context.
+     */
     public static final List<String> SCOPES = List.of(
-            MANAGEMENT_API_SCOPE, DSP_2025_1_SCOPE, CATALOG_FILTER_API_SCOPE, CATALOG_QUERY_API_SCOPE);
+            MANAGEMENT_SCOPE, MANAGEMENT_SCOPE_V4, DSP_SCOPE_V_2025_1, CATALOG_FILTER_API_SCOPE);
 
     @Inject
     private JsonLd jsonLd;

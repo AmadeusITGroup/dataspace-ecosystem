@@ -39,6 +39,10 @@ spec:
           # either use the specified image, or use the default one
           image: {{ include "dse.federatedcatalogfilter.image.repository" . | trim }}:{{ .Values.federatedcatalogfilter.image.tag | default .Chart.AppVersion }}
           imagePullPolicy: {{ .Values.federatedcatalogfilter.image.pullPolicy }}
+          {{- with .Values.federatedcatalogfilter.logLevel }}
+          args:
+            - "--log-level={{ . }}"
+          {{- end }}
           ports:
           {{- range $key,$value := .Values.federatedcatalogfilter.endpoints }}
             - name: {{ $key }}
@@ -161,14 +165,12 @@ spec:
               secretKeyRef:
                 name: {{ include "dse.federatedcatalogfilter.vault.hashicorp.tokenSecretName" . | quote }}
                 key: {{.Values.federatedcatalogfilter.vault.hashicorp.token.secret.tokenKey | required ".Values.federatedcatalogfilter.vault.hashicorp.token.secret.tokenKey is required" | quote}}
-          - name: "EDC_VAULT_HASHICORP_TOKEN_SCHEDULED-RENEW-ENABLED"
+          - name: "EDC_VAULT_HASHICORP_TOKEN_SCHEDULEDRENEW_ENABLED"
             value: {{ .Values.federatedcatalogfilter.vault.hashicorp.token.renewal.enabled | quote }}
           - name: "EDC_VAULT_HASHICORP_TOKEN_RENEW-BUFFER"
             value: {{ .Values.federatedcatalogfilter.vault.hashicorp.token.renewal.renewBuffer | quote }}
           - name: "EDC_VAULT_HASHICORP_TOKEN_TTL"
             value: {{ .Values.federatedcatalogfilter.vault.hashicorp.token.renewal.ttl | quote }}
-          - name: "EDC_VAULT_HASHICORP_TIMEOUT_SECONDS"
-            value: {{ .Values.federatedcatalogfilter.vault.hashicorp.timeout | quote }}
           - name: "EDC_VAULT_HASHICORP_HEALTH_CHECK_ENABLED"
             value: {{ .Values.federatedcatalogfilter.vault.hashicorp.healthCheck.enabled | quote }}
           - name: "EDC_VAULT_HASHICORP_HEALTH_CHECK_STANDBY_OK"
@@ -179,7 +181,7 @@ spec:
             value: {{ include "dse.federatedcatalogfilter.vault.hashicorp.folder" . | quote }}
           - name: "EDC_VAULT_HASHICORP_API_HEALTH_CHECK_PATH"
             value: {{ .Values.federatedcatalogfilter.vault.hashicorp.paths.health | quote }}
-          - name: "EDC_VAULT_HASHICORP_ALLOW_FALLBACK"
+          - name: "EDC_VAULT_HASHICORP_ALLOWFALLBACK"
             value: {{ .Values.federatedcatalogfilter.vault.hashicorp.allowFallback | quote }}
           {{- end }}
 
@@ -224,8 +226,6 @@ spec:
           #######
           # DID #
           #######
-          - name: "EDC_IDENTITY_DID_URL"
-            value: {{ include "dse.federatedcatalogfilter.didWebUrl" . | quote }}
           - name: "EDC_IAM_DID_WEB_USE_HTTPS"
             value: {{ include "dse.federatedcatalogfilter.didWebUseHttps" . | quote }}
           - name: "DSE_AUTHORITY_DID"

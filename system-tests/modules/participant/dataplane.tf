@@ -86,8 +86,8 @@ resource "helm_release" "dataplane" {
                EOT
 
         "config" : <<EOT
-edc.vault.hashicorp.token.scheduled-renew-enabled=false
-edc.vault.hashicorp.allow.fallback=true
+edc.vault.hashicorp.token.scheduledrenew.enabled=false
+edc.vault.hashicorp.allowfallback=true
 edc.dataplane.state-machine.iteration-wait-millis=${var.data_plane_state_machine_wait_millis}
 edc.blobstore.endpoint.template=http://azurite-blobstorage:10000/%s
 ${local.tls_config_props}

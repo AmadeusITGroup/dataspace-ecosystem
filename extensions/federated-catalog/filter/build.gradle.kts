@@ -31,8 +31,12 @@ dependencies {
     implementation(libs.edc.dsp.spi.v2025)
     implementation(libs.edc.lib.jerseyproviders)
     implementation(libs.edc.spi.control.plane.transform)
+    implementation(libs.edc.spi.web)
     testImplementation(libs.edc.lib.jsonld)
     testImplementation(libs.edc.lib.query)
+    testImplementation(libs.edc.core.junit)
+    testImplementation(testFixtures(libs.edc.core.jersey))
+    testImplementation(libs.restAssured)
 }
 
 tasks.test {

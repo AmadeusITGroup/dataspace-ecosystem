@@ -8,7 +8,9 @@ locals {
     var.environment == "devbox" ? "${var.devbox-registry}/federated-catalog-postgresql-hashicorpvault" :
     "federated-catalog-postgresql-hashicorpvault"
   )
-  catalog_url = "${local.scheme}://${local.catalog_release_name}.default.svc.cluster.local:8383/api/catalog/v1alpha/catalog/query"
+  # Published as FederatedCatalogService in the authority DID document and called by the federated catalog filter:
+  # the upstream management v4 endpoint.
+  catalog_url = "${local.scheme}://${local.catalog_release_name}.default.svc.cluster.local:8181/api/management/v4/catalogs/request"
 }
 
 resource "helm_release" "federated-catalog" {
@@ -77,8 +79,8 @@ resource "helm_release" "federated-catalog" {
 
         "config" : <<EOT
 edc.iam.trustedissuer.authority.id=${local.did_url}
-edc.vault.hashicorp.token.scheduled-renew-enabled=false
-edc.vault.hashicorp.allow.fallback=true
+edc.vault.hashicorp.token.scheduledrenew.enabled=false
+edc.vault.hashicorp.allowfallback=true
 dse.namespace.prefix=${var.dse_namespace_prefix}
 dse.policy.prefix=${var.dse_policy_prefix}
 ${local.tls_config_props}
@@ -116,8 +118,9 @@ ${local.tls_config_props}
           ),
           "endpoints" : [
             {
-              "port" : 8383,
-              "path" : "/${var.authority_name}/(catalog)(.*)",
+              # federated catalog management API (/v4/catalogs/request, /v4/catalogs/query/count), used by the system tests only
+              "port" : 8181,
+              "path" : "/${var.authority_name}/fc/(management)(.*)",
               "pathType" : "ImplementationSpecific"
             }
           ]

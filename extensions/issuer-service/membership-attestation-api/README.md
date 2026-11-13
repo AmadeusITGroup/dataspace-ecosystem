@@ -27,7 +27,7 @@ OpenAPI interface defining the administrative API contract:
 
 #### `MembershipAttestationApiController`
 REST controller implementing the administrative API:
-- **Path**: `/identity/unstable/participants/{participantContextId}/attestation-membership`
+- **Path**: `/v1beta/participants/{participantContextId}/attestation-membership` on the `issueradmin` context (`/api/issueradmin`); `participantContextId` is the authority DID as is (not base64)
 - **Content Type**: `application/json`
 - Delegates storage operations to `MembershipAttestationStore`
 - Automatically sets attestation timestamp to current time on create/update

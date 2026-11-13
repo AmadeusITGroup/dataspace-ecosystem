@@ -52,7 +52,7 @@ DocBE ->> MGW : GET /KL/GetDocsDSE\n{LSS OIDC token, documentationId}
 MGW ->> CrBff : forward to KL connector
 activate CrBff
 
-CrBff ->> CP : POST /api/management/v1alpha/catalog/query\n{filterExpression: [documentationId = "..."]}
+CrBff ->> CP : POST /api/management/v4/catalogs/request\n{filterExpression: [documentationId = "..."]}
 activate CP
 
 note right of CP

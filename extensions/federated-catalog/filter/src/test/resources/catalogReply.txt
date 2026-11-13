@@ -412,7 +412,7 @@
             "dcat:endpointUrl": "http://consumer-controlplane:8282/api/dsp/2025-1",
             "dcat:endpointURL": "http://consumer-controlplane:8282/api/dsp/2025-1"
         },
-        "dspace:participantId": "did:web:consumer-identityhub%3A8383:api:did",
+        "dspace:participantId": "did:web:consumer-identityhub:api:did",
         "originator": "http://consumer-controlplane:8282/api/dsp/2025-1",
         "@context": {
             "dse-policy": "https://w3id.org/dse/policy/",

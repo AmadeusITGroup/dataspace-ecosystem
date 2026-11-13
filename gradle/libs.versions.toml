@@ -92,6 +92,7 @@ edc-lib-sql = { module = "org.eclipse.edc:sql-lib", version.ref = "edc" }
 edc-lib-transform = { module = "org.eclipse.edc:transform-lib", version.ref = "edc" }
 edc-spi-transform = { module = "org.eclipse.edc:transform-spi", version.ref = "edc" }
 edc-lib-validator = { module = "org.eclipse.edc:validator-lib", version.ref = "edc" }
+edc-spi-validator = { module = "org.eclipse.edc:validator-spi", version.ref = "edc" }
 edc-lib-crypto-common = { module = "org.eclipse.edc:crypto-common-lib", version.ref = "edc" }
 edc-core-policy-monitor = { module = "org.eclipse.edc:policy-monitor-core", version.ref = "edc" }
 edc-junit = { module = "org.eclipse.edc:junit", version.ref = "edc" }
@@ -107,7 +108,7 @@ edc-tests-junit-base = { module = "org.eclipse.edc:junit-base", version.ref = "e
 edc-api-management-config = { module = "org.eclipse.edc:management-api-configuration", version.ref = "edc" }
 edc-api-control-config = { module = "org.eclipse.edc:control-api-configuration", version.ref = "edc" }
 edc-api-management = { module = "org.eclipse.edc:management-api", version.ref = "edc" }
-edc-dpf-api-public-v2 = { module = "org.eclipse.edc:data-plane-public-api-v2", version.ref = "edc" }
+edc-api-management-lib = { module = "org.eclipse.edc:management-api-lib", version.ref = "edc" }
 edc-ext-dpf-http = { module = "org.eclipse.edc:data-plane-http", version.ref = "edc" }
 edc-ext-dpf-util = { module = "org.eclipse.edc:data-plane-util", version.ref = "edc" }
 edc-ext-dpf-core = { module = "org.eclipse.edc:data-plane-core", version.ref = "edc" }
@@ -185,10 +186,11 @@ edc-issuerservice-api-admin-config = { module = "org.eclipse.edc:issuer-admin-ap
 
 # Federated Catalog dependencies
 edc-federatedcatalog-spi-core = { module = "org.eclipse.edc:federated-catalog-spi", version.ref = "edc" }
+# upstream federated catalog query API (CatalogsApiV4Controller), used by the federated-catalog-cache HTTP tests only
+edc-federatedcatalog-api = { module = "org.eclipse.edc:federated-catalog-api", version.ref = "edc" }
 edc-federatedcatalog-bom = { module = "org.eclipse.edc:federatedcatalog-dcp-bom", version.ref = "edc" }
 edc-protocol-dsp-catalog = { module = "org.eclipse.edc:dsp-catalog-transform-lib", version.ref = "edc" }
 edc-protocol-dsp-catalog-v2025 = { module = "org.eclipse.edc:dsp-catalog-transform-2025", version.ref = "edc" }
-edc-lib-catalog-util = { module = "org.eclipse.edc:catalog-util-lib", version.ref = "edc" }
 edc-lib-jerseyproviders = { module = "org.eclipse.edc:jersey-providers-lib", version.ref = "edc" }
 edc-federated-catalog-core = { module = "org.eclipse.edc:catalog-crawler-core", version.ref = "edc" }
 # Other dependencies
@@ -201,6 +203,7 @@ jakartaJson = { module = "org.glassfish:jakarta.json", version.ref = "jackarta-j
 jetty-jakarta-servletApi = { module = "org.eclipse.jetty.toolchain:jetty-jakarta-servlet-api", version.ref = "servletApi" }
 jetty-server = { module = "org.eclipse.jetty:jetty-server", version.ref = "jetty" }
 jetty-util = { module = "org.eclipse.jetty:jetty-util", version.ref = "jetty" }
+jetty-ee10-servlet = { module = "org.eclipse.jetty.ee10:jetty-ee10-servlet", version.ref = "jetty" }
 jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref = "jackson" }
 jackson-core = { module = "com.fasterxml.jackson.core:jackson-core", version.ref = "jackson" }
 jackson-datatypeJsr310 = { module = "com.fasterxml.jackson.datatype:jackson-datatype-jsr310", version.ref = "jackson" }

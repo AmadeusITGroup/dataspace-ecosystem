@@ -1,0 +1,120 @@
+{{- if and .Values.enabled .Values.didCutover }}
+# STEP 3 — credential reissue + old-identity cleanup (idempotent, allowlist deletes). hook-weight 20.
+# RBAC: read nothing special; restart the federated catalog deployment after cleanup.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Release.Name }}-reissue
+  namespace: {{ .Values.namespace }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "15"
+    "helm.sh/hook-delete-policy": before-hook-creation
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ .Release.Name }}-reissue
+  namespace: {{ .Values.namespace }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "15"
+    "helm.sh/hook-delete-policy": before-hook-creation
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list"]
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    resourceNames: [{{ .Values.reissue.federatedCatalogDeployment | quote }}]
+    verbs: ["patch", "update"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ .Release.Name }}-reissue
+  namespace: {{ .Values.namespace }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "15"
+    "helm.sh/hook-delete-policy": before-hook-creation
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ .Release.Name }}-reissue
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Release.Name }}-reissue
+    namespace: {{ .Values.namespace }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-reissue
+  namespace: {{ .Values.namespace }}
+  labels:
+    app.kubernetes.io/name: {{ .Release.Name }}-reissue
+    app.kubernetes.io/component: migration-reissue
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "20"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 3
+  activeDeadlineSeconds: 900
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ .Release.Name }}-reissue
+        app.kubernetes.io/component: migration-reissue
+    spec:
+      serviceAccountName: {{ .Release.Name }}-reissue
+      restartPolicy: Never
+      volumes:
+        - name: script
+          configMap:
+            name: {{ .Release.Name }}-reissue-script
+            defaultMode: 0755
+      containers:
+        - name: migration-reissue
+          image: {{ .Values.images.tools }}
+          imagePullPolicy: {{ .Values.images.toolsPullPolicy }}
+          volumeMounts:
+            - name: script
+              mountPath: /migration
+          env:
+            - name: SCHEME
+              value: {{ .Values.reissue.scheme | default "https" | quote }}
+            - name: IS_HOST
+              value: {{ .Values.reissue.issuerServiceHost | quote }}
+            - name: IS_PORT
+              value: {{ .Values.reissue.issuerServicePort | quote }}
+            - name: AUTH_NEW_DID
+              value: {{ .Values.reissue.authorityNewDid | quote }}
+            - name: AUTH_OLD_DID_ENC
+              value: {{ .Values.reissue.authorityOldDidEnc | quote }}
+            - name: FC_DEPLOYMENT
+              value: {{ .Values.reissue.federatedCatalogDeployment | quote }}
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: IDENTITY_API_PORT
+              value: {{ .Values.reissue.identityApiPort | quote }}
+            - name: CRED_MEMBERSHIP
+              value: {{ .Values.reissue.credentialDefs.membership | quote }}
+            - name: CRED_DOMAIN
+              value: {{ .Values.reissue.credentialDefs.domain | quote }}
+            - name: CRED_VISIBILITY
+              value: {{ .Values.reissue.credentialDefs.visibility | quote }}
+            - name: PARTICIPANTS_JSON
+              value: {{ .Values.reissue.participants | toJson | quote }}
+            - name: OLD_HOLDERS_JSON
+              value: {{ .Values.reissue.oldHolders | toJson | quote }}
+          command: ["/bin/sh", "-c", "python3 /migration/reissue.py"]
+          resources:
+            requests:
+              ephemeral-storage: {{ .Values.resources.ephemeralStorage | quote }}
+            limits:
+              ephemeral-storage: {{ .Values.resources.ephemeralStorage | quote }}
+{{- end }}

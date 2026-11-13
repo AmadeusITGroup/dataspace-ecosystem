@@ -45,11 +45,15 @@ The entity representing a retired contract agreement with the following properti
 The entry extends `Entity` for EDC entity management features (versioning, timestamps, etc.).
 
 #### JSON-LD Context
-The entry uses standardized JSON-LD properties:
+The entry uses these JSON-LD properties:
 - `AR_ENTRY_TYPE` - `edc:AgreementsRetirementEntry`
 - `AR_ENTRY_AGREEMENT_ID` - `edc:agreementId`
-- `AR_ENTRY_REASON` - `dse:reason`
-- `AR_ENTRY_RETIREMENT_DATE` - `dse:agreementRetirementDate`
+- `AgreementConstants.getArEntryReason()` - `<DSE namespace>reason`, by default `https://w3id.org/dse/v0.0.1/ns/reason`
+- `AgreementConstants.getArEntryRetirementDate()` - `<DSE namespace>agreementRetirementDate`
+
+The deprecated constants `AR_ENTRY_REASON` / `AR_ENTRY_RETIREMENT_DATE` (`edc:reason` / `edc:agreementRetirementDate`)
+are not used by the API. The control plane registers no `dse` prefix, so its responses carry the reason and the
+retirement date as full IRIs; requests can use `dse:reason` with the `dse` prefix in their own `@context`.
 
 ## Dependencies
 

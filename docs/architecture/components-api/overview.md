@@ -64,7 +64,7 @@ sequenceDiagram
 
     rect rgb(225, 245, 254)
         Note over Consumer,ProviderCP: Step 2: Discover Data
-        Consumer->>CPAPI: POST /v3/catalog (query available datasets)
+        Consumer->>CPAPI: POST /v4/catalog (query available datasets)
         CPAPI->>Protocol: Fetch catalog from provider (automatic)
         Protocol->>ProviderCP: DSP catalog request
         ProviderCP-->>Protocol: Catalog with assets, policies, offers
@@ -74,7 +74,7 @@ sequenceDiagram
 
     rect rgb(225, 245, 254)
         Note over Consumer,ProviderCP: Step 3: Negotiate Contract
-        Consumer->>CPAPI: POST /v3/contractnegotiations (initiate)
+        Consumer->>CPAPI: POST /v4/contractnegotiations (initiate)
         CPAPI->>Protocol: Contract negotiation (automatic)
         Protocol->>ProviderCP: DSP negotiation messages
         ProviderCP->>IH: Verify consumer credentials
@@ -86,7 +86,7 @@ sequenceDiagram
 
     rect rgb(255, 243, 224)
         Note over Consumer,DPAPI: Step 4: Transfer Data
-        Consumer->>CPAPI: POST /v3/transferprocesses (initiate transfer)
+        Consumer->>CPAPI: POST /v4/transferprocesses (initiate transfer)
         CPAPI-->>Consumer: Transfer started + EDR token
         Consumer->>DPAPI: GET /data (with contract agreement headers)
         DPAPI-->>Consumer: Actual data
@@ -98,9 +98,9 @@ sequenceDiagram
 | Step | API Endpoints | What Happens |
 |------|--------------|-------------|
 | **1. Onboard** | `POST /identity/.../credentials/request` | Your organization obtains a membership credential from the dataspace authority. This is a one-time setup step. |
-| **2. Discover** | `POST /management/v3/catalog` | Query what data is available. The Control Plane automatically contacts providers via the Protocol API and returns a catalog of datasets with their usage policies. |
-| **3. Negotiate** | `POST /management/v3/contractnegotiations` | Initiate a contract negotiation for a specific dataset. The Control Planes handle the entire negotiation automatically using the DSP protocol. You poll the negotiation status until it reaches `FINALIZED`. |
-| **4. Transfer** | `POST /management/v3/transferprocesses` then `GET /dp/data` | Start a transfer process to get access credentials (EDR), then use them to pull data from the Data Plane. |
+| **2. Discover** | `POST /management/v4/catalog` | Query what data is available. The Control Plane automatically contacts providers via the Protocol API and returns a catalog of datasets with their usage policies. |
+| **3. Negotiate** | `POST /management/v4/contractnegotiations` | Initiate a contract negotiation for a specific dataset. The Control Planes handle the entire negotiation automatically using the DSP protocol. You poll the negotiation status until it reaches `FINALIZED`. |
+| **4. Transfer** | `POST /management/v4/transferprocesses` then `GET /dp/data` | Start a transfer process to get access credentials (EDR), then use them to pull data from the Data Plane. |
 
 ## Available APIs
 
@@ -117,13 +117,13 @@ sequenceDiagram
 ### API Key (Development)
 
 ```bash
-curl -H "X-Api-Key: password" http://localhost:8181/management/v3/assets
+curl -H "X-Api-Key: password" http://localhost:8181/management/v4/assets
 ```
 
 ### OAuth 2.0
 
 ```bash
-curl -H "Authorization: Bearer <token>" http://localhost:8181/management/v3/assets
+curl -H "Authorization: Bearer <token>" http://localhost:8181/management/v4/assets
 ```
 
 ### Verifiable Credentials
@@ -173,7 +173,7 @@ All APIs use JSON-LD:
   "@type": "ApiErrorDetail",
   "message": "Asset not found",
   "type": "NOT_FOUND",
-  "path": "/management/v3/assets/unknown-id",
+  "path": "/management/v4/assets/unknown-id",
   "invalidValue": "unknown-id"
 }
 ```
@@ -234,7 +234,7 @@ OpenAPI specs are available at:
 
 APIs are versioned in the URL path:
 
-- Current: `/v3/`
+- Current: `/v4/`
 - Legacy: `/v2/` (deprecated)
 
 ## Rate Limiting

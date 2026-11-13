@@ -7,34 +7,61 @@ tags:
     catalog
   name: Federated Catalog Filter Endpoint for Participant Control-Plane
 paths:
-  /v1alpha/catalog/query:
+  /v4/catalogs/request:
     post:
-      description: Creates a Token Representation from Identity Hub and sends it to
-        the filtering of the federated catalog for asset filtering
+      description: "Returns the federated catalog filtered for this participant. DSE\
+        \ endpoint: it is not the upstream federated catalog query API (POST /v4/catalogs/request)\
+        \ and has its own path. The control plane sends the QuerySpec to the authority\
+        \ catalog filter, which queries the federated catalog and removes the datasets\
+        \ this participant may not see, and returns the filter's reply as is: same\
+        \ status, Content-Type and body, no JSON-LD processing. The response is not\
+        \ the federated catalog management v4 one: the catalogs are in the DSP 2025-1\
+        \ form, compacted with the DSP 2025-1 context (https://w3id.org/dspace/2025/1/context.jsonld),\
+        \ the EDC dspace context (https://w3id.org/edc/dspace/v0.0.1) and the DSE\
+        \ prefixes (dse, dse-policy, skos, prov, adms): Catalog with dataset, service,\
+        \ participantId; Dataset with hasPolicy and distribution; Offer with permission,\
+        \ action, constraint, leftOperand, operator, rightOperand."
       operationId: fetchCatalog
       requestBody:
         content:
           application/json:
             schema:
-              type: object
-              additionalProperties:
-                $ref: "#/components/schemas/JsonValue"
-              properties:
-                empty:
-                  type: boolean
-                valueType:
-                  type: string
-                  enum:
-                  - ARRAY
-                  - OBJECT
-                  - STRING
-                  - NUMBER
-                  - "TRUE"
-                  - "FALSE"
-                  - "NULL"
+              $ref: https://w3id.org/edc/connector/management/schema/v4/query-spec-schema.json
+        description: "Optional QuerySpec. A present body must have the compact @type\
+          \ QuerySpec (management v4), otherwise 400 is returned."
       responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+          description: "The filtered catalogs, as returned by the catalog filter:\
+            \ a JSON array of DSP 2025-1 catalogs"
+        "400":
+          description: "The request body is not a valid v4 QuerySpec (e.g. missing,\
+            \ expanded or wrong @type), or the catalog filter answered 400 (no participant\
+            \ token, or the federated catalog rejected the query, e.g. a sortField\
+            \ that no dataset has; EDC error body, forwarded as is)"
+        "403":
+          description: "The catalog filter rejected the participant token, or the\
+            \ federated catalog answered 403 (EDC error body, forwarded as is). Other\
+            \ statuses of the catalog filter (e.g. 401, 409) are forwarded the same\
+            \ way"
         "500":
-          description: Failed to fetch the filtered catalog
+          description: "Unexpected error in the catalog filter (forwarded as is),\
+            \ or the control plane could not obtain its credentials token. No EDC\
+            \ error body: EDC sets no entity for an unexpected error, the body is\
+            \ the Jetty error page"
+        "502":
+          description: "The authority catalog filter could not be reached: its URL\
+            \ could not be resolved from the authority DID document, or the connection\
+            \ failed (EDC error body, type BadGateway); or the catalog filter answered\
+            \ 502 (forwarded as is): the federated catalog could not be resolved or\
+            \ reached, or answered a status (e.g. 404, 500, 503) that has no upstream\
+            \ exception that keeps the federated catalog message (ObjectNotFoundException\
+            \ has a fixed text)"
       security:
       - bearerAuth: []
       - apiKeyAuth: []

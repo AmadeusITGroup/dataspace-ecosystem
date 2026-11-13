@@ -1,6 +1,6 @@
 locals {
   identityhub_release_name = "${var.authority_name}-identityhub"
-  did_url                  = "did:web:${local.identityhub_release_name}%3A8383:api:did"
+  did_url                  = "did:web:${local.identityhub_release_name}:api:did"
   authority_identity_hub_image = (
     var.environment == "local" ? "localhost/identity-hub-postgresql-hashicorpvault" :
     var.environment == "devbox" ? "${var.devbox-registry}/identity-hub-postgresql-hashicorpvault" :
@@ -11,7 +11,6 @@ locals {
   sts_path                = "/api/sts"
   sts_url                 = "${local.scheme}://${local.identityhub_release_name}.default.svc.cluster.local:${local.sts_port}${local.sts_path}/token"
   sts_client_secret_alias = "${local.did_url}-sts-client-secret"
-  did_url_base64_url      = replace(replace(replace(base64encode(local.did_url), "+", "-"), "/", "_"), "=", "")
 
   identityhub_credentials_url = "${local.scheme}://${local.identityhub_release_name}.default.svc.cluster.local:8282/api/credentials"
 }
@@ -60,8 +59,7 @@ resource "helm_release" "identity-hub" {
         "keys" : {
           "sts" : {
             "privateKeyAlias" : local.privatekey_alias,
-            "publicKeyAlias" : local.publickey_alias,
-            "publicKeyId" : "${local.did_url}#my-key"
+            "publicKeyAlias" : local.publickey_alias
           },
           "encryption" : {
             "aesKeyAlias" : local.aes_key_alias
@@ -73,12 +71,12 @@ resource "helm_release" "identity-hub" {
               {
                 id : "credential-service-url"
                 type : "CredentialService",
-                serviceEndpoint : "${local.identityhub_credentials_url}/v1/participants/${local.did_url_base64_url}"
+                serviceEndpoint : "${local.identityhub_credentials_url}/v1/participants/${local.did_url}"
               },
               {
                 id : "issuer-service-url",
                 type : "IssuerService",
-                serviceEndpoint : "${local.issuance_url}/v1beta/participants/${local.did_url_base64_url}"
+                serviceEndpoint : "${local.issuance_url}/v1beta/participants/${local.did_url}"
               },
               {
                 id : "telemetry-service-url",
@@ -121,8 +119,8 @@ resource "helm_release" "identity-hub" {
         #        EOT
 
         "config" : <<EOT
-edc.vault.hashicorp.token.scheduled-renew-enabled=false
-edc.vault.hashicorp.allow.fallback=true
+edc.vault.hashicorp.token.scheduledrenew.enabled=false
+edc.vault.hashicorp.allowfallback=true
 ${local.tls_config_props}
         EOT
         "env" : {

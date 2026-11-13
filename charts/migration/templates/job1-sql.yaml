@@ -1,0 +1,73 @@
+{{- if and .Values.enabled .Values.schemaMigration }}
+# STEP 1 — schema migration (idempotent: ADD COLUMN IF NOT EXISTS). pre-upgrade, hook-weight 0.
+# Additive/idempotent: safe to run on every sync (like the CLE preinstall-hook).
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-sql
+  namespace: {{ .Values.namespace }}
+  labels:
+    app.kubernetes.io/name: {{ .Release.Name }}-sql
+    app.kubernetes.io/component: migration-sql
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "0"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 2
+  activeDeadlineSeconds: 600
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ .Release.Name }}-sql
+        app.kubernetes.io/component: migration-sql
+    spec:
+      restartPolicy: Never
+      volumes:
+        - name: sql
+          configMap:
+            name: {{ .Release.Name }}-sql
+            defaultMode: 0755
+      containers:
+        - name: migration-sql
+          image: {{ .Values.images.postgres }}
+          volumeMounts:
+            - name: sql
+              mountPath: /migration
+          env:
+            - name: DB_HOST
+              value: {{ .Values.db.host | quote }}
+            - name: DB_PORT
+              value: {{ .Values.db.port | quote }}
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.db.adminSecretName }}
+                  key: {{ .Values.db.adminUserKey }}
+            - name: DB_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.db.adminSecretName }}
+                  key: {{ .Values.db.adminPasswordKey }}
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -eu
+              echo "→ waiting for postgres ${DB_HOST}:${DB_PORT}"
+              until pg_isready -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" >/dev/null 2>&1; do sleep 2; done
+              export PGPASSWORD="$DB_PASS"
+              # apply-migrations.sh assumes bash ($BASH_SOURCE, set -o pipefail); run the SQL directly
+              # and sh-safely against the mounted files (same effect, idempotent).
+              for db in {{- range .Values.db.participantDbs }} {{ . }}{{- end }}; do
+                echo "→ participant-migration.sql on $db"
+                psql -X -v ON_ERROR_STOP=1 -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$db" -f /migration/participant-migration.sql
+              done
+              echo "→ authority-migration.sql on {{ .Values.db.authorityDb }}"
+              psql -X -v ON_ERROR_STOP=1 -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d {{ .Values.db.authorityDb }} -f /migration/authority-migration.sql
+              echo "✓ schema migration complete"
+          resources:
+            requests:
+              ephemeral-storage: {{ .Values.resources.ephemeralStorage | quote }}
+            limits:
+              ephemeral-storage: {{ .Values.resources.ephemeralStorage | quote }}
+{{- end }}

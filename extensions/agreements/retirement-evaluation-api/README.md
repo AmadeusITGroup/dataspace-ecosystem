@@ -27,7 +27,7 @@ This API provides programmatic control over agreement retirement without permane
 #### `AgreementsRetirementApiV3`
 - **Type**: Interface
 - **Purpose**: Defines the REST API contract for agreement retirement management
-- **Base Path**: `/v3/contractagreements/retirements`
+- **Base Path**: `/v4/contractagreements/retirements`
 - **Security**: Supports both Bearer token (JWT) and API key authentication
 - **Operations**:
   1. **Query Retired Agreements**: POST `/request` - Returns filtered list of retired agreements
@@ -37,7 +37,7 @@ This API provides programmatic control over agreement retirement without permane
 #### `AgreementsRetirementApiV3Controller`
 - **Type**: REST Controller
 - **Purpose**: Implements the retirement API endpoints
-- **Path**: `/v3/contractagreements/retirements`
+- **Path**: `/v4/contractagreements/retirements`
 - **Content Type**: `application/json`
 
 ##### Endpoints
@@ -45,11 +45,12 @@ This API provides programmatic control over agreement retirement without permane
 **1. Get All Retired Agreements**
 - **Method**: POST
 - **Path**: `/request`
-- **Body**: Optional `QuerySpec` for filtering/pagination
+- **Body**: Optional `QuerySpec` for filtering/pagination. No body = all entries (`QuerySpec.max()`); a present body
+  must have the compact `@type` `QuerySpec` (management v4 validation before JSON-LD expansion)
 - **Response**: `JsonArray` of retired agreement entries
 - **Status Codes**:
   - `200 OK`: Successfully retrieved retired agreements
-  - `400 Bad Request`: Malformed query specification
+  - `400 Bad Request`: Malformed query specification, or `@type` missing / expanded IRI / not `QuerySpec`
 
 **2. Reactivate Retired Agreement**
 - **Method**: DELETE
@@ -64,12 +65,13 @@ This API provides programmatic control over agreement retirement without permane
 **3. Retire Agreement**
 - **Method**: POST
 - **Path**: `/`
-- **Body**: `AgreementsRetirementEntry` with agreement ID and reason
+- **Body**: `AgreementsRetirementEntry` with agreement ID and reason; the compact `@type` `AgreementsRetirementEntry`
+  is required
 - **Response**: No content on success
 - **Status Codes**:
   - `204 No Content`: Agreement successfully retired
   - `409 Conflict`: Agreement is already retired
-  - `400 Bad Request`: Malformed request body
+  - `400 Bad Request`: Malformed request body, or `@type` missing / expanded IRI / not `AgreementsRetirementEntry`
 
 ### Transformers
 

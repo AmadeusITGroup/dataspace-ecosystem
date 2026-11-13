@@ -8,4 +8,5 @@ dependencies {
     implementation(libs.edc.spi.transform)
     implementation(libs.edc.dsp.spi.v2025)
     implementation(libs.edc.runtime.metamodel)
+    implementation(libs.edc.api.management.lib)
 }

@@ -9,7 +9,10 @@ tags:
 paths:
   /filter:
     post:
-      description: Filters federated catalog assets based on participant vcs
+      description: "Filters federated catalog assets based on participant vcs. Errors\
+        \ have the EDC JSON error body (an array of {message, type, path, invalidValue}),\
+        \ except 500: EDC sets no entity for an unexpected error, so the body is the\
+        \ Jetty error page."
       operationId: filter
       requestBody:
         content:
@@ -17,13 +20,66 @@ paths:
             schema:
               $ref: "#/components/schemas/FilterRequest"
       responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+          description: "The filtered catalogs: a JSON array of DSP 2025-1 catalogs\
+            \ (empty when there are none)"
         "400":
-          description: Missing access token
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ApiErrorDetail"
+          description: "The request has no participant token (tokenRepresentation),\
+            \ or the federated catalog rejected the query with 400, e.g. a sortField\
+            \ that no dataset has (its messages are kept)"
+        "401":
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ApiErrorDetail"
+          description: The federated catalog replied 401 (its messages are kept)
         "403":
-          description: Access token is expired or invalid
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ApiErrorDetail"
+          description: "The participant token is expired or invalid, or the federated\
+            \ catalog replied 403 (its messages are kept)"
+        "409":
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ApiErrorDetail"
+          description: The federated catalog replied 409 (its messages are kept)
         "500":
-          description: "Failed to transfer data, something went wrong on the server\
-            \ side"
+          description: "Unexpected error in the catalog filter (no EDC error body:\
+            \ the Jetty error page)"
+        "502":
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ApiErrorDetail"
+          description: "The federated catalog URL cannot be resolved from the authority\
+            \ DID document, the federated catalog cannot be reached, or it replied\
+            \ with another error status (e.g. 404, 500, 503), which has no upstream\
+            \ exception that keeps the federated catalog message (ObjectNotFoundException\
+            \ has a fixed text): type BadGateway, the message has the federated catalog\
+            \ status and messages"
       security:
       - bearerAuth: []
       - apiKeyAuth: []
@@ -31,6 +87,17 @@ paths:
       - Federated Catalog Filter
 components:
   schemas:
+    ApiErrorDetail:
+      type: object
+      properties:
+        invalidValue:
+          type: object
+        message:
+          type: string
+        path:
+          type: string
+        type:
+          type: string
     Criterion:
       type: object
       properties:

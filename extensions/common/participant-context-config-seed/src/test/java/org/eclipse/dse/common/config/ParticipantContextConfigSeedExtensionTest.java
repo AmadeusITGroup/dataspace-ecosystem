@@ -35,7 +35,8 @@ class ParticipantContextConfigSeedExtensionTest {
         when(context.getConfig()).thenReturn(ConfigFactory.fromMap(Map.of(
                 "edc.participant.id", PARTICIPANT_ID,
                 "edc.participant.something", "value1",
-                "edc.iam.issuer.id", "did:web:test",
+                "edc.participant.did", "did:web:test",
+                "edc.iam.sts.oauth.client.id", "did:web:test",
                 "edc.ih.iam.publickey.alias", "did:web:test#key",
                 "other.key", "should-be-excluded"
         )));
@@ -63,7 +64,8 @@ class ParticipantContextConfigSeedExtensionTest {
             assertThat(cfg.getParticipantContextId()).isEqualTo(PARTICIPANT_ID);
             assertThat(cfg.getEntries()).containsKey("edc.participant.id");
             assertThat(cfg.getEntries()).containsKey("edc.participant.something");
-            assertThat(cfg.getEntries()).containsEntry("edc.iam.issuer.id", "did:web:test");
+            assertThat(cfg.getEntries()).containsEntry("edc.participant.did", "did:web:test");
+            assertThat(cfg.getEntries()).containsEntry("edc.iam.sts.oauth.client.id", "did:web:test");
             assertThat(cfg.getEntries()).containsEntry("edc.ih.iam.publickey.alias", "did:web:test#key");
             assertThat(cfg.getEntries()).doesNotContainKey("other.key");
         }));

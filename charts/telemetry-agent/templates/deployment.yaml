@@ -39,6 +39,10 @@ spec:
           # either use the specified image, or use the default one
           image: {{ include "dse.telemetryagent.imageRepository" . }}:{{ .Values.telemetryagent.image.tag | required ".Values.telemetryagent.image.tag is required" }}
           imagePullPolicy: {{ .Values.telemetryagent.image.pullPolicy }}
+          {{- with .Values.telemetryagent.logLevel }}
+          args:
+            - "--log-level={{ . }}"
+          {{- end }}
           ports:
           {{- range $key,$value := .Values.telemetryagent.endpoints }}
             - name: {{ $key }}
@@ -137,14 +141,12 @@ spec:
                 secretKeyRef:
                   name: {{ include "dse.telemetryagent.vaultTokenSecretName" . | quote }}
                   key: {{ .Values.telemetryagent.vault.hashicorp.token.secret.tokenKey | required ".Values.telemetryagent.vault.hashicorp.token.secret.tokenKey is required" | quote }}
-            - name: "EDC_VAULT_HASHICORP_TOKEN_SCHEDULED-RENEW-ENABLED"
+            - name: "EDC_VAULT_HASHICORP_TOKEN_SCHEDULEDRENEW_ENABLED"
               value: {{.Values.telemetryagent.vault.hashicorp.token.renewal.enabled | quote}}
             - name: "EDC_VAULT_HASHICORP_TOKEN_TTL"
               value: {{ .Values.telemetryagent.vault.hashicorp.token.renewal.ttl | quote }}
             - name: "EDC_VAULT_HASHICORP_TOKEN_RENEW-BUFFER"
               value: {{ .Values.telemetryagent.vault.hashicorp.token.renewal.renewBuffer | quote }}
-            - name: "EDC_VAULT_HASHICORP_TIMEOUT_SECONDS"
-              value: {{ .Values.telemetryagent.vault.hashicorp.timeout | quote }}
             - name: "EDC_VAULT_HASHICORP_HEALTH_CHECK_ENABLED"
               value: {{ .Values.telemetryagent.vault.hashicorp.healthCheck.enabled | quote }}
             - name: "EDC_VAULT_HASHICORP_HEALTH_CHECK_STANDBY_OK"
@@ -155,7 +157,7 @@ spec:
               value: {{ include "dse.telemetryagent.vaultFolder" . | quote }}
             - name: "EDC_VAULT_HASHICORP_API_HEALTH_CHECK_PATH"
               value: {{ .Values.telemetryagent.vault.hashicorp.paths.health | quote }}
-            - name: "EDC_VAULT_HASHICORP_ALLOW_FALLBACK"
+            - name: "EDC_VAULT_HASHICORP_ALLOWFALLBACK"
               value: {{ .Values.telemetryagent.vault.hashicorp.allowFallback | quote }}
           {{- end }}
 
@@ -243,14 +245,6 @@ spec:
             - name: "EDC_IH_IAM_PUBLICKEY_ALIAS"
               value: {{ include "dse.telemetryagent.keys.sts.publicKeyVaultAlias" . | quote }}
 
-
-            #######
-            # DID #
-            #######
-            - name: "EDC_IDENTITY_DID_URL"
-              value: {{ include "dse.telemetryagent.did.web.url" . | quote }}
-            - name: "EDC_IAM_DID_WEB_USE_HTTPS"
-              value: {{ include "dse.telemetryagent.did.web.useHttps" . | quote }}
 
             #####################
             # STS REMOTE CONFIG #

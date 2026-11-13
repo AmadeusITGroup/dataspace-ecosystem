@@ -118,8 +118,18 @@ allprojects {
         finalizedBy(tasks.withType<JacocoReport>())
     }
 
-    // edc-build >= 1.2 no longer configures the Java toolchain/release (its JavaConvention was removed);
-    // keep producing Java 17 bytecode regardless of the JDK running Gradle.
+    // edc-build >= 1.2 no longer configures the Java toolchain/release (its JavaConvention was removed).
+    // Compile, test and javadoc run on an explicit Java 17 toolchain, whatever JDK runs Gradle. No toolchain
+    // resolver plugin: an installed JDK 17 must be found (auto-detection or org.gradle.java.installations.paths).
+    plugins.withType<JavaPlugin> {
+        extensions.configure<JavaPluginExtension> {
+            toolchain {
+                languageVersion.set(JavaLanguageVersion.of(17))
+            }
+        }
+    }
+
+    // Keep producing Java 17 bytecode.
     tasks.withType<JavaCompile>().configureEach {
         options.release.set(17)
     }

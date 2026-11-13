@@ -32,7 +32,6 @@ import static org.eclipse.edc.spi.core.CoreConstants.DSE_POLICY_NS;
 import static org.eclipse.edc.spi.core.CoreConstants.DSE_POLICY_PREFIX;
 import static org.eclipse.edc.test.system.ParticipantConstants.CLUSTER_HOSTNAME;
 import static org.eclipse.edc.test.system.ParticipantConstants.CONTROL_PLANE_DSP_PORT;
-import static org.eclipse.edc.test.system.ParticipantConstants.IDENTITY_HUB_DID_PORT;
 import static org.eclipse.edc.test.system.ParticipantConstants.SCHEME;
 import static org.eclipse.edc.protocol.dsp.spi.type.Dsp2025Constants.DATASPACE_PROTOCOL_HTTP_V_2025_1;
 import static org.eclipse.edc.protocol.dsp.spi.type.Dsp2025Constants.V_2025_1_PATH;
@@ -44,7 +43,7 @@ abstract class AbstractParticipant extends AbstractEntity {
 
     @Override
     protected String did() {
-        return "did:web:" + name() + "-identityhub%3A" + IDENTITY_HUB_DID_PORT + ":api:did";
+        return "did:web:" + name() + "-identityhub:api:did";
     }
 
     @Override
@@ -74,7 +73,7 @@ abstract class AbstractParticipant extends AbstractEntity {
     }
 
     protected String controlPlaneCatalogFilterUrl() {
-        return "%s://%s/%s/cp/management/v1alpha/catalog/query".formatted(SCHEME, CLUSTER_HOSTNAME, name());
+        return "%s://%s/%s/cp/management/v4/catalogs/request".formatted(SCHEME, CLUSTER_HOSTNAME, name());
     }
 
     protected void createEntry(String assetId, String name, String description, Map<String, Object> dataAddressProps, JsonObject... additionalConstraints) {
@@ -356,8 +355,7 @@ abstract class AbstractParticipant extends AbstractEntity {
                     // versionPath is empty because controlPlaneProtocolUrl() already includes V_2025_1_PATH;
                     // Participant.getProtocolUrl() appends versionPath to the configured protocol URL.
                     .protocol(DATASPACE_PROTOCOL_HTTP_V_2025_1, "")
-                    // EDC 0.18 changed the fixture default to "/v4"; DSE (and its consumers) still use management v3
-                    .managementVersionBasePath("/v3")
+                    .managementVersionBasePath("/v4")
                     .jsonLd(jsonLd())
                     .dataPlaneData(dataPlaneDataUrl())
                     .controlPlaneManagement(controlPlaneManagementUrl())

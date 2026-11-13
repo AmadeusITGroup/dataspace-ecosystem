@@ -39,6 +39,10 @@ spec:
           # either use the specified image, or use the default one
           image: {{ include "dse.dataplane.imageRepository" . }}:{{ .Values.dataplane.image.tag | required ".Values.dataplane.image.tag is required" }}
           imagePullPolicy: {{ .Values.dataplane.image.pullPolicy }}
+          {{- with .Values.dataplane.logLevel }}
+          args:
+            - "--log-level={{ . }}"
+          {{- end }}
           ports:
           {{- range $key,$value := .Values.dataplane.endpoints }}
             - name: {{ $key }}
@@ -174,14 +178,12 @@ spec:
                 secretKeyRef:
                   name: {{ include "dse.dataplane.vaultTokenSecretName" . | quote }}
                   key: {{ .Values.dataplane.vault.hashicorp.token.secret.tokenKey | required ".Values.dataplane.vault.hashicorp.token.secret.tokenKey is required" | quote }}
-            - name: "EDC_VAULT_HASHICORP_TOKEN_SCHEDULED-RENEW-ENABLED"
+            - name: "EDC_VAULT_HASHICORP_TOKEN_SCHEDULEDRENEW_ENABLED"
               value: {{ .Values.dataplane.vault.hashicorp.token.renewal.enabled | quote }}
             - name: "EDC_VAULT_HASHICORP_TOKEN_RENEW-BUFFER"
               value: {{ .Values.dataplane.vault.hashicorp.token.renewal.renewBuffer | quote }}
             - name: "EDC_VAULT_HASHICORP_TOKEN_TTL"
               value: {{ .Values.dataplane.vault.hashicorp.token.renewal.ttl | quote }}
-            - name: "EDC_VAULT_HASHICORP_TIMEOUT_SECONDS"
-              value: {{ .Values.dataplane.vault.hashicorp.timeout | quote }}
             - name: "EDC_VAULT_HASHICORP_HEALTH_CHECK_ENABLED"
               value: {{ .Values.dataplane.vault.hashicorp.healthCheck.enabled | quote }}
             - name: "EDC_VAULT_HASHICORP_HEALTH_CHECK_STANDBY_OK"
@@ -192,7 +194,7 @@ spec:
               value: {{ include "dse.dataplane.vaultFolder" . | quote }}
             - name: "EDC_VAULT_HASHICORP_API_HEALTH_CHECK_PATH"
               value: {{ .Values.dataplane.vault.hashicorp.paths.health | quote }}
-            - name: "EDC_VAULT_HASHICORP_ALLOW_FALLBACK"
+            - name: "EDC_VAULT_HASHICORP_ALLOWFALLBACK"
               value: {{ .Values.dataplane.vault.hashicorp.allowFallback | quote }}
           {{- end }}
 

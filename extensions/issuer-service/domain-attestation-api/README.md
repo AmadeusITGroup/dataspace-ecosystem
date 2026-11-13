@@ -29,7 +29,7 @@ OpenAPI interface defining the administrative API contract:
 
 #### `DomainAttestationApiController`
 REST controller implementing the administrative API:
-- **Path**: `/identity/unstable/participants/{participantContextId}/attestation-domain`
+- **Path**: `/v1beta/participants/{participantContextId}/attestation-domain` on the `issueradmin` context (`/api/issueradmin`); `participantContextId` is the authority DID as is (not base64)
 - Enforces domain authorization checks
 - Delegates storage operations to `DomainAttestationStore`
 

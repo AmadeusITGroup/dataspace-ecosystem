@@ -2,8 +2,10 @@ package org.eclipse.edc.util;
 
 import jakarta.json.Json;
 import jakarta.json.JsonArray;
+import jakarta.json.JsonException;
 import jakarta.json.JsonObject;
 import jakarta.json.JsonReader;
+import jakarta.json.JsonString;
 import org.eclipse.dse.iam.policy.CatalogDiscoveryPolicyContext;
 import org.eclipse.edc.connector.controlplane.catalog.spi.Catalog;
 import org.eclipse.edc.connector.controlplane.catalog.spi.Dataset;
@@ -11,11 +13,19 @@ import org.eclipse.edc.jsonld.spi.JsonLd;
 import org.eclipse.edc.participant.spi.ParticipantAgent;
 import org.eclipse.edc.policy.engine.spi.PolicyEngine;
 import org.eclipse.edc.policy.model.Policy;
+import org.eclipse.edc.spi.EdcException;
 import org.eclipse.edc.spi.iam.ClaimToken;
 import org.eclipse.edc.spi.monitor.Monitor;
 import org.eclipse.edc.spi.query.QuerySpec;
 import org.eclipse.edc.spi.result.Result;
 import org.eclipse.edc.transform.spi.TypeTransformerRegistry;
+import org.eclipse.edc.web.spi.exception.AuthenticationFailedException;
+import org.eclipse.edc.web.spi.exception.BadGatewayException;
+import org.eclipse.edc.web.spi.exception.EdcApiException;
+import org.eclipse.edc.web.spi.exception.InvalidRequestException;
+import org.eclipse.edc.web.spi.exception.NotAuthorizedException;
+import org.eclipse.edc.web.spi.exception.ObjectConflictException;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.io.StringReader;
@@ -33,6 +43,7 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 import static org.eclipse.edc.FilterConstants.VC_CLAIMS;
+import static org.eclipse.edc.VcCatalogFilterExtension.CATALOG_FILTER_SCOPE;
 
 
 public class FederatedCatalogService {
@@ -130,30 +141,30 @@ public class FederatedCatalogService {
         return new CatalogDiscoveryPolicyContext(agent);
     }
 
-    protected Collection<Catalog> retrieveCatalog(QuerySpec query) throws IOException, InterruptedException {
-        Result<String> urlResult = didResolver.fetchCatalogFilterUrl();
-        if (urlResult.failed()) {
-            throw new RuntimeException("Failed to resolve catalog URL: " + urlResult.getFailureMessages());
-        }
-        String catalogUrl = urlResult.getContent();
+    /**
+     * Queries the federated catalog of the authority (management v4 {@code POST /v4/catalogs/request}).
+     * <p>
+     * Failures are EDC exceptions, written by the EDC exception mappers of the catalog filter API: the federated
+     * catalog URL cannot be resolved or the federated catalog cannot be reached: {@link BadGatewayException} (502);
+     * the federated catalog replies with an error: see {@link #federatedCatalogError(int, String)}.
+     */
+    protected Collection<Catalog> retrieveCatalog(QuerySpec query) throws InterruptedException {
+        String catalogUrl = didResolver.fetchCatalogFilterUrl()
+                .orElseThrow(failure -> new BadGatewayException("Could not resolve the federated catalog url: " + failure.getFailureDetail()));
 
-        HttpRequest.Builder builder = HttpRequest.newBuilder()
-                .uri(URI.create(catalogUrl));
-
+        JsonObject jsonBody = null;
         if (query != null) {
-            JsonObject jsonBody = transformerRegistry.transform(query, JsonObject.class)
-                    .orElseThrow(failure -> new RuntimeException("QuerySpec transform failed: " + failure));
-            builder.header("Content-Type", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofString(jsonBody.toString()));
-        } else {
-            builder.POST(HttpRequest.BodyPublishers.noBody());
+            JsonObject expandedBody = transformerRegistry.transform(query, JsonObject.class)
+                    .orElseThrow(failure -> new EdcException("QuerySpec transform failed: " + failure.getFailureDetail()));
+            // the federated catalog management v4 API expects the compacted form ("@type": "QuerySpec")
+            jsonBody = jsonLd.compact(expandedBody, CATALOG_FILTER_SCOPE)
+                    .orElseThrow(failure -> new EdcException("QuerySpec compaction failed: " + failure.getFailureDetail()));
         }
 
-        HttpRequest request = builder.build();
-
-        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        HttpResponse<String> response = send(catalogUrl, jsonBody);
         if (response.statusCode() != 200) {
-            throw new RuntimeException("Failed to query catalog: HTTP " + response.statusCode() + " - " + response.body());
+            monitor.warning("The federated catalog %s replied HTTP %d: %s".formatted(catalogUrl, response.statusCode(), response.body()));
+            throw federatedCatalogError(response.statusCode(), response.body());
         }
 
         try (JsonReader reader = Json.createReader(new StringReader(response.body()))) {
@@ -180,6 +191,73 @@ public class FederatedCatalogService {
                 }
             }
             return catalogs;
+        }
+    }
+
+    /**
+     * Maps an error reply of the federated catalog to the upstream EDC exception that the EDC exception mapper turns
+     * into the same HTTP status, keeping the federated catalog messages: the {@code message} fields of its EDC error body
+     * ({@code [{"message": ..., "type": ...}]}). Any other body (e.g. the Jetty error page of a 500, which EDC sends
+     * without an entity) is not forwarded; {@link #retrieveCatalog(QuerySpec)} logs it.
+     * <p>
+     * Only 400, 401, 403 and 409 have an upstream EDC exception that keeps these messages. Any other status (e.g. 404,
+     * 500, 503) has no upstream exception that keeps the federated catalog message ({@code ObjectNotFoundException} has a
+     * fixed text), so it is reported as {@link BadGatewayException} (502), the EDC exception for a failed call to an
+     * external endpoint, with the federated catalog status and messages in its message.
+     */
+    static EdcApiException federatedCatalogError(int status, @Nullable String body) {
+        var messages = edcErrorMessages(body);
+        var keptMessages = messages.isEmpty()
+                ? List.of("The federated catalog replied HTTP %d".formatted(status))
+                : messages;
+        return switch (status) {
+            case 400 -> new InvalidRequestException(keptMessages);
+            case 401 -> new AuthenticationFailedException(String.join(", ", keptMessages));
+            case 403 -> new NotAuthorizedException(String.join(", ", keptMessages));
+            case 409 -> new ObjectConflictException(keptMessages);
+            default -> new BadGatewayException(messages.isEmpty()
+                    ? "The federated catalog query failed with HTTP %d".formatted(status)
+                    : "The federated catalog query failed with HTTP %d: %s".formatted(status, String.join(", ", messages)));
+        };
+    }
+
+    private HttpResponse<String> send(String catalogUrl, @Nullable JsonObject body) throws InterruptedException {
+        try {
+            HttpRequest.Builder builder = HttpRequest.newBuilder()
+                    .uri(URI.create(catalogUrl));
+            if (body != null) {
+                builder.header("Content-Type", "application/json")
+                        .POST(HttpRequest.BodyPublishers.ofString(body.toString()));
+            } else {
+                builder.POST(HttpRequest.BodyPublishers.noBody());
+            }
+            return httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString());
+        } catch (IOException | IllegalArgumentException e) {
+            var message = "Could not reach the federated catalog %s: %s".formatted(catalogUrl, e);
+            monitor.warning(message, e);
+            throw new BadGatewayException(message);
+        }
+    }
+
+    /**
+     * The {@code message} fields of an EDC error body; empty for any other body.
+     */
+    private static List<String> edcErrorMessages(@Nullable String body) {
+        if (body == null || body.isBlank()) {
+            return List.of();
+        }
+        try (JsonReader reader = Json.createReader(new StringReader(body))) {
+            if (reader.readValue() instanceof JsonArray errors) {
+                return errors.stream()
+                        .filter(JsonObject.class::isInstance)
+                        .map(error -> error.asJsonObject().get("message"))
+                        .filter(JsonString.class::isInstance)
+                        .map(message -> ((JsonString) message).getString())
+                        .toList();
+            }
+            return List.of();
+        } catch (JsonException e) {
+            return List.of();
         }
     }
 }

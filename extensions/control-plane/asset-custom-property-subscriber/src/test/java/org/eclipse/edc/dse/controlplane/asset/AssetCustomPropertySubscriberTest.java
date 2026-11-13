@@ -1,6 +1,7 @@
 package org.eclipse.edc.dse.controlplane.asset;
 
 import org.eclipse.edc.connector.controlplane.asset.spi.domain.Asset;
+import org.eclipse.edc.connector.controlplane.asset.spi.domain.DataplaneMetadata;
 import org.eclipse.edc.connector.controlplane.asset.spi.event.AssetCreated;
 import org.eclipse.edc.connector.controlplane.asset.spi.index.AssetIndex;
 import org.eclipse.edc.spi.EdcException;
@@ -56,6 +57,48 @@ class AssetCustomPropertySubscriberTest {
         var updated = captor.getValue();
         assertThat(updated).isNotNull();
         assertThat(updated.getProperties()).containsAllEntriesOf(props).containsEntry(TEST_PROP, "test");
+    }
+
+    @Test
+    void keepsEveryFieldOfTheStoredAsset() {
+        var assetId = UUID.randomUUID().toString();
+        var dataAddress = DataAddress.Builder.newInstance().type("HttpData").property("baseUrl", "https://provider.example/api").build();
+        var dataplaneMetadata = DataplaneMetadata.Builder.newInstance()
+                .label("label-1")
+                .profile("profile-1")
+                .property("https://w3id.org/edc/v0.0.1/ns/key", "value")
+                .build();
+        var asset = Asset.Builder.newInstance()
+                .id(assetId)
+                .createdAt(1_700_000_000_000L)
+                .participantContextId("participant-context-1")
+                .properties(Map.of("foo", "bar"))
+                .privateProperties(Map.of("secret", "value"))
+                .dataAddress(dataAddress)
+                .dataplaneMetadata(dataplaneMetadata)
+                .build();
+        subscriber.register((existing, builder) -> builder.property(TEST_PROP, "test"));
+        var captor = ArgumentCaptor.forClass(Asset.class);
+        when(assetIndex.findById(assetId)).thenReturn(asset);
+        when(assetIndex.updateAsset(captor.capture())).thenReturn(StoreResult.success());
+
+        subscriber.on(EventEnvelope.Builder.newInstance()
+                .id(UUID.randomUUID().toString())
+                .at(Instant.now().getEpochSecond())
+                .payload(AssetCreated.Builder.newInstance().assetId(assetId).build())
+                .build());
+
+        var updated = captor.getValue();
+        assertThat(updated).isNotSameAs(asset);
+        assertThat(updated.getId()).isEqualTo(assetId);
+        assertThat(updated.getCreatedAt()).isEqualTo(1_700_000_000_000L);
+        assertThat(updated.getParticipantContextId()).isEqualTo("participant-context-1");
+        assertThat(updated.getProperties()).containsEntry("foo", "bar").containsEntry(TEST_PROP, "test");
+        assertThat(updated.getPrivateProperties()).containsExactlyEntriesOf(Map.of("secret", "value"));
+        assertThat(updated.getDataplaneMetadata()).isSameAs(dataplaneMetadata);
+        assertThat(updated.getDataAddress()).isSameAs(dataAddress);
+        // the stored asset is not modified
+        assertThat(asset.getProperties()).doesNotContainKey(TEST_PROP);
     }
 
     @Test

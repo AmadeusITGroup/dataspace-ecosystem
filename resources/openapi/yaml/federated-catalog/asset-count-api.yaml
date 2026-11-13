@@ -1,0 +1,80 @@
+openapi: 3.0.1
+paths:
+  /v4/catalogs/query/count:
+    post:
+      description: "Returns the number of datasets matching the supplied QuerySpec\
+        \ for each participant catalog. Pagination and sorting are ignored, but a\
+        \ sortField that no dataset has is rejected with 400, as on POST /v4/catalogs/request."
+      operationId: queryFederatedCatalogAssetCount
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: https://w3id.org/edc/connector/management/schema/v4/query-spec-schema.json
+        description: "Optional QuerySpec. A present body must have the compact @type\
+          \ QuerySpec (management v4), otherwise 400 is returned."
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/JsonObject"
+          description: The matching dataset count for each participant catalog
+        "400":
+          description: "The QuerySpec is invalid (e.g. missing, expanded or wrong\
+            \ @type), or its sortField does not exist in a dataset (ValidationFailure\
+            \ on path sortField: Cannot sort by '<field>': field does not exist in\
+            \ Dataset)"
+      tags:
+      - Federated Catalog Asset Count
+components:
+  schemas:
+    JsonArray:
+      type: array
+      items:
+        $ref: "#/components/schemas/JsonValue"
+      properties:
+        empty:
+          type: boolean
+        valueType:
+          type: string
+          enum:
+          - ARRAY
+          - OBJECT
+          - STRING
+          - NUMBER
+          - "TRUE"
+          - "FALSE"
+          - "NULL"
+    JsonObject:
+      type: object
+      additionalProperties:
+        $ref: "#/components/schemas/JsonValue"
+      properties:
+        empty:
+          type: boolean
+        valueType:
+          type: string
+          enum:
+          - ARRAY
+          - OBJECT
+          - STRING
+          - NUMBER
+          - "TRUE"
+          - "FALSE"
+          - "NULL"
+    JsonValue:
+      type: object
+      properties:
+        valueType:
+          type: string
+          enum:
+          - ARRAY
+          - OBJECT
+          - STRING
+          - NUMBER
+          - "TRUE"
+          - "FALSE"
+          - "NULL"

@@ -12,7 +12,6 @@ import org.eclipse.edc.spi.result.StoreResult;
 import org.eclipse.edc.web.jersey.testfixtures.RestControllerTestBase;
 import org.junit.jupiter.api.Test;
 
-import java.util.Base64;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -101,7 +100,6 @@ class VisibilityAttestationApiControllerTest extends RestControllerTestBase {
     }
 
     private RequestSpecification baseRequest() {
-        return given().baseUri("http://localhost:" + port + Versions.UNSTABLE + "/participants/" +
-                Base64.getUrlEncoder().encodeToString(PARTICIPANT_ID.getBytes()) + "/attestation-visibility");
+        return given().baseUri("http://localhost:" + port + Versions.UNSTABLE + "/participants/" + PARTICIPANT_ID + "/attestation-visibility");
     }
 }

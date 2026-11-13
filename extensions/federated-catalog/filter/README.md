@@ -23,12 +23,22 @@ This extension provides a VC (Verifiable Credential)-based filtering mechanism f
   2. Authenticates the request using the IdentityService
   3. Fetches and filters the catalog based on participant credentials
   4. Returns filtered catalogs as JSON-LD
-- **Response Codes**:
-  - `200 OK`: Successfully filtered catalog entries
-  - `204 No Content`: No catalog entries after filtering
-  - `400 Bad Request`: Missing or invalid request
-  - `403 Forbidden`: Invalid or expired token
-  - `500 Internal Server Error`: Processing error
+- **Response Codes** (the participant control plane forwards them as is). Errors are thrown as EDC exceptions and
+  written by the EDC exception mappers with the EDC JSON error body (`[{"message", "type", "path", "invalidValue"}]`):
+  - `200 OK`: the filtered catalogs (an empty JSON array when there are none)
+  - `400 Bad Request` (`InvalidRequest`): the request has no participant token (`tokenRepresentation`)
+  - `403 Forbidden` (`NotAuthorized`): invalid or expired token
+  - the federated catalog answered `400`, `401`, `403` or `409` (the statuses with an upstream EDC exception that keeps
+    the federated catalog messages): the same status, with the messages of its EDC error body
+  - `502 Bad Gateway` (`BadGateway`): the federated catalog URL cannot be resolved from the authority DID document, the
+    federated catalog cannot be reached, or it answered another status (e.g. `404`, `500`, `503`), which has no upstream
+    exception that keeps the federated catalog message (`ObjectNotFoundException` has a fixed text); the message names
+    that status. Bodies that are not EDC error bodies (e.g. the Jetty error page of a `500`) are only logged
+  - `500 Internal Server Error`: unexpected error; EDC sets no entity, so the body is the Jetty error page
+- **Response body**: a JSON array of catalogs written with the EDC DSP 2025-1 transformers and compacted with the
+  `CATALOG_FILTER_API` scope (DSP 2025-1 context, EDC dspace context, DSE prefixes). The control plane
+  `POST /v4/catalogs/request` returns it unchanged, see
+  [`control-plane-federated-catalog-filter`](../../control-plane/control-plane-federated-catalog-filter/README.md#filtered-catalog-response).
 
 ### Extension
 

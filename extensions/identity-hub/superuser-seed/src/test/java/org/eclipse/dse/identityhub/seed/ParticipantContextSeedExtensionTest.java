@@ -213,7 +213,7 @@ class ParticipantContextSeedExtensionTest {
         private static final Service CATALOG_OLD = new Service("federated-catalog", "FederatedCatalogService",
                 "https://authority-federatedcatalog:8383/api/catalog/v1alpha/catalog/query");
         private static final Service CATALOG_NEW = new Service("federated-catalog", "FederatedCatalogService",
-                "https://authority-federatedcatalog:8181/api/management/v3/catalogs/request");
+                "https://authority-federatedcatalog:8181/api/management/v4/catalogs/request");
         private static final Service CREDENTIALS = new Service("credential-service-url", "CredentialService",
                 "https://authority-identityhub:8282/api/credentials/v1/participants/abc");
         private static final Service UNCONFIGURED = new Service("added-through-api", "SomeService", "https://example.com");

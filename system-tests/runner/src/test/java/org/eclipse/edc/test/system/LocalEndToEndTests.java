@@ -662,19 +662,19 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
                     ASSET_ID_THEMED_ORDER_MANAGEMENT_SYSTEM
             );
 
-            assertThat(queryParticipantDatasets(AUTHORITY, PROVIDER.did(), PROVIDER.controlPlaneCatalogFilterUrl()))
+            assertThat(queryParticipantDatasets(PROVIDER.did(), PROVIDER.controlPlaneCatalogFilterUrl()))
                     .allSatisfy(dataset -> assertThat(assets).contains(dataset.getString(ID)))
-                    .allSatisfy(dataset -> assertThat(dataset.get(EDC_NAMESPACE + "createdAt")).isNotNull());
+                    .allSatisfy(dataset -> assertThat(dataset.get("edc:createdAt")).isNotNull());
         }
 
         @Test
         void catalog_consumer() {
-            assertThat(queryParticipantDatasets(AUTHORITY, CONSUMER.did(), CONSUMER.controlPlaneCatalogFilterUrl())).isEmpty();
+            assertThat(queryParticipantDatasets(CONSUMER.did(), CONSUMER.controlPlaneCatalogFilterUrl())).isEmpty();
         }
 
         @Test
         void catalog_consumer_restricted() {
-            assertThat(queryParticipantDatasets(AUTHORITY, PROVIDER.did(), CONSUMER.controlPlaneCatalogFilterUrl()))
+            assertThat(queryParticipantDatasets(PROVIDER.did(), CONSUMER.controlPlaneCatalogFilterUrl()))
                     .anyMatch(dataset -> ASSET_ID_REST_API_ROUTE_DOMAIN_RESTRICTED.equals(dataset.getString(ID)))
                     .noneMatch(dataset -> ASSET_ID_REST_API_TRAVEL_DOMAIN_RESTRICTED.equals(dataset.getString(ID)));
         }
@@ -683,6 +683,7 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
     @Nested
     class ThemeTaxonomyTest {
 
+        // The participant catalog (/v4/catalog/request) is the provider's DSP 2025-1 catalog, compacted with the DSP context.
         private static final String DCAT_THEME_TAXONOMY = "dcat:themeTaxonomy";
         private static final String SKOS_HAS_TOP_CONCEPT = "skos:hasTopConcept";
         private static final String SKOS_NARROWER = "skos:narrower";
@@ -696,7 +697,7 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
 
         @Test
         void participantCatalog_includesUsedCategoriesWithTheirParents() {
-            // Same as POST /consumer/cp/management/v3/catalog/request: the consumer asks the provider
+            // Same as POST /consumer/cp/management/v4/catalog/request: the consumer asks the provider
             // for its catalog over DSP 2025-1. Only the assets seeded by createThemedAssets use
             // whitelisted categories.
             var catalogRequest = Json.createObjectBuilder()
@@ -712,7 +713,7 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
                 var body = CONSUMER.participantClient().baseManagementRequest()
                         .contentType(ContentType.JSON)
                         .body(catalogRequest.toString())
-                        // baseManagementRequest() already points at the /v3 management API
+                        // baseManagementRequest() already points at the /v4 management API
                         .post("/catalog/request")
                         .then()
                         .statusCode(200)
@@ -770,13 +771,13 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
         @Test
         void federatedCatalog_keepsTheProviderThemeTaxonomy() {
             // The federated catalog crawls the provider's catalog, stores it and serves it again
-            // from /v1alpha/catalog/query. The taxonomy must come out exactly as the provider
-            // built it. The query returns expanded JSON-LD, so the properties use full IRIs.
+            // from the management /v4/catalogs/request. The taxonomy must come out exactly as the provider
+            // built it. queryCatalog expands the response, so the properties use full IRIs.
             // The crawler may have stored the provider catalog before the assets with category
             // ids were created, so keep asking until a later crawl brings the full tree.
             await().atMost(TEST_TIMEOUT).untilAsserted(() -> {
                 var catalog = queryParticipantCatalog(AUTHORITY, PROVIDER.did(),
-                        AUTHORITY.catalogUrl() + "/v1alpha/catalog/query");
+                        AUTHORITY.federatedCatalogManagementUrl() + "/v4/catalogs/request");
 
                 assertThat(catalog.containsKey(DCAT_THEME_TAXONOMY_IRI)).as("cached catalog carries dcat:themeTaxonomy").isTrue();
                 var taxonomy = asArray(catalog.get(DCAT_THEME_TAXONOMY_IRI)).getJsonObject(0);
@@ -811,22 +812,26 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
     @Nested
     class DcatDistributionPropagationTest {
 
-        private static final String DCAT_DISTRIBUTION = "http://www.w3.org/ns/dcat#distribution";
-        private static final String DCAT_ACCESS_SERVICE = "http://www.w3.org/ns/dcat#accessService";
-        private static final String DCAT_ACCESS_URL = "http://www.w3.org/ns/dcat#accessURL";
-        private static final String DCAT_MEDIA_TYPE = "http://www.w3.org/ns/dcat#mediaType";
-        private static final String DCT_CONFORMS_TO = "http://purl.org/dc/terms/conformsTo";
-        private static final String DCT_MODIFIED = "http://purl.org/dc/terms/modified";
-        private static final String DCT_TITLE = "http://purl.org/dc/terms/title";
-        private static final String DCT_TYPE = "http://purl.org/dc/terms/type";
         private static final String CUSTOM_DISTRIBUTION_TYPE = "https://example.com/AsyncApiDistribution";
         private static final String CUSTOM_DISTRIBUTION_ID = "urn:amadeus:platform:content-management:nevio:content-distributions:order-created-event";
         private static final String SERVICE_LESS_DISTRIBUTION_ID = "urn:amadeus:platform:content-management:nevio:content-documents:contract-asyncapi-001";
 
+        /**
+         * The control plane returns the catalog filter's reply (DSP 2025-1 compaction): the DSP 2025-1 and EDC dspace
+         * context terms are unprefixed, the other DCAT / Dublin Core terms keep their prefix.
+         */
+        private static final DistributionKeys CATALOG_FILTER_KEYS = new DistributionKeys("distribution", "accessService",
+                "dcat:accessURL", "dcat:mediaType", "conformsTo", "dct:modified", "dct:title", "dct:type", "format");
+        /**
+         * The federated catalog management v4 API compacts with the management/v2 context ({@code dcat:} / {@code dct:}).
+         */
+        private static final DistributionKeys FEDERATED_CATALOG_KEYS = new DistributionKeys("dcat:distribution", "dcat:accessService",
+                "dcat:accessURL", "dcat:mediaType", "dct:conformsTo", "dct:modified", "dct:title", "dct:type", "dct:format");
+
         @Test
         void participantCatalog_containsGeneratedAndCustomDistributions() {
-            var datasets = queryParticipantDatasets(AUTHORITY, PROVIDER.did(), PROVIDER.controlPlaneCatalogFilterUrl());
-            assertDistributionSet(findDataset(datasets));
+            var datasets = queryParticipantDatasets(PROVIDER.did(), PROVIDER.controlPlaneCatalogFilterUrl());
+            assertDistributionSet(findDataset(datasets), CATALOG_FILTER_KEYS);
         }
 
         @Test
@@ -842,11 +847,11 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
                     .add("limit", 100)
                     .add("offset", 0)
                     .build();
-            var datasets = queryCatalogWithFilter(AUTHORITY.catalogUrl() + "/v1alpha/catalog/query", query, 1);
+            var datasets = queryCatalogWithFilter(AUTHORITY.federatedCatalogManagementUrl() + "/v4/catalogs/request", query, 1);
             assertDistributionSet(datasets.stream()
                     .filter(dataset -> ASSET_ID_DCAT_DISTRIBUTION.equals(dataset.getString(ID)))
                     .findFirst()
-                    .orElseThrow());
+                    .orElseThrow(), FEDERATED_CATALOG_KEYS);
         }
 
         private JsonObject findDataset(List<JsonObject> datasets) {
@@ -856,26 +861,24 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
                     .orElseThrow();
         }
 
-        private void assertDistributionSet(JsonObject dataset) {
-            var distributions = getArray(dataset, DCAT_DISTRIBUTION, "distribution");
+        private void assertDistributionSet(JsonObject dataset, DistributionKeys keys) {
+            var distributions = getArray(dataset, keys.distribution());
             assertThat(distributions.size()).isGreaterThanOrEqualTo(3);
             assertThat(distributions).anySatisfy(value ->
-                    assertThat(value.asJsonObject().containsKey("http://purl.org/dc/terms/format") ||
-                            value.asJsonObject().containsKey("dct:format") ||
-                            value.asJsonObject().containsKey("format")).isTrue());
+                    assertThat(value.asJsonObject().get(keys.format())).isNotNull());
 
             var custom = distributions.stream()
                     .map(JsonValue::asJsonObject)
                     .filter(value -> CUSTOM_DISTRIBUTION_ID.equals(value.getString("@id", null)))
                     .findFirst()
                     .orElseThrow();
-            var service = getObject(custom, DCAT_ACCESS_SERVICE, "accessService");
+            var service = getObject(custom, keys.accessService());
             assertThat(service.getString("@id")).isEqualTo(CUSTOM_DISTRIBUTION_ID + ":service");
-            assertThat(getString(service, DCAT_MEDIA_TYPE, "dcat:mediaType"))
+            assertThat(getString(service, keys.mediaType()))
                     .isEqualTo("https://www.iana.org/assignments/media-types/application/json");
-            var conformsTo = getArray(service, DCT_CONFORMS_TO, conformsToKey(service));
+            var conformsTo = getArray(service, keys.conformsTo());
             assertThat(conformsTo).singleElement()
-                    .satisfies(value -> assertThat(getString(value.asJsonObject(), DCT_TITLE, "dct:title"))
+                    .satisfies(value -> assertThat(getString(value.asJsonObject(), keys.title()))
                             .isEqualTo("Binding Kafka-specific information on AsyncAPI"));
 
             var serviceLessDistribution = distributions.stream()
@@ -883,47 +886,32 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
                     .filter(value -> SERVICE_LESS_DISTRIBUTION_ID.equals(value.getString("@id", null)))
                     .findFirst()
                     .orElseThrow();
-            assertThat(serviceLessDistribution)
-                    .doesNotContainKeys(DCAT_ACCESS_SERVICE, "dcat:accessService", "accessService");
+            assertThat(serviceLessDistribution.get(keys.accessService())).isNull();
             assertThat(hasType(serviceLessDistribution, CUSTOM_DISTRIBUTION_TYPE)).isTrue();
-            assertThat(getString(serviceLessDistribution, DCAT_MEDIA_TYPE, "dcat:mediaType"))
+            assertThat(getString(serviceLessDistribution, keys.mediaType()))
                     .isEqualTo("application/yaml");
-            assertThat(getString(serviceLessDistribution, DCAT_ACCESS_URL, "dcat:accessURL"))
+            assertThat(getString(serviceLessDistribution, keys.accessUrl()))
                     .isEqualTo("https://test.platform.api.amadeus.com/v1/content-management/content-documents/file/905");
-            assertThat(getString(serviceLessDistribution, DCT_TITLE, "dct:title"))
+            assertThat(getString(serviceLessDistribution, keys.title()))
                     .isEqualTo("Order Created Event AsyncAPI Specification");
-            assertThat(getString(serviceLessDistribution, DCT_MODIFIED, "dct:modified"))
+            assertThat(getString(serviceLessDistribution, keys.modified()))
                     .isEqualTo("2023-11-19T04:54:00Z");
-            assertThat(getString(serviceLessDistribution, DCT_CONFORMS_TO, conformsToKey(serviceLessDistribution)))
+            assertThat(getString(serviceLessDistribution, keys.conformsTo()))
                     .isEqualTo("https://datatracker.ietf.org/doc/html/rfc4648");
-            assertThat(getString(serviceLessDistribution, DCT_TYPE, "dct:type"))
+            assertThat(getString(serviceLessDistribution, keys.type()))
                     .isEqualTo("ASYNC_API_SPECIFICATION");
         }
 
-        /**
-         * EDC 0.18 (eclipse-edc/Connector#5780) defines the "conformsTo" term in the EDC DSP JSON-LD context, so the
-         * federated catalog (compacted with that context) returns "conformsTo" where 0.16 returned "dct:conformsTo".
-         */
-        private String conformsToKey(JsonObject object) {
-            return object.containsKey("conformsTo") ? "conformsTo" : "dct:conformsTo";
-        }
-
-        private JsonObject getObject(JsonObject object, String expandedKey, String compactKey) {
-            var value = object.get(expandedKey);
-            if (value == null) {
-                value = object.get(compactKey);
-            }
+        private JsonObject getObject(JsonObject object, String key) {
+            var value = object.get(key);
             if (value.getValueType() == JsonValue.ValueType.ARRAY) {
                 return value.asJsonArray().getJsonObject(0);
             }
             return value.asJsonObject();
         }
 
-        private String getString(JsonObject object, String expandedKey, String compactKey) {
-            var value = object.get(expandedKey);
-            if (value == null) {
-                value = object.get(compactKey);
-            }
+        private String getString(JsonObject object, String key) {
+            var value = object.get(key);
             if (value.getValueType() == JsonValue.ValueType.ARRAY) {
                 var array = value.asJsonArray();
                 return array.isEmpty() ? null : getStringValue(array.get(0));
@@ -957,15 +945,19 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
             return type.equals(getStringValue(value));
         }
 
-        private JsonArray getArray(JsonObject object, String expandedKey, String compactKey) {
-            var value = object.get(expandedKey);
-            if (value == null) {
-                value = object.get(compactKey);
-            }
+        private JsonArray getArray(JsonObject object, String key) {
+            var value = object.get(key);
             if (value.getValueType() == JsonValue.ValueType.OBJECT) {
                 return Json.createArrayBuilder().add(value).build();
             }
             return value.asJsonArray();
+        }
+
+        /**
+         * Keys of the asserted DCAT / Dublin Core terms in one response shape.
+         */
+        private record DistributionKeys(String distribution, String accessService, String accessUrl, String mediaType,
+                                        String conformsTo, String modified, String title, String type, String format) {
         }
     }
 
@@ -980,8 +972,9 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
         *   dcat-asset-gamma  dct:identifier=dataset-gamma  publisher=publisher-alpha  type=DATASET  dcat:theme.identifier=theme-c  dcat:theme.dcat:theme.identifier=sub-c
      * </pre>
      *
-     * <p>All requests target the authority's direct catalog endpoint
-     * ({@code /authority/catalog/v1alpha/catalog/query}) which goes through
+     * <p>All requests target the authority's federated catalog query endpoint
+     * ({@code /authority/fc/management/v4/catalogs/request}, and the DSE asset count
+     * {@code /authority/fc/management/v4/catalogs/query/count}), which goes through
      * {@code CustomFederatedCatalogCache}.
      *
      * <p>Property paths use the JSON-LD expanded IRI form because that is how keys are
@@ -1008,8 +1001,8 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
         private static final String PROP_THEME_SUB_ID = "properties.'" + DCAT_NS + "theme'.'" + DCAT_NS + "theme'.'" + DCT_NS + "identifier'";
 
         private static final String CATALOG_QUERY_URL =
-                AUTHORITY.catalogUrl() + "/v1alpha/catalog/query";
-        private static final String CATALOG_COUNT_URL = CATALOG_QUERY_URL + "/count";
+                AUTHORITY.federatedCatalogManagementUrl() + "/v4/catalogs/request";
+        private static final String CATALOG_COUNT_URL = AUTHORITY.federatedCatalogManagementUrl() + "/v4/catalogs/query/count";
 
         // ── Filter tests ─────────────────────────────────────────────────────
 
@@ -1278,8 +1271,9 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
 
         // ── helpers ──────────────────────────────────────────────────────────
 
+        // management v4 requires the QuerySpec @type
         private static jakarta.json.JsonObject querySpec(jakarta.json.JsonObject body) {
-            return body;
+            return body.containsKey("@type") ? body : Json.createObjectBuilder(body).add("@type", "QuerySpec").build();
         }
 
         private static jakarta.json.JsonObjectBuilder criterion(String left, String op, Object right) {
@@ -1302,8 +1296,10 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
         private static void assertCatalogCountResponse(JsonArray counts) {
             assertThat(counts).hasSize(1);
             var response = counts.getJsonObject(0);
-            assertThat(response.getString("@type")).isEqualTo("Catalog");
-            assertThat(response.getString("participantId")).isEqualTo(PROVIDER.did());
+            // compacted with the management v4 context (management/v2) and the DSE "dse" prefix of the federated catalog
+            assertThat(response.getString("@type")).isEqualTo("dcat:Catalog");
+            assertThat(response.getJsonObject("https://w3id.org/dspace/2025/1/participantId").getString("@id"))
+                    .isEqualTo(PROVIDER.did());
             assertThat(response.getInt("dse:datasetCount")).isEqualTo(2);
         }
 
@@ -1665,6 +1661,8 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
                             "dse", "https://w3id.org/dse/v0.0.1/ns/",
                             "edc", "https://w3id.org/edc/v0.0.1/ns/"
                     ),
+                    // management v4 requires the compact @type
+                    "@type", "AgreementsRetirementEntry",
                     "edc:agreementId", contractId,
                     "dse:reason", reason
             );
@@ -2016,7 +2014,7 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
             getVisibilityCredential(CONSUMER);
 
             await().atMost(TEST_TIMEOUT).untilAsserted(() ->
-                    assertThat(queryParticipantDatasets(AUTHORITY, PROVIDER.did(), CONSUMER.controlPlaneCatalogFilterUrl()))
+                    assertThat(queryParticipantDatasets(PROVIDER.did(), CONSUMER.controlPlaneCatalogFilterUrl()))
                             .anyMatch(dataset -> ASSET_ID_REST_API_TRAVEL_DOMAIN_RESTRICTED.equals(dataset.getString(ID))));
 
             var negotiationId = CONSUMER.participantClient().initContractNegotiation(

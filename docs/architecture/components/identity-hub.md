@@ -24,6 +24,8 @@ The Identity Hub exposes multiple API endpoints (from Helm chart configuration):
 | DID | 8383 | /api/did | DID document resolution |
 | STS | 8484 | /api/sts | Secure Token Service |
 
+The Service also exposes the DID endpoint on port 443 (80 when `did.web.useHttps` is false), the default port of the did:web scheme. The DID therefore carries no port: `did:web:<release>-identityhub:api:did` resolves to `https://<release>-identityhub/api/did/did.json`.
+
 ### DID WebParser Extension
 
 Parses DID Web identifiers:
@@ -78,9 +80,9 @@ public class ParticipantContextSeedExtension implements ServiceExtension {
     
     @Override
     public void start() {
-        // Create super-user with admin role if not exists
+        // Create the super-user with the admin scopes if it does not exist
         ParticipantManifest.Builder.newInstance()
-            .participantId(participantId)
+            .participantContextId(participantId)
             .did(participantId)
             .active(true)
             .key(KeyDescriptor.Builder.newInstance()
@@ -88,10 +90,12 @@ public class ParticipantContextSeedExtension implements ServiceExtension {
                 .privateKeyAlias(privateKeyAlias)
                 .publicKeyPem(publicKeyPem)
                 .build())
-            .roles(List.of(ROLE_ADMIN));
+            .scopes(List.of(IdentityApiScopes.ADMIN, IssuerAdminApiScopes.ADMIN));
     }
 }
 ```
+
+IdentityHub 0.18 replaced the participant roles with scopes (eclipse-edc/IdentityHub#1010): `identity-api:admin` and `issuer-admin-api:admin` grant every Identity API / Issuer Admin API operation on every participant context. DSE runs these APIs without the upstream authentication and authorization modules, so the scopes are stored but not checked (see "Administrative Scopes" in `extensions/identity-hub/superuser-seed/README.md`).
 
 ## VC Authorization Flow
 
@@ -114,17 +118,17 @@ public class ParticipantContextSeedExtension implements ServiceExtension {
 ```json
 {
   "@context": ["https://www.w3.org/ns/did/v1"],
-  "id": "did:web:identityhub:8383:api:did",
+  "id": "did:web:identityhub:api:did",
   "verificationMethod": [{
-    "id": "did:web:identityhub:8383:api:did#my-key",
+    "id": "did:web:identityhub:api:did#my-key",
     "type": "JsonWebKey2020",
-    "controller": "did:web:identityhub:8383:api:did",
+    "controller": "did:web:identityhub:api:did",
     "publicKeyJwk": { ... }
   }],
   "service": [
     {
       "type": "CredentialService",
-      "serviceEndpoint": "http://identityhub:8282/api/credentials"
+      "serviceEndpoint": "https://identityhub:8282/api/credentials/v1/participants/did:web:identityhub:api:did"
     }
   ]
 }
@@ -166,7 +170,7 @@ dse:ComplianceCredential:all
 identityhub:
   did:
     web:
-      url: "did:web:identityhub%3A8383:api:did"
+      url: "did:web:identityhub:api:did"
       useHttps: false
   keys:
     sts:
@@ -202,7 +206,7 @@ Filters credentials during storage.
 ```yaml
 # Terraform configuration (from system-tests)
 locals {
-  did_url = "did:web:${local.identityhub_release_name}%3A8383:api:did"
+  did_url = "did:web:${local.identityhub_release_name}:api:did"
   sts_url = "http://${local.identityhub_release_name}:8484/api/sts/token"
   identityhub_credentials_url = "http://${local.identityhub_release_name}:8282/api/credentials"
 }

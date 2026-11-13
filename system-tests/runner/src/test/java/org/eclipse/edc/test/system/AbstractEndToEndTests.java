@@ -1,6 +1,7 @@
 package org.eclipse.edc.test.system;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.restassured.http.ContentType;
 import jakarta.json.Json;
 import jakarta.json.JsonArray;
 import jakarta.json.JsonObject;
@@ -12,6 +13,7 @@ import org.eclipse.edc.junit.extensions.TestServiceExtensionContext;
 import org.eclipse.edc.spi.monitor.ConsoleMonitor;
 import org.eclipse.edc.spi.monitor.Monitor;
 
+import java.io.ByteArrayInputStream;
 import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
@@ -23,9 +25,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.eclipse.dse.iam.policy.PolicyConstants.VISIBILITY_CREDENTIAL_TYPE;
 import static org.eclipse.edc.connector.controlplane.transfer.spi.types.TransferProcessStates.STARTED;
+import static org.eclipse.edc.jsonld.spi.JsonLdKeywords.CONTEXT;
+import static org.eclipse.edc.jsonld.spi.JsonLdKeywords.TYPE;
 import static org.eclipse.edc.jsonld.spi.JsonLdKeywords.VALUE;
 import static org.eclipse.edc.jsonld.spi.Namespaces.DSPACE_2025_1_IRI;
-import static org.eclipse.edc.jsonld.spi.PropertyAndTypeNames.DCAT_DATASET_ATTRIBUTE;
+import static org.eclipse.edc.jsonld.spi.Namespaces.DSPACE_CONTEXT_2025_1;
+import static org.eclipse.edc.jsonld.spi.Namespaces.EDC_DSPACE_CONTEXT;
 
 public class AbstractEndToEndTests {
 
@@ -35,24 +40,78 @@ public class AbstractEndToEndTests {
     private static final JsonLd JSON_LD = new JsonLdExtension().createJsonLdService(TestServiceExtensionContext.testServiceExtensionContext());
     private static final Duration TEST_POLL_INTERVAL = Duration.ofMillis(500);
     public static final String HTTP_DATA_PULL = "HttpData-PULL";
+    /**
+     * Keys of the control-plane catalog response, the catalog filter's DSP 2025-1 compaction.
+     */
+    protected static final String CATALOG_FILTER_PARTICIPANT_ID = "participantId";
+    protected static final String CATALOG_FILTER_DATASET = "dataset";
+    private static final String QUERY_ALL = """
+            {
+                "@context": { "@vocab": "https://w3id.org/edc/v0.0.1/ns/" },
+                "@type": "QuerySpec",
+                "filterExpression": [],
+                "limit": 100,
+                "offset": 0
+            }
+            """;
 
-    protected List<JsonObject> queryParticipantDatasets(AbstractAuthority authority, String participantDid, String catalogUrl) {
+    /**
+     * Queries the control-plane catalog endpoint ({@code POST /v4/catalogs/request}) and returns the datasets of the
+     * given participant's catalog as the control plane returns them, retrying until the crawler has cached the catalog.
+     * <p>
+     * The control plane returns the authority catalog filter's reply as is: a JSON array of DSP 2025-1 catalogs compacted
+     * with the DSP 2025-1 and EDC dspace contexts ({@code @type: Catalog}, {@code participantId}, {@code dataset} with
+     * {@code Dataset} entries), not the federated catalog management v4 shape. The keys are read as returned.
+     */
+    protected List<JsonObject> queryParticipantDatasets(String participantDid, String controlPlaneCatalogUrl) {
         AtomicReference<List<JsonObject>> datasets = new AtomicReference<>();
         await().atMost(TEST_TIMEOUT)
                 .pollInterval(TEST_POLL_INTERVAL)
                 .untilAsserted(() -> {
-                    var catalog = authority.queryCatalog(MAPPER, JSON_LD, catalogUrl).stream()
-                            .filter(isCatalogOf(participantDid))
+                    var catalog = queryControlPlaneCatalogs(controlPlaneCatalogUrl).stream()
+                            .filter(candidate -> participantDid.equals(candidate.getString(CATALOG_FILTER_PARTICIPANT_ID, null)))
                             .findFirst()
                             .orElseThrow(() -> new AssertionError("Failed to find Catalog for participant %s".formatted(participantDid)));
-                    datasets.set(Optional.ofNullable(catalog.getJsonArray(DCAT_DATASET_ATTRIBUTE)).map(arr -> arr.stream().map(JsonValue::asJsonObject).toList()).orElse(List.of()));
+                    var catalogDatasets = Optional.ofNullable(catalog.getJsonArray(CATALOG_FILTER_DATASET))
+                            .map(arr -> arr.stream().map(JsonValue::asJsonObject).toList())
+                            .orElse(List.of());
+                    assertThat(catalogDatasets).allSatisfy(dataset -> assertThat(dataset.getString(TYPE, null)).isEqualTo("Dataset"));
+                    datasets.set(catalogDatasets);
                 });
 
         return datasets.get();
     }
 
     /**
-     * Queries the federated catalog directly (authority's {@code /v1alpha/catalog/query}) and
+     * The control-plane catalog response, checked to be the catalog filter's DSP 2025-1 compaction (each catalog has
+     * {@code @type: Catalog} and the DSP 2025-1 and EDC dspace contexts).
+     */
+    private static List<JsonObject> queryControlPlaneCatalogs(String controlPlaneCatalogUrl) {
+        var body = given()
+                .baseUri(controlPlaneCatalogUrl)
+                .contentType(ContentType.JSON)
+                .body(QUERY_ALL)
+                .when()
+                .post()
+                .then()
+                .statusCode(200)
+                .contentType(ContentType.JSON)
+                .extract().body().asByteArray();
+
+        List<JsonObject> catalogs;
+        try (var reader = Json.createReader(new ByteArrayInputStream(body))) {
+            catalogs = reader.readArray().stream().map(JsonValue::asJsonObject).toList();
+        }
+        assertThat(catalogs).allSatisfy(catalog -> {
+            assertThat(catalog.getString(TYPE, null)).isEqualTo("Catalog");
+            assertThat(catalog.get(CONTEXT)).isInstanceOf(JsonArray.class);
+            assertThat(catalog.getJsonArray(CONTEXT)).contains(Json.createValue(DSPACE_CONTEXT_2025_1), Json.createValue(EDC_DSPACE_CONTEXT));
+        });
+        return catalogs;
+    }
+
+    /**
+     * Queries the federated catalog directly (authority's management {@code /v4/catalogs/request}) and
      * returns the raw cached {@link JsonObject} for the given participant's catalog, retrying
      * until the crawler has cached it.
      * <p>
@@ -73,7 +132,7 @@ public class AbstractEndToEndTests {
     }
 
     /**
-     * Queries the federated catalog directly (authority's {@code /v1alpha/catalog/query}) with a
+     * Queries the federated catalog directly (authority's management {@code /v4/catalogs/request}) with a
      * full {@code QuerySpec} body supporting {@code filterExpression}, {@code sortField},
      * {@code sortOrder}, {@code offset}, and {@code limit}.
      *
@@ -84,7 +143,7 @@ public class AbstractEndToEndTests {
      * new assets before the assertion is evaluated.</p>
      *
      * @param catalogQueryUrl the full URL of the authority's catalog query endpoint,
-     *                        typically {@code AUTHORITY.catalogUrl() + "/v1alpha/catalog/query"}
+     *                        typically {@code AUTHORITY.federatedCatalogManagementUrl() + "/v4/catalogs/request"}
      * @param querySpec       JSON body with filter / sort / pagination fields
      * @param expectedCount   minimum number of datasets expected (used as the await condition)
      */
@@ -92,13 +151,15 @@ public class AbstractEndToEndTests {
                                                       jakarta.json.JsonObject querySpec,
                                                       int expectedCount) {
         AtomicReference<List<JsonObject>> result = new AtomicReference<>(List.of());
+        // management v4 rejects a QuerySpec without @type
+        var body = querySpec.containsKey("@type") ? querySpec : Json.createObjectBuilder(querySpec).add("@type", "QuerySpec").build();
         await().atMost(TEST_TIMEOUT)
                 .pollInterval(TEST_POLL_INTERVAL)
                 .untilAsserted(() -> {
-                    var body = given()
+                    var response = given()
                             .baseUri(catalogQueryUrl)
                             .contentType("application/json")
-                            .body(querySpec.toString())
+                            .body(body.toString())
                             .when()
                             .post()
                             .then()
@@ -106,14 +167,14 @@ public class AbstractEndToEndTests {
                             .extract().body().asString();
 
                     jakarta.json.JsonArray catalogs;
-                    try (var reader = Json.createReader(new java.io.StringReader(body))) {
+                    try (var reader = Json.createReader(new java.io.StringReader(response))) {
                         catalogs = reader.readArray();
                     }
                     var datasets = catalogs.stream()
                             .map(JsonValue::asJsonObject)
                             .flatMap(catalog -> {
+                                // management v4 response key (compacted with the management/v2 context)
                                 var ds = catalog.get("dcat:dataset");
-                                if (ds == null) ds = catalog.get("dataset");
                                 if (ds == null) return java.util.stream.Stream.empty();
                                 if (ds instanceof JsonArray arr) {
                                     return arr.stream().map(JsonValue::asJsonObject);

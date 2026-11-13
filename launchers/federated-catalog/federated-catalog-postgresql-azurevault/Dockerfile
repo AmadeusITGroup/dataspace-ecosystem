@@ -38,8 +38,6 @@ ENV WEB_HTTP_PROTOCOL_PORT="8282"
 ENV WEB_HTTP_PROTOCOL_PATH="/api/dsp"
 
 # catalog api
-ENV WEB_HTTP_CATALOG_PORT="8383"
-ENV WEB_HTTP_CATALOG_PATH="/api/catalog"
 
 # ARG can not be used in ENTRYPOINT so storing value in an ENV variable
 ENV ENV_JVM_ARGS=$JVM_ARGS
@@ -47,12 +45,12 @@ ENV ENV_JVM_ARGS=$JVM_ARGS
 # Execute the container as non-root user
 USER appuser
 
-CMD ["java", \
-    "-javaagent:/app/opentelemetry-javaagent.jar", \
+ENTRYPOINT ["java", \
+     "-javaagent:/app/opentelemetry-javaagent.jar", \
      "-Djava.util.logging.config.file=/app/logging.properties", \
      "-Dotel.javaagent.configuration-file=/app/opentelemetry.properties", \
      "-Djava.security.egd=file:/dev/urandom", \
      "-jar", \
      "federatedcatalog.jar", \
-     "--no-color", \
-     "--log-level=INFO"]
+     "--no-color"]
+CMD ["--log-level=INFO"]

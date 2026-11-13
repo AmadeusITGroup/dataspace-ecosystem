@@ -1,6 +1,5 @@
 package org.eclipse.edc.dse.controlplane.asset;
 
-import org.eclipse.edc.connector.controlplane.asset.spi.domain.Asset;
 import org.eclipse.edc.connector.controlplane.asset.spi.event.AssetEvent;
 import org.eclipse.edc.connector.controlplane.asset.spi.index.AssetIndex;
 import org.eclipse.edc.dse.controlplane.asset.decorator.AssetDecorator;
@@ -39,12 +38,10 @@ public class AssetCustomPropertySubscriber implements EventSubscriber {
                 var existing = ofNullable(assetIndex.findById(event.getAssetId()))
                         .orElseThrow(() -> new EdcException("Failed to find Asset with id %s SHOULD NOT HAPPEN".formatted(event.getAssetId())));
 
-                var builder = Asset.Builder.newInstance()
-                        .id(existing.getId())
-                        .createdAt(existing.getCreatedAt())
-                        .properties(existing.getProperties())
-                        .privateProperties(existing.getPrivateProperties())
-                        .dataAddress(existing.getDataAddress());
+                // toBuilder() keeps every field of the stored asset (properties, private properties, data address,
+                // dataplane metadata, createdAt); it does not copy the participant context id, so it is set as well
+                var builder = existing.toBuilder()
+                        .participantContextId(existing.getParticipantContextId());
 
                 decorators.forEach(d -> d.decorate(existing, builder));
                 var asset = builder.build();
