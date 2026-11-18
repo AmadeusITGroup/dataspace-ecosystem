@@ -36,7 +36,7 @@ spec:
           securityContext:
           {{- toYaml .Values.telemetrycsvmanager.securityContext | nindent 12}}
           # either use the specified image, or use the default one
-          image: {{ include "dse.telemetrycsvmanager.image.repository" . | trim }}:{{ .Values.telemetrycsvmanager.image.tag | default .Chart.AppVersion }}
+          image: {{ include "dse.telemetrycsvmanager.image.repository" . | trim }}:{{ .Values.telemetrycsvmanager.image.tag | default .Chart.AppVersion | required ".Values.telemetrycsvmanager.image.tag is required when the chart has no appVersion" }}
           imagePullPolicy: {{.Values.telemetrycsvmanager.image.pullPolicy}}
           {{- with .Values.telemetrycsvmanager.logLevel }}
           args:

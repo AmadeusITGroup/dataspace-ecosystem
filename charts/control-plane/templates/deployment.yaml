@@ -40,7 +40,7 @@ spec:
           securityContext:
           {{- toYaml .Values.controlplane.securityContext | nindent 12}}
           # either use the specified image, or use the default one
-          image: {{ include "dse.controlplane.imageRepository" . }}:{{ .Values.controlplane.image.tag | required ".Values.controlplane.image.tag is required" }}
+          image: {{ include "dse.controlplane.imageRepository" . }}:{{ .Values.controlplane.image.tag | default .Chart.AppVersion | required ".Values.controlplane.image.tag is required when the chart has no appVersion" }}
           imagePullPolicy: {{.Values.controlplane.image.pullPolicy}}
           {{- with .Values.controlplane.logLevel }}
           args:

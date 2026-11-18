@@ -37,7 +37,7 @@ spec:
             {{- toYaml .Values.identityhub.securityContext | nindent 12 }}
 
           # either use the specified image, or use the default one
-          image: {{ include "dse.identityhub.imageRepository" . }}:{{ .Values.identityhub.image.tag | required ".Values.identityhub.image.tag is required" }}
+          image: {{ include "dse.identityhub.imageRepository" . }}:{{ .Values.identityhub.image.tag | default .Chart.AppVersion | required ".Values.identityhub.image.tag is required when the chart has no appVersion" }}
           imagePullPolicy: {{ .Values.identityhub.image.pullPolicy }}
           {{- with .Values.identityhub.logLevel }}
           args:

@@ -37,7 +37,7 @@ spec:
             {{- toYaml .Values.dataplane.securityContext | nindent 12 }}
 
           # either use the specified image, or use the default one
-          image: {{ include "dse.dataplane.imageRepository" . }}:{{ .Values.dataplane.image.tag | required ".Values.dataplane.image.tag is required" }}
+          image: {{ include "dse.dataplane.imageRepository" . }}:{{ .Values.dataplane.image.tag | default .Chart.AppVersion | required ".Values.dataplane.image.tag is required when the chart has no appVersion" }}
           imagePullPolicy: {{ .Values.dataplane.image.pullPolicy }}
           {{- with .Values.dataplane.logLevel }}
           args:

@@ -37,7 +37,7 @@ spec:
             {{- toYaml .Values.telemetryagent.securityContext | nindent 12 }}
 
           # either use the specified image, or use the default one
-          image: {{ include "dse.telemetryagent.imageRepository" . }}:{{ .Values.telemetryagent.image.tag | required ".Values.telemetryagent.image.tag is required" }}
+          image: {{ include "dse.telemetryagent.imageRepository" . }}:{{ .Values.telemetryagent.image.tag | default .Chart.AppVersion | required ".Values.telemetryagent.image.tag is required when the chart has no appVersion" }}
           imagePullPolicy: {{ .Values.telemetryagent.image.pullPolicy }}
           {{- with .Values.telemetryagent.logLevel }}
           args:
