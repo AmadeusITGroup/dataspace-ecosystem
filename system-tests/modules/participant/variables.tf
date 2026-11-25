@@ -196,7 +196,7 @@ variable "telemetry_agent_image" {
 
 # Category whitelist
 variable "category_whitelist_enabled" {
-  description = "Mount the shared category-whitelist ConfigMap into the control plane and set DSE_CATEGORY_WHITELIST_ENABLED, via the chart's generic hooks. When false there is no mount and no env. Defaults to false for standalone use of this module (no ConfigMap exists there); the root system-tests module always passes its own value (default true)."
+  description = "Mount the shared category-whitelist ConfigMap into the control plane via the chart's generic hooks. The control plane always loads the whitelist, so set this to false only when an umbrella chart provides the volume and mount itself. Defaults to false for standalone use of this module (no ConfigMap exists there); the root system-tests module always passes its own value (default true)."
   type        = bool
   default     = false
 }

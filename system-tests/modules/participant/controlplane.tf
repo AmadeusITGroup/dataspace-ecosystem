@@ -20,12 +20,9 @@ locals {
     "control-plane-postgresql-hashicorpvault"
   )
 
-  # Category whitelist wiring via the control-plane chart's generic
-  # hooks. When disabled, every piece below is empty so the rendered control
-  # plane is exactly as without a whitelist (no env, no volume, no mount).
-  category_whitelist_env = var.category_whitelist_enabled ? {
-    "DSE_CATEGORY_WHITELIST_ENABLED" = "true"
-  } : {}
+  # Category whitelist wiring via the control-plane chart's generic hooks. The
+  # control plane always loads the whitelist; this module mounts it unless an
+  # umbrella chart owns the volume and mount (category_whitelist_enabled = false).
   category_whitelist_volumes = var.category_whitelist_enabled ? [
     {
       "name" = "category-whitelist"
@@ -155,10 +152,10 @@ dse.policy.prefix=${var.dse_policy_prefix}
 ${local.tls_config_props}
         EOT
 
-      "env" : merge({
+      "env" : {
         "JAVA_TOOL_OPTIONS" : local.tls_java_opts
         "EDC_IAM_CREDENTIAL_REVOCATION_MIMETYPE" : "application/json"
-      }, local.category_whitelist_env)
+      }
 
       "ingress" : {
         "enabled" : true

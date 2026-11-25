@@ -157,9 +157,9 @@ module "backend-provider" {
 ##################
 
 # Single shared category-whitelist ConfigMap for the whole
-# system-tests deployment. Created only when the whitelist is enabled (the
-# default); when disabled there is no ConfigMap and the participant module
-# mounts nothing. The data key `whitelist.json` matches the path the control
+# system-tests deployment. Created by default; when category_whitelist_enabled is false (an
+# umbrella chart provides the whitelist) there is no ConfigMap and the
+# participant module mounts nothing. The data key `whitelist.json` matches the path the control
 # plane reads (/etc/dse/category-whitelist/whitelist.json). The file defaults
 # to the committed example list. A caller that deploys the control plane through
 # an umbrella chart that creates its own ConfigMap sets
@@ -212,8 +212,8 @@ module "participant" {
   controlplane_chart_repository = var.controlplane_chart_repository
   controlplane_values_key       = var.controlplane_values_key
 
-  # Category whitelist: off => no mount; on => mount the shared
-  # ConfigMap through the control-plane chart's generic hooks.
+  # Category whitelist: on => mount the shared ConfigMap through the
+  # control-plane chart's generic hooks; off => an umbrella chart provides it.
   category_whitelist_enabled   = var.category_whitelist_enabled
   category_whitelist_configmap = var.category_whitelist_enabled ? kubernetes_config_map.category_whitelist[0].metadata[0].name : ""
 

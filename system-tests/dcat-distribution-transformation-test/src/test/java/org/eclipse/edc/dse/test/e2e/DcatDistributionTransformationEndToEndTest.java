@@ -74,7 +74,6 @@ class DcatDistributionTransformationEndToEndTest {
             config.put("edc.participant.id", "test-provider");
             config.put("edc.dsp.callback.address", "http://localhost:" + PROTOCOL_PORT + "/protocol");
             // The theme taxonomy extension needs the category whitelist, otherwise the runtime does not start.
-            config.put("dse.category.whitelist.enabled", "true");
             config.put("dse.category.whitelist.path",
                     Path.of("src/test/resources/category-whitelist.json").toAbsolutePath().toString());
             setConfiguration(config);

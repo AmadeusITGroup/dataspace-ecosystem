@@ -547,6 +547,9 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
                         .add("description", "Data tourisme files")
                         .add("id", ASSET_ID_DCAT_DISTRIBUTION)
                         .add("contenttype", "application/json")
+                        .add("dcat:theme", Json.createArrayBuilder()
+                                .add(Json.createObjectBuilder()
+                                        .add("@id", "urn:amadeus:platform:content-management:taxonomy:category:Order")))
                         .add("dcat:distribution", Json.createArrayBuilder()
                                 .add(customDistribution)
                                 .add(serviceLessCustomDistribution)))
@@ -698,8 +701,9 @@ public class LocalEndToEndTests extends AbstractEndToEndTests {
         @Test
         void participantCatalog_includesUsedCategoriesWithTheirParents() {
             // Same as POST /consumer/cp/management/v4/catalog/request: the consumer asks the provider
-            // for its catalog over DSP 2025-1. Only the assets seeded by createThemedAssets use
-            // whitelisted categories.
+            // for its catalog over DSP 2025-1. Every test asset carries the default category Order
+            // (AbstractParticipant); Order Management System comes from createThemedAssets and the
+            // order-created-event asset.
             var catalogRequest = Json.createObjectBuilder()
                     .add("@context", Json.createObjectBuilder().add("@vocab", EDC_NAMESPACE))
                     .add("@type", "CatalogRequest")

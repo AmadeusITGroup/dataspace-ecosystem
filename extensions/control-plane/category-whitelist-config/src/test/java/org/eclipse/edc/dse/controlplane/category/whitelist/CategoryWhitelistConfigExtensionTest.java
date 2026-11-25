@@ -24,15 +24,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.HashMap;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -43,7 +40,6 @@ import static org.mockito.Mockito.when;
 class CategoryWhitelistConfigExtensionTest {
 
     private static final String SETTING = "dse.category.whitelist.path";
-    private static final String ENABLED = "dse.category.whitelist.enabled";
 
     @BeforeEach
     void setUp(ServiceExtensionContext context) {
@@ -59,7 +55,7 @@ class CategoryWhitelistConfigExtensionTest {
     void initialize_loadsFixtureAndRegistersService(CategoryWhitelistConfigExtension ext,
                                                     ServiceExtensionContext context) throws URISyntaxException {
         var path = Path.of(getClass().getClassLoader().getResource("whitelist.json").toURI()).toString();
-        when(context.getConfig()).thenReturn(ConfigFactory.fromMap(Map.of(ENABLED, "true", SETTING, path)));
+        when(context.getConfig()).thenReturn(ConfigFactory.fromMap(Map.of(SETTING, path)));
 
         ext.initialize(context);
 
@@ -69,57 +65,26 @@ class CategoryWhitelistConfigExtensionTest {
     }
 
     @Test
-    void initialize_enabled_missingFile_abortsBoot(CategoryWhitelistConfigExtension ext,
+    void initialize_missingFile_abortsBoot(CategoryWhitelistConfigExtension ext,
                                                    ServiceExtensionContext context) {
         when(context.getConfig()).thenReturn(ConfigFactory.fromMap(Map.of(
-                ENABLED, "true",
                 SETTING, "/no/such/path/whitelist.json")));
 
         assertThatExceptionOfType(EdcException.class).isThrownBy(() -> ext.initialize(context));
     }
 
-    @ParameterizedTest(name = "enabled={0}")
-    @ValueSource(strings = { "<unset>", "false" })
-    void initialize_disabled_missingFile_bootsWithoutService(String enabled, CategoryWhitelistConfigExtension ext,
-                                                             ServiceExtensionContext context) {
-        // unset = off by default; either way the file is never read and boot is not aborted
-        var config = new HashMap<String, String>(Map.of(SETTING, "/no/such/path/whitelist.json"));
-        if (!"<unset>".equals(enabled)) {
-            config.put(ENABLED, enabled);
-        }
-        when(context.getConfig()).thenReturn(ConfigFactory.fromMap(config));
-
-        ext.initialize(context);
-
-        assertThat(context.getService(CategoryWhitelist.class, true)).isNull();
-    }
-
     @Test
-    void initialize_enabled_invalidFile_abortsBoot(CategoryWhitelistConfigExtension ext,
+    void initialize_invalidFile_abortsBoot(CategoryWhitelistConfigExtension ext,
                                                    ServiceExtensionContext context,
                                                    @TempDir Path dir) throws IOException {
         var file = dir.resolve("whitelist.json");
         Files.writeString(file, "{ \"categories\": [ { \"id\": \"A\", \"name\": \"A\", \"internalId\": \"urn:example:a\", " +
                 "\"parentId\": \"A\" } ] }", StandardCharsets.UTF_8);
-        when(context.getConfig()).thenReturn(ConfigFactory.fromMap(Map.of(ENABLED, "true", SETTING, file.toString())));
+        when(context.getConfig()).thenReturn(ConfigFactory.fromMap(Map.of(SETTING, file.toString())));
 
         assertThatExceptionOfType(EdcException.class)
                 .isThrownBy(() -> ext.initialize(context))
                 .withMessageContaining("its own parent");
-        assertThat(context.getService(CategoryWhitelist.class, true)).isNull();
-    }
-
-    @Test
-    void initialize_disabled_doesNotRegisterService(CategoryWhitelistConfigExtension ext,
-                                                    ServiceExtensionContext context) throws URISyntaxException {
-        var path = Path.of(getClass().getClassLoader().getResource("whitelist.json").toURI()).toString();
-        when(context.getConfig()).thenReturn(ConfigFactory.fromMap(Map.of(
-                ENABLED, "false",
-                SETTING, path)));
-
-        ext.initialize(context);
-
-        // even with a valid file, nothing is registered when disabled
         assertThat(context.getService(CategoryWhitelist.class, true)).isNull();
     }
 }

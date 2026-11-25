@@ -33,7 +33,10 @@ Content-Type: application/json
         "name": "user-test",
         "description": "user test files",
         "id": "{{assetId}}",
-        "contenttype": "application/json"
+        "contenttype": "application/json",
+        "dcat:theme": [
+            { "@id": "{{assetCategoryId}}" }
+        ]
     },
     "dataAddress": {
         "@type": "DataAddress",
@@ -44,10 +47,15 @@ Content-Type: application/json
     "@context": {
         "@vocab": "https://w3id.org/edc/v0.0.1/ns/",
         "edc": "https://w3id.org/edc/v0.0.1/ns/",
-        "odrl": "http://www.w3.org/ns/odrl/2/"
+        "odrl": "http://www.w3.org/ns/odrl/2/",
+        "dcat": "http://www.w3.org/ns/dcat#"
     }
 }
 ```
+
+The category whitelist is always on: `dcat:theme` is
+mandatory: every entry must be an object whose `@id` is a whitelisted category `internalId`.
+Otherwise the request is rejected with **400**.
 
 ### Get Asset
 

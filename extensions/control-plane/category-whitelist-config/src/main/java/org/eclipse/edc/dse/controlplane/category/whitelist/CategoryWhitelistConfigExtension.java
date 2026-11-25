@@ -26,17 +26,14 @@ import org.eclipse.edc.spi.types.TypeManager;
  * Loads the category whitelist from the ConfigMap-backed file once at boot and registers
  * the parsed {@link CategoryWhitelist} as a runtime service.
  *
- * <p>Controlled by {@code dse.category.whitelist.enabled} (default {@code false}). When disabled no
- * file is read, no {@link CategoryWhitelist} service is registered, and the control plane boots
- * without category validation - the default, for deployments that do not use a whitelist.
+ * <p>The whitelist is always loaded: there is no switch to turn category validation off. It is
+ * fail-fast: if the file is missing, unreadable, or unparseable the loader throws an
+ * {@code EdcException} from {@link #initialize(ServiceExtensionContext)}, aborting EDC boot. This is
+ * deliberate - running with an empty or absent whitelist would either hide every dataset downstream
+ * or let assets be published without category validation.
  *
- * <p>When enabled it is fail-fast: if the file is missing, unreadable, or unparseable the loader
- * throws an {@code EdcException} from {@link #initialize(ServiceExtensionContext)}, aborting EDC
- * boot. This is deliberate - running with an empty whitelist would silently hide every dataset
- * downstream.
- *
- * <p>Because the service is registered only when enabled, consumers must inject
- * {@link CategoryWhitelist} with {@code @Inject(required = false)} and handle {@code null}.
+ * <p>Because the service is always registered, consumers inject {@link CategoryWhitelist} as a
+ * required dependency.
  */
 @Provides(CategoryWhitelist.class)
 @Extension(value = CategoryWhitelistConfigExtension.EXTENSION_NAME)
@@ -45,11 +42,6 @@ public class CategoryWhitelistConfigExtension implements ServiceExtension {
     public static final String EXTENSION_NAME = "DSE Category Whitelist Config";
 
     public static final String DEFAULT_WHITELIST_PATH = "/etc/dse/category-whitelist/whitelist.json";
-
-    @Setting(description = "Whether to load the category whitelist at boot. When false, no whitelist is " +
-            "loaded, no CategoryWhitelist service is registered, and any category is accepted.",
-            defaultValue = "false")
-    public static final String ENABLED_KEY = "dse.category.whitelist.enabled";
 
     @Setting(description = "Filesystem path to the shared category whitelist JSON file (ConfigMap-backed)",
             defaultValue = DEFAULT_WHITELIST_PATH)
@@ -66,12 +58,6 @@ public class CategoryWhitelistConfigExtension implements ServiceExtension {
     @Override
     public void initialize(ServiceExtensionContext context) {
         var monitor = context.getMonitor();
-
-        if (!context.getSetting(ENABLED_KEY, false)) {
-            monitor.info("Category whitelist disabled (" + ENABLED_KEY +
-                    "=false): no whitelist loaded, any category accepted");
-            return;
-        }
 
         var path = context.getSetting(PATH_KEY, DEFAULT_WHITELIST_PATH);
 

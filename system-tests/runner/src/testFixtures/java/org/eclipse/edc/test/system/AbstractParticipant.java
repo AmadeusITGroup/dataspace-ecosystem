@@ -77,14 +77,36 @@ abstract class AbstractParticipant extends AbstractEntity {
     }
 
     protected void createEntry(String assetId, String name, String description, Map<String, Object> dataAddressProps, JsonObject... additionalConstraints) {
-        var client = participantClient();
-        Map<String, Object> assetProps = Map.of(
-                "name", name,
-                "contenttype", "application/json",
-                "version", "1.0",
-                "description", description
-        );
-        var asset = client.createAsset(assetId, assetProps, dataAddressProps);
+        // Build the asset body directly (rather than via the EDC client helper) so it can carry a
+        // whitelisted dcat:theme category - the control-plane now rejects an asset created without
+        // one (PSMP-9102). A single default category keeps every basic test asset valid without
+        // touching each call site.
+        var body = createObjectBuilder()
+                .add(CONTEXT, createObjectBuilder()
+                        .add(VOCAB, EDC_NAMESPACE)
+                        .add(DSE_POLICY_PREFIX, DSE_POLICY_NS)
+                        .add("dcat", DCAT_NS))
+                .add(ID, assetId)
+                .add(TYPE, "Asset")
+                .add("properties", createObjectBuilder()
+                        .add("name", name)
+                        .add("contenttype", "application/json")
+                        .add("version", "1.0")
+                        .add("description", description)
+                        .add("dcat:theme", defaultThemeArray()))
+                .add("dataAddress", buildDataAddress(dataAddressProps))
+                .build();
+
+        var assetId_ = participantClient().baseManagementRequest()
+                .contentType(JSON)
+                .body(body)
+                .when()
+                .post("/assets")
+                .then()
+                .log().ifError()
+                .statusCode(200)
+                .contentType(JSON)
+                .extract().jsonPath().getString(ID);
 
         var constraints = new ArrayList<JsonObject>();
         constraints.add(atomicConstraint("%s:%s".formatted(DSE_POLICY_PREFIX, MEMBERSHIP_CONSTRAINT), "odrl:eq", "active"));
@@ -92,7 +114,7 @@ abstract class AbstractParticipant extends AbstractEntity {
 
         var permissions = constraints.stream().map(this::createPermission).toList();
         var policy = createPolicyDefinition(PolicyFixtures.policy(permissions));
-        client.createContractDefinition(asset, UUID.randomUUID().toString(), policy, policy);
+        participantClient().createContractDefinition(assetId_, UUID.randomUUID().toString(), policy, policy);
     }
 
     /**
@@ -114,10 +136,21 @@ abstract class AbstractParticipant extends AbstractEntity {
                 .add(VOCAB, EDC_NAMESPACE)
                 .add(DSE_POLICY_PREFIX, DSE_POLICY_NS);
         extraContext.forEach(contextBuilder::add);
+        if (!extraContext.containsKey("dcat")) {
+            contextBuilder.add("dcat", DCAT_NS);
+        }
 
         var propsBuilder = createObjectBuilder();
+        var hasTheme = properties.containsKey("dcat:theme");
         properties.forEach((k, v) -> {
-            if (v instanceof Map<?, ?> nested) {
+            if ("dcat:theme".equals(k) && v instanceof Map<?, ?> nested) {
+                // Keep the caller's theme metadata but add a whitelisted @id so the asset passes
+                // the category validator (PSMP-9102) while the existing dcat:theme.dct:identifier
+                // filter paths still resolve.
+                @SuppressWarnings("unchecked")
+                var themeMap = (Map<String, Object>) nested;
+                propsBuilder.add(k, withThemeId(themeMap));
+            } else if (v instanceof Map<?, ?> nested) {
                 // Safe: callers of this test helper always provide Map<String, Object> for nested values
                 @SuppressWarnings("unchecked")
                 var nestedMap = (Map<String, Object>) nested;
@@ -126,16 +159,17 @@ abstract class AbstractParticipant extends AbstractEntity {
                 propsBuilder.add(k, v.toString());
             }
         });
+        if (!hasTheme) {
+            // No category supplied by the caller: add the default whitelisted one.
+            propsBuilder.add("dcat:theme", defaultThemeArray());
+        }
 
         var body = createObjectBuilder()
                 .add(CONTEXT, contextBuilder)
                 .add(ID, assetId)
                 .add(TYPE, "Asset")
                 .add("properties", propsBuilder)
-                .add("dataAddress", createObjectBuilder()
-                        .add(TYPE, "DataAddress")
-                        .add("type", "HttpData")
-                        .add("baseUrl", dataAddressProps.getOrDefault("baseUrl", "http://example.com").toString()))
+                .add("dataAddress", buildDataAddress(dataAddressProps))
                 .build();
 
         var assetId_ = participantClient().baseManagementRequest()
@@ -169,6 +203,63 @@ abstract class AbstractParticipant extends AbstractEntity {
                 builder.add(k, v.toString());
             }
         });
+        return builder.build();
+    }
+
+    /**
+     * DCAT namespace IRI, used for the {@code dcat:theme} category property.
+     */
+    protected static final String DCAT_NS = "http://www.w3.org/ns/dcat#";
+
+    /**
+     * The category every test asset carries by default. System-tests deploy the committed example
+     * list ({@code system-tests/category-whitelist.example.json}), on which this id is whitelisted,
+     * so the control plane's category validator (PSMP-9102) accepts the asset.
+     */
+    protected static final String DEFAULT_WHITELISTED_THEME_ID =
+            "urn:amadeus:platform:content-management:taxonomy:category:Order";
+
+    /**
+     * A {@code dcat:theme} array holding one default whitelisted category.
+     */
+    private static jakarta.json.JsonArray defaultThemeArray() {
+        return jakarta.json.Json.createArrayBuilder()
+                .add(createObjectBuilder().add("@id", DEFAULT_WHITELISTED_THEME_ID))
+                .build();
+    }
+
+    /**
+     * Serializes a caller-supplied theme map and adds a whitelisted {@code @id} to it (unless the
+     * caller already set one), so the theme metadata is preserved AND the category is valid.
+     */
+    private static jakarta.json.JsonObject withThemeId(Map<String, Object> themeMap) {
+        var builder = createObjectBuilder();
+        themeMap.forEach((k, v) -> {
+            if (v instanceof Map<?, ?> nested) {
+                @SuppressWarnings("unchecked")
+                var nestedMap = (Map<String, Object>) nested;
+                builder.add(k, buildJsonObject(nestedMap));
+            } else {
+                builder.add(k, v.toString());
+            }
+        });
+        if (!themeMap.containsKey("@id")) {
+            builder.add("@id", DEFAULT_WHITELISTED_THEME_ID);
+        }
+        return builder.build();
+    }
+
+    private static jakarta.json.JsonObject buildDataAddress(Map<String, Object> dataAddressProps) {
+        var builder = createObjectBuilder().add(TYPE, "DataAddress");
+        // Carry every data-address property the caller supplied (type, baseUrl, proxyQueryParams,
+        // oauth2:*, Azure storage props, ...), defaulting type/baseUrl when absent.
+        if (!dataAddressProps.containsKey("type")) {
+            builder.add("type", "HttpData");
+        }
+        if (!dataAddressProps.containsKey("baseUrl")) {
+            builder.add("baseUrl", "http://example.com");
+        }
+        dataAddressProps.forEach((k, v) -> builder.add(k, v.toString()));
         return builder.build();
     }
 

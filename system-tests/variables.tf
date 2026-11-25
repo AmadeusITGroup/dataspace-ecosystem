@@ -115,7 +115,7 @@ variable "vault_folder" {
 
 # Category whitelist
 variable "category_whitelist_enabled" {
-  description = "Render the shared category-whitelist ConfigMap and mount it into the control plane through the chart's generic hooks. When false there is no ConfigMap and no mount, so set it to false only when something else provides the whitelist (e.g. an umbrella chart, as in the devbox): the control plane does not start without one. The control plane reads the file once at boot and system-tests runs no ConfigMap reloader, so after changing the file content re-apply and restart the control-plane deployments (kubectl rollout restart)."
+  description = "Render the shared category-whitelist ConfigMap and mount it into the control plane through the chart's generic hooks. The control plane always loads the whitelist and does not start without it, so set this to false only when something else provides the ConfigMap and mount (e.g. an umbrella chart, as in the devbox). The control plane reads the file once at boot and system-tests runs no ConfigMap reloader, so after changing the file content re-apply and restart the control-plane deployments (kubectl rollout restart)."
   type        = bool
   default     = true
 }

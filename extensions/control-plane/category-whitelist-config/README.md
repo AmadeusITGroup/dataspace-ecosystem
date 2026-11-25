@@ -13,18 +13,13 @@ category data.
 
 | Setting (`@Setting`) | Env var | Default |
 |---|---|---|
-| `dse.category.whitelist.enabled` | `DSE_CATEGORY_WHITELIST_ENABLED` | `false` |
 | `dse.category.whitelist.path` | `DSE_CATEGORY_WHITELIST_PATH` | `/etc/dse/category-whitelist/whitelist.json` |
 
 > EDC maps an env var to a setting key by lowercasing it and turning `_` into `.`
 > (`DSE_CATEGORY_WHITELIST_PATH` → `dse.category.whitelist.path`). An `EDC_`-prefixed name would
 > map to `edc.dse...`, a different key, and would have no effect.
 
-When `dse.category.whitelist.enabled` is `false` (the default) the file is never read, no `CategoryWhitelist`
-service is registered, and the control plane boots without category validation. This is the mode
-for deployments that do not use a whitelist.
-
-When enabled, the file is typically projected from a ConfigMap (data key `whitelist.json`) mounted at
+The whitelist is always loaded and category validation cannot be switched off. The file is typically projected from a ConfigMap (data key `whitelist.json`) mounted at
 `/etc/dse/category-whitelist/`.
 
 ## Mounting the file with the control-plane chart
@@ -35,8 +30,6 @@ mounts it like this:
 
 ```yaml
 controlplane:
-  env:
-    DSE_CATEGORY_WHITELIST_ENABLED: "true"
   volumes:
     - name: category-whitelist
       configMap:
@@ -51,9 +44,9 @@ controlplane:
     configmap.reloader.stakater.com/reload: '{{ .Release.Name }}-category-whitelist'
 ```
 
-The chart never creates the ConfigMap. Enable all three of `env`, `volumes` and `volumeMounts`
-together: enabling without the mount fails at boot, and a mount without its volume is rejected by
-Kubernetes.
+The chart never creates the ConfigMap. Set both `volumes` and `volumeMounts`
+together: without the mount the control plane fails at boot, and a mount without its volume is
+rejected by Kubernetes.
 
 ## File format
 
@@ -63,19 +56,18 @@ A JSON object with a `categories` ordered array. Each entry is
 
 ## Fail-fast
 
-When enabled, if the file is missing, unreadable, empty, or unparseable, `initialize()` throws an
+If the file is missing, unreadable, empty, or unparseable, `initialize()` throws an
 `EdcException` and EDC boot aborts. This is deliberate: starting with an empty whitelist would
 silently hide every dataset downstream, which looks like a data outage rather than a configuration
 error. The file is read once at startup, so changing the list means updating the ConfigMap and
 restarting the control-plane pods: through a ConfigMap reloader annotation (see above) where one is
 installed, otherwise `kubectl rollout restart deployment/<release>`.
 
-Code that consumes the `CategoryWhitelist` service must treat it as optional: it is registered only
-when enabled, so use `@Inject(required = false)` and handle `null`.
+The `CategoryWhitelist` service is always registered, so consumers inject it as a required dependency.
 
 ## Validation
 
-When enabled the file is rejected if it:
+The file is rejected if it:
 
 - has trailing content after the JSON object (e.g. two concatenated documents);
 - has no categories, or a `null` entry;
