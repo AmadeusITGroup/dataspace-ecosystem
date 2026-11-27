@@ -221,6 +221,7 @@ subprojects {
             val dockerFile = file("$dockerContextDir/Dockerfile")
             val imageName = "${project.name}:latest"
             val imageTar = layout.buildDirectory.file("docker/${project.name}-image.tar")
+            val imageIdFile = layout.buildDirectory.file("docker/${project.name}-image.id")
 
             val copyOtel = tasks.register("copyOtel") {
                 val agentFile = rootDir.resolve("externalLibs").resolve(otelFileName)
@@ -277,6 +278,13 @@ subprojects {
                 val otelFile = "./build/$otelFileName"
                 val platform = System.getProperty("platform")
                 outputs.file(imageTar)
+                outputs.file(imageIdFile)
+                // The tar can outlive the image (podman reset/prune, interrupted build), or the tag can point to
+                // another image, so only skip when the local image is still the one this task built.
+                outputs.upToDateWhen {
+                    val recordedId = imageIdFile.get().asFile.takeIf { it.exists() }?.readText()?.trim()
+                    recordedId != null && recordedId == podmanImageIdOrNull(imageName)
+                }
                 val commandLineArgs  = mutableListOf(
                     "podman", "build",
                     "--no-cache",
@@ -319,6 +327,9 @@ subprojects {
                     execOps.exec {
                         commandLine("podman", "save", "-o", imageTar.get().asFile.absolutePath, imageName)
                     }
+                    val idFile = imageIdFile.get().asFile
+                    val builtId = podmanImageIdOrNull(imageName)
+                    if (builtId != null) idFile.writeText(builtId) else idFile.delete()
                     println("New image saved $imageName")
                 }
             }
